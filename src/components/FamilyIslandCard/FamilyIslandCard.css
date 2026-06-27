@@ -1,0 +1,30 @@
+.family-island-card {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-top: 7px solid var(--island-color);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-small);
+}
+
+.family-island-card__header {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--space-md);
+}
+
+.family-island-card__dot {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin-top: 0.45rem;
+  background: var(--island-color);
+  border-radius: 999px;
+}
+
+.family-island-card__people {
+  display: grid;
+  gap: var(--space-sm);
+}

@@ -1,0 +1,34 @@
+---
+import ParticipantCard from "@/components/ParticipantCard/ParticipantCard.astro";
+import "./FamilyIslandCard.css";
+
+interface Participant {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  active?: boolean;
+  preferredChannel?: string;
+}
+
+interface Props {
+  name: string;
+  color?: string | null;
+  description?: string | null;
+  participants: Participant[];
+}
+
+const { name, color = "#d6a84f", description, participants } = Astro.props;
+---
+
+<section class="family-island-card" style={`--island-color: ${color}`}>
+  <header class="family-island-card__header">
+    <span class="family-island-card__dot" aria-hidden="true"></span>
+    <div>
+      <h2>{name}</h2>
+      {description && <p>{description}</p>}
+    </div>
+  </header>
+  <div class="family-island-card__people">
+    {participants.map((participant) => <ParticipantCard {...participant} />)}
+  </div>
+</section>

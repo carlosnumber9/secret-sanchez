@@ -1,0 +1,18 @@
+---
+import Button from "@/components/Button/Button.astro";
+import DeliveryStatusPanel from "@/components/react/DeliveryStatusPanel/DeliveryStatusPanel";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { demoDeliveries } from "@/lib/demo";
+---
+
+<AdminLayout title="Envíos">
+  <div class="section-header">
+    <h1>Envíos</h1>
+    <p>Estado de mensajes por persona, con acciones sencillas para reintentar o copiar el enlace secreto.</p>
+  </div>
+  <div class="cluster">
+    <Button variant="secondary">Reintentar fallidos</Button>
+    <Button variant="ghost">Marcar manual</Button>
+  </div>
+  <DeliveryStatusPanel client:load deliveries={demoDeliveries} />
+</AdminLayout>

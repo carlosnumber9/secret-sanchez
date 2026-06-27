@@ -1,0 +1,26 @@
+---
+import StatusBadge from "@/components/StatusBadge/StatusBadge.astro";
+import "./ParticipantCard.css";
+
+interface Props {
+  name: string;
+  email?: string | null;
+  phone?: string | null;
+  active?: boolean;
+  preferredChannel?: string;
+}
+
+const { name, email, phone, active = true, preferredChannel = "email" } = Astro.props;
+const hasContact = Boolean(email || phone);
+---
+
+<article class="participant-card">
+  <div>
+    <h3>{name}</h3>
+    <p>{email || phone || "Falta contacto"}</p>
+  </div>
+  <div class="participant-card__badges">
+    <StatusBadge tone={active ? "ok" : "neutral"}>{active ? "Activo" : "Inactivo"}</StatusBadge>
+    <StatusBadge tone={hasContact ? "ok" : "warning"}>{hasContact ? preferredChannel : "Pendiente"}</StatusBadge>
+  </div>
+</article>

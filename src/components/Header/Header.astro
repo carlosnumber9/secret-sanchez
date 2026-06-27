@@ -1,0 +1,32 @@
+---
+import "./Header.css";
+
+const links = [
+  { href: "/inicio", label: "Inicio" },
+  { href: "/familia", label: "Familia" },
+  { href: "/sorteo", label: "Sorteo" },
+  { href: "/envios", label: "Envíos" }
+];
+const current = Astro.url.pathname;
+---
+
+<header class="header">
+  <div class="header__inner page-shell">
+    <a class="header__brand" href="/inicio" aria-label="Secret Sánchez">
+      <span class="header__mark">S</span>
+      <span>
+        <strong>Secret Sánchez</strong>
+        <small>Reyes en familia</small>
+      </span>
+    </a>
+    <nav class="header__nav" aria-label="Navegación principal">
+      {
+        links.map((link) => (
+          <a class:list={["header__link", current === link.href && "header__link--active"]} href={link.href}>
+            {link.label}
+          </a>
+        ))
+      }
+    </nav>
+  </div>
+</header>

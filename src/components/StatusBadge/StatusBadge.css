@@ -1,0 +1,30 @@
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 0.35rem 0.7rem;
+  border-radius: 999px;
+  font-size: 0.92rem;
+  font-weight: 800;
+}
+
+.status-badge--ok {
+  color: #174b34;
+  background: #dff3e8;
+}
+
+.status-badge--warning {
+  color: #6c4812;
+  background: #fff0cb;
+}
+
+.status-badge--danger {
+  color: #7f1d1d;
+  background: #f9d8d0;
+}
+
+.status-badge--neutral {
+  color: var(--color-muted);
+  background: #f4eadb;
+}

@@ -1,0 +1,38 @@
+body {
+  font-family: var(--font-body);
+  color: var(--color-ink);
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+h1,
+h2,
+.display-text {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+h1 {
+  font-size: clamp(2.25rem, 5vw, 4.5rem);
+  line-height: 0.98;
+}
+
+h2 {
+  font-size: clamp(1.75rem, 3vw, 2.6rem);
+  line-height: 1.05;
+}
+
+h3 {
+  font-size: 1.15rem;
+  line-height: 1.25;
+}
+
+p {
+  color: var(--color-muted);
+  line-height: 1.65;
+}

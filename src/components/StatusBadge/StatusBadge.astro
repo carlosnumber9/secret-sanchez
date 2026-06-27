@@ -1,0 +1,13 @@
+---
+import "./StatusBadge.css";
+
+interface Props {
+  tone?: "ok" | "warning" | "danger" | "neutral";
+}
+
+const { tone = "neutral" } = Astro.props;
+---
+
+<span class={`status-badge status-badge--${tone}`}>
+  <slot />
+</span>

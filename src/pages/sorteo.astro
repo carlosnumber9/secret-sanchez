@@ -1,0 +1,62 @@
+---
+import Card from "@/components/Card/Card.astro";
+import StatusBadge from "@/components/StatusBadge/StatusBadge.astro";
+import DrawGenerator from "@/components/react/DrawGenerator/DrawGenerator";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { demoGroup, getDemoStats } from "@/lib/demo";
+
+const stats = getDemoStats();
+---
+
+<AdminLayout title="Sorteo">
+  <div class="section-header">
+    <h1>Sorteo</h1>
+    <p>Un botón grande, reglas claras y sin mostrar asignaciones completas para no estropear la sorpresa.</p>
+  </div>
+
+  <section class="two-column">
+    <div class="stack">
+      <DrawGenerator client:load groupId={demoGroup.id} participantCount={stats.participantCount} />
+      <Card>
+        <div class="stack">
+          <h2>Después de repartir</h2>
+          <p>La app genera un token secreto por participante, guarda solo el hash y prepara los mensajes.</p>
+          <div class="cluster">
+            <StatusBadge tone="neutral">Emails con Resend</StatusBadge>
+            <StatusBadge tone="neutral">WhatsApp preparado</StatusBadge>
+          </div>
+        </div>
+      </Card>
+    </div>
+
+    <Card tone="warm">
+      <div class="stack">
+        <h2>Reglas activas</h2>
+        <ul class="rules-list">
+          <li>Nadie se regala a sí mismo.</li>
+          <li>Nadie regala dentro de su núcleo familiar.</li>
+          <li>Todos reciben un regalo.</li>
+          <li>Se respetan exclusiones manuales.</li>
+        </ul>
+      </div>
+    </Card>
+  </section>
+</AdminLayout>
+
+<style>
+  .rules-list {
+    display: grid;
+    gap: var(--space-md);
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .rules-list li {
+    padding: var(--space-md);
+    background: rgba(255, 255, 255, 0.76);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-weight: 800;
+  }
+</style>

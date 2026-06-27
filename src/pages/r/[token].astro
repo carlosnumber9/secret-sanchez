@@ -1,0 +1,63 @@
+---
+import RevealGift from "@/components/react/RevealGift/RevealGift";
+import PublicRevealLayout from "@/layouts/PublicRevealLayout.astro";
+import { isDatabaseConfigured } from "@/lib/env";
+import { hashRevealToken } from "@/lib/tokens";
+
+const token = Astro.params.token ?? "";
+let reveal = {
+  giverName: "Juan",
+  receiverName: "Irene",
+  alreadyOpened: false,
+  found: token === "demo"
+};
+
+if (token && token !== "demo" && isDatabaseConfigured()) {
+  const { getAssignmentByTokenHash, markAssignmentOpened } = await import("@/db/queries/assignments");
+  const assignment = await getAssignmentByTokenHash(hashRevealToken(token));
+  if (assignment?.giver && assignment.receiver) {
+    reveal = {
+      giverName: assignment.giver.name,
+      receiverName: assignment.receiver.name,
+      alreadyOpened: Boolean(assignment.assignment.openedAt),
+      found: true
+    };
+    if (!assignment.assignment.openedAt) {
+      await markAssignmentOpened(assignment.assignment.id);
+    }
+  }
+}
+---
+
+<PublicRevealLayout title="Tu regalo secreto">
+  {
+    reveal.found ? (
+      <RevealGift
+        client:load
+        giverName={reveal.giverName}
+        receiverName={reveal.receiverName}
+        alreadyOpened={reveal.alreadyOpened}
+      />
+    ) : (
+      <section class="missing-token">
+        <h1>Este enlace no parece válido</h1>
+        <p>Puede que el enlace esté incompleto o que el sorteo se haya regenerado. Pide ayuda al organizador.</p>
+      </section>
+    )
+  }
+</PublicRevealLayout>
+
+<style>
+  .missing-token {
+    display: grid;
+    min-height: min(620px, calc(100vh - 64px));
+    place-content: center;
+    gap: var(--space-lg);
+    padding: var(--space-xl);
+    text-align: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-soft);
+  }
+</style>

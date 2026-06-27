@@ -1,0 +1,72 @@
+.draw-generator {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: var(--space-lg);
+  align-items: center;
+  padding: var(--space-xl);
+  background: linear-gradient(135deg, #fff 0%, #fff1d2 100%);
+  border: 1px solid rgba(214, 168, 79, 0.5);
+  border-radius: var(--radius-lg);
+  box-shadow: var(--shadow-soft);
+}
+
+.draw-generator__gift {
+  display: grid;
+  width: 76px;
+  height: 76px;
+  place-items: center;
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+  border-radius: 20px;
+  animation: ribbon-sway 2.8s ease-in-out infinite;
+}
+
+.draw-generator__content {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.draw-generator__count {
+  font-weight: 800;
+  color: var(--color-green);
+}
+
+.draw-generator__actions {
+  display: grid;
+  gap: var(--space-sm);
+}
+
+.draw-generator__actions button,
+.draw-generator__actions a {
+  display: inline-flex;
+  min-height: 58px;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-sm);
+  padding-inline: 1.2rem;
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 850;
+}
+
+.draw-generator__actions button {
+  color: white;
+  background: var(--color-primary);
+}
+
+.draw-generator__actions button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
+.draw-generator__actions a {
+  color: var(--color-primary-dark);
+  background: var(--color-primary-soft);
+}
+
+@media (max-width: 780px) {
+  .draw-generator {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,0 +1,13 @@
+---
+import "./Card.css";
+
+interface Props {
+  tone?: "plain" | "warm" | "accent";
+}
+
+const { tone = "plain" } = Astro.props;
+---
+
+<section class={`card card--${tone}`}>
+  <slot />
+</section>

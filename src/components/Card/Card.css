@@ -1,0 +1,16 @@
+.card {
+  padding: var(--space-lg);
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  box-shadow: var(--shadow-small);
+}
+
+.card--warm {
+  background: var(--color-surface-warm);
+}
+
+.card--accent {
+  background: linear-gradient(135deg, #fff 0%, #fff4dd 100%);
+  border-color: rgba(214, 168, 79, 0.55);
+}

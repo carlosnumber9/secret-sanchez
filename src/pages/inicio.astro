@@ -1,0 +1,66 @@
+---
+import Button from "@/components/Button/Button.astro";
+import Card from "@/components/Card/Card.astro";
+import StatusBadge from "@/components/StatusBadge/StatusBadge.astro";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { demoGroup, getDemoStats } from "@/lib/demo";
+
+const stats = getDemoStats();
+---
+
+<AdminLayout title="Inicio">
+  <section class="hero-panel">
+    <div class="section-header">
+      <p>Preparando Reyes sin líos</p>
+      <h1>{demoGroup.name}</h1>
+      <p>
+        Todo lo importante a la vista: familia, contactos, sorteo y mensajes secretos para cada persona.
+      </p>
+    </div>
+    <div class="hero-kpis">
+      <div class="hero-kpi">
+        <span>Familia</span>
+        <strong>Creada</strong>
+      </div>
+      <div class="hero-kpi">
+        <span>Participantes</span>
+        <strong>{stats.participantCount}</strong>
+      </div>
+      <div class="hero-kpi">
+        <span>Sin contacto</span>
+        <strong>{stats.missingContactCount}</strong>
+      </div>
+      <div class="hero-kpi">
+        <span>Sorteo</span>
+        <strong>No realizado</strong>
+      </div>
+    </div>
+    <div class="cluster">
+      <Button href="/familia" size="large">Preparar sorteo</Button>
+      <Button href="/sorteo" variant="secondary" size="large">Ir al reparto</Button>
+    </div>
+  </section>
+
+  <section class="two-column">
+    <Card>
+      <div class="stack">
+        <div class="section-header">
+          <h2>Qué falta</h2>
+          <p>Juan debería ver siempre el siguiente paso claro, sin tener que buscar entre opciones.</p>
+        </div>
+        <div class="cluster">
+          <StatusBadge tone="ok">Familia creada</StatusBadge>
+          <StatusBadge tone="warning">{stats.missingContactCount} sin contacto</StatusBadge>
+          <StatusBadge tone="neutral">Sorteo pendiente</StatusBadge>
+        </div>
+      </div>
+    </Card>
+    <Card tone="warm">
+      <div class="stack">
+        <h2>Enlace de prueba</h2>
+        <p>Para comprobar la experiencia familiar sin login, abre la revelación demo.</p>
+        <Button href="/r/demo" variant="secondary">Ver regalo secreto</Button>
+      </div>
+    </Card>
+  </section>
+</AdminLayout>

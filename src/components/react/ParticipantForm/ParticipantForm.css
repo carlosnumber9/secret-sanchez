@@ -1,0 +1,14 @@
+.participant-form {
+  display: grid;
+  gap: var(--space-md);
+}
+
+.participant-form__button {
+  min-height: 54px;
+  color: white;
+  background: var(--color-primary);
+  border: 0;
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: 800;
+}

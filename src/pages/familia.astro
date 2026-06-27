@@ -1,0 +1,16 @@
+---
+import FamilyEditor from "@/components/react/FamilyEditor/FamilyEditor";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { demoIslands } from "@/lib/demo";
+---
+
+<AdminLayout title="Familia">
+  <div class="section-header">
+    <h1>Familia</h1>
+    <p>
+      Núcleos familiares claros, tarjetas grandes y contactos visibles. La regla principal del sorteo usará estos
+      núcleos para evitar regalos dentro de casa.
+    </p>
+  </div>
+  <FamilyEditor client:load initialIslands={demoIslands} />
+</AdminLayout>
