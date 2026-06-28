@@ -1,5 +1,6 @@
 import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "@/lib/env";
+import { serverRealtimeTransport } from "@/lib/supabase/realtime";
 
 export async function loginWithMagicLink(email: string) {
   const env = getEnv();
@@ -14,6 +15,9 @@ export async function loginWithMagicLink(email: string) {
     auth: {
       persistSession: true,
       autoRefreshToken: true
+    },
+    realtime: {
+      transport: serverRealtimeTransport
     }
   });
 

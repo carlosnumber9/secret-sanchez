@@ -1,6 +1,7 @@
 import { createServerClient } from "@supabase/ssr";
 import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "../env";
+import { serverRealtimeTransport } from "./realtime";
 
 type AstroCookies = {
   get: (name: string) => { value: string } | undefined;
@@ -15,6 +16,9 @@ export function createSupabaseServerClient(cookies: AstroCookies) {
   }
 
   return createServerClient(env.publicSupabaseUrl, env.publicSupabaseAnonKey, {
+    realtime: {
+      transport: serverRealtimeTransport
+    },
     cookies: {
       get(name) {
         return cookies.get(name)?.value;
@@ -39,6 +43,9 @@ export function createSupabaseAdminClient() {
     auth: {
       persistSession: false,
       autoRefreshToken: false
+    },
+    realtime: {
+      transport: serverRealtimeTransport
     }
   });
 }

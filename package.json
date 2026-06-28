@@ -25,6 +25,7 @@
     "react": "latest",
     "react-dom": "latest",
     "resend": "latest",
+    "ws": "^8.21.0",
     "zod": "latest"
   },
   "devDependencies": {
@@ -32,6 +33,7 @@
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
+    "@types/ws": "^8.18.1",
     "drizzle-kit": "latest",
     "tsx": "^4.22.4",
     "typescript": "latest"
