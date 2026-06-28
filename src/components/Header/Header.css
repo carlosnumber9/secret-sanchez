@@ -27,8 +27,13 @@
   height: 42px;
   place-items: center;
   color: white;
-  background: var(--color-primary);
-  border-radius: 12px;
+  background: var(--surface-clay-primary);
+  border-radius: 14px;
+  box-shadow:
+    7px 8px 16px rgba(83, 45, 20, 0.22),
+    -4px -5px 12px rgba(255, 255, 255, 0.62),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.24),
+    inset -2px -3px 8px rgba(47, 36, 29, 0.16);
   font-family: var(--font-display);
   font-size: 1.4rem;
   font-weight: 800;
@@ -51,12 +56,19 @@
   color: var(--color-muted);
   border-radius: 999px;
   font-weight: 750;
+  transition:
+    background 160ms ease,
+    box-shadow 160ms ease,
+    color 160ms ease;
 }
 
 .header__link--active,
 .header__link:hover {
   color: var(--color-primary-dark);
-  background: var(--color-primary-soft);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.74), transparent 36%),
+    linear-gradient(145deg, var(--color-primary-soft), #fff3df);
+  box-shadow: var(--shadow-clay-small);
 }
 
 @media (max-width: 720px) {

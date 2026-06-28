@@ -5,26 +5,38 @@
   min-height: 32px;
   padding: 0.35rem 0.7rem;
   border-radius: 999px;
+  box-shadow:
+    5px 6px 13px rgba(83, 45, 20, 0.12),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.58),
+    inset -1px -2px 5px rgba(83, 45, 20, 0.055);
   font-size: 0.92rem;
   font-weight: 800;
 }
 
 .status-badge--ok {
   color: #174b34;
-  background: #dff3e8;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.68), transparent 36%),
+    #dff3e8;
 }
 
 .status-badge--warning {
   color: #6c4812;
-  background: #fff0cb;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.68), transparent 36%),
+    #fff0cb;
 }
 
 .status-badge--danger {
   color: #7f1d1d;
-  background: #f9d8d0;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.68), transparent 36%),
+    #f9d8d0;
 }
 
 .status-badge--neutral {
   color: var(--color-muted);
-  background: #f4eadb;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.68), transparent 36%),
+    #f4eadb;
 }

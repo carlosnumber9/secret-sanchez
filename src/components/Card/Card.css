@@ -1,16 +1,30 @@
 .card {
+  position: relative;
   padding: var(--space-lg);
-  background: var(--color-surface);
+  overflow: hidden;
+  background: var(--surface-clay);
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-small);
+  border-radius: 20px;
+  box-shadow: var(--shadow-clay-small);
+}
+
+.card::before {
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  content: "";
+  border-radius: inherit;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.78),
+    inset -8px -10px 18px rgba(83, 45, 20, 0.035);
 }
 
 .card--warm {
-  background: var(--color-surface-warm);
+  background: var(--surface-clay-warm);
 }
 
 .card--accent {
-  background: linear-gradient(135deg, #fff 0%, #fff4dd 100%);
+  background: var(--surface-clay-accent);
   border-color: rgba(214, 168, 79, 0.55);
+  box-shadow: var(--shadow-clay);
 }

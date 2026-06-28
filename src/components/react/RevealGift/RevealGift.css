@@ -11,7 +11,11 @@
   background-position: center;
   background-size: cover;
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
+  box-shadow:
+    18px 22px 50px rgba(83, 45, 20, 0.24),
+    -12px -12px 30px rgba(255, 255, 255, 0.48),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.34),
+    inset -3px -4px 12px rgba(47, 36, 29, 0.12);
   color: white;
 }
 
@@ -21,10 +25,16 @@
   height: 160px;
   place-items: center;
   color: var(--color-primary-dark);
-  background: #fff8ec;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.88), transparent 34%),
+    linear-gradient(145deg, #fff8ec, #fff3df);
   border: 8px solid var(--color-gold);
   border-radius: 32px;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.24);
+  box-shadow:
+    18px 22px 48px rgba(0, 0, 0, 0.24),
+    -10px -10px 24px rgba(255, 255, 255, 0.32),
+    inset 2px 2px 0 rgba(255, 255, 255, 0.78),
+    inset -4px -5px 12px rgba(83, 45, 20, 0.1);
   transition: transform 260ms ease;
 }
 
@@ -49,12 +59,28 @@
   min-height: 64px;
   padding-inline: 1.8rem;
   color: var(--color-primary-dark);
-  background: #fff8ec;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.86), transparent 36%),
+    linear-gradient(145deg, #fff8ec, #fff3df);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 14px;
+  box-shadow: var(--shadow-clay-small);
   cursor: pointer;
   font-size: 1.08rem;
   font-weight: 900;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.reveal-gift__copy button:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-clay);
+}
+
+.reveal-gift__copy button:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: var(--shadow-clay-pressed);
 }
 
 .reveal-gift__name {

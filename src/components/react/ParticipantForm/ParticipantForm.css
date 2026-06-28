@@ -6,9 +6,27 @@
 .participant-form__button {
   min-height: 54px;
   color: white;
-  background: var(--color-primary);
+  background: var(--surface-clay-primary);
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 14px;
+  box-shadow:
+    10px 12px 24px rgba(184, 50, 50, 0.3),
+    -6px -7px 18px rgba(255, 255, 255, 0.46),
+    inset 1px 1px 0 rgba(255, 255, 255, 0.24),
+    inset -2px -3px 8px rgba(47, 36, 29, 0.16);
   cursor: pointer;
   font-weight: 800;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.participant-form__button:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-clay);
+}
+
+.participant-form__button:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: var(--shadow-clay-pressed);
 }

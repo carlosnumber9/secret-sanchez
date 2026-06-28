@@ -1,13 +1,26 @@
 .draw-generator {
+  position: relative;
   display: grid;
   grid-template-columns: auto minmax(0, 1fr) auto;
   gap: var(--space-lg);
   align-items: center;
   padding: var(--space-xl);
-  background: linear-gradient(135deg, #fff 0%, #fff1d2 100%);
+  overflow: hidden;
+  background: var(--surface-clay-accent);
   border: 1px solid rgba(214, 168, 79, 0.5);
   border-radius: var(--radius-lg);
-  box-shadow: var(--shadow-soft);
+  box-shadow: var(--shadow-clay);
+}
+
+.draw-generator::before {
+  position: absolute;
+  inset: 1px;
+  pointer-events: none;
+  content: "";
+  border-radius: inherit;
+  box-shadow:
+    inset 1px 1px 0 rgba(255, 255, 255, 0.78),
+    inset -10px -12px 22px rgba(83, 45, 20, 0.045);
 }
 
 .draw-generator__gift {
@@ -16,8 +29,11 @@
   height: 76px;
   place-items: center;
   color: var(--color-primary-dark);
-  background: var(--color-primary-soft);
-  border-radius: 20px;
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.74), transparent 36%),
+    linear-gradient(145deg, var(--color-primary-soft), #fff3df);
+  border-radius: 24px;
+  box-shadow: var(--shadow-clay-small);
   animation: ribbon-sway 2.8s ease-in-out infinite;
 }
 
@@ -45,14 +61,30 @@
   gap: var(--space-sm);
   padding-inline: 1.2rem;
   border: 0;
-  border-radius: var(--radius-sm);
+  border-radius: 14px;
+  box-shadow: var(--shadow-clay-small);
   cursor: pointer;
   font-weight: 850;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease;
+}
+
+.draw-generator__actions button:hover,
+.draw-generator__actions a:hover {
+  transform: translateY(-3px) scale(1.01);
+  box-shadow: var(--shadow-clay);
+}
+
+.draw-generator__actions button:active,
+.draw-generator__actions a:active {
+  transform: translateY(1px) scale(0.985);
+  box-shadow: var(--shadow-clay-pressed);
 }
 
 .draw-generator__actions button {
   color: white;
-  background: var(--color-primary);
+  background: var(--surface-clay-primary);
 }
 
 .draw-generator__actions button:disabled {
@@ -62,7 +94,9 @@
 
 .draw-generator__actions a {
   color: var(--color-primary-dark);
-  background: var(--color-primary-soft);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.74), transparent 36%),
+    linear-gradient(145deg, var(--color-primary-soft), #fff3df);
 }
 
 @media (max-width: 780px) {

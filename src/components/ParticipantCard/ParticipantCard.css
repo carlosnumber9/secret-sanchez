@@ -4,9 +4,12 @@
   justify-content: space-between;
   gap: var(--space-md);
   padding: var(--space-md);
-  background: rgba(255, 255, 255, 0.76);
+  background:
+    radial-gradient(circle at 24% 18%, rgba(255, 255, 255, 0.82), transparent 36%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.92), rgba(255, 243, 223, 0.8));
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
+  border-radius: 14px;
+  box-shadow: var(--shadow-clay-small);
 }
 
 .participant-card h3 {
