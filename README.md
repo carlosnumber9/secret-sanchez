@@ -31,6 +31,7 @@ npm run build
 npm run preview
 npm run db:generate
 npm run db:migrate
+npm run db:push
 npm run db:studio
 ```
 
@@ -39,6 +40,14 @@ npm run db:studio
 `PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY` se usan en cliente y servidor.
 
 `SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `RESEND_API_KEY` y `KAPSO_API_KEY` son solo de servidor.
+
+Para Drizzle con Supabase Cloud, define `DATABASE_URL` con la cadena de conexión Postgres del proyecto:
+
+```bash
+DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres
+```
+
+En despliegues serverless usa el Transaction pooler de Supabase. Con la variable configurada, `npm run db:generate` crea migraciones desde `src/db/schema.ts`, `npm run db:migrate` ejecuta las migraciones pendientes y `npm run db:push` sincroniza el schema directamente contra la base.
 
 ## Rutas
 
