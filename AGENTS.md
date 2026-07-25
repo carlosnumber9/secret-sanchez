@@ -14,6 +14,15 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - Resend esta preparado para email.
 - Kapso esta preparado para WhatsApp en una fase posterior.
 
+## Documentacion
+
+- `docs/README.md` es el indice y la fuente de verdad documental del proyecto.
+- Actualizar las docs en el mismo cambio que modifica el comportamiento descrito.
+- Distinguir entre comportamiento implementado, parcial, demo, previsto y por decidir.
+- Los commits usan `<type>(<scope opcional>): <descripcion en ingles y pasado simple>`.
+- Ejemplo: `feat: Added Whatsapp integration over participants`.
+- La convencion completa vive en `docs/git-workflow.md`.
+
 ## Stack
 
 - Astro

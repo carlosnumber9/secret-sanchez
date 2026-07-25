@@ -9,6 +9,7 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
         <p class="muted">Acceso seguro</p>
         <h1>Confirmando tu sesión...</h1>
         <p id="auth-callback-message">Estamos validando el enlace de Supabase.</p>
+        <p class="auth-callback__debug" id="auth-callback-debug"></p>
       </section>
     </div>
   </main>
@@ -16,9 +17,14 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 
 <script>
   const message = document.querySelector<HTMLElement>("#auth-callback-message");
+  const debug = document.querySelector<HTMLElement>("#auth-callback-debug");
 
   function setMessage(text: string) {
     if (message) message.textContent = text;
+  }
+
+  function setDebug(text: string) {
+    if (debug) debug.textContent = text;
   }
 
   function getSafeNext(value: string | null) {
@@ -26,9 +32,15 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
     return value;
   }
 
+  function getHashParams() {
+    const hash = window.location.hash.replace(/^#/, "");
+    const queryStart = hash.indexOf("?");
+    return new URLSearchParams(queryStart >= 0 ? hash.slice(queryStart + 1) : hash);
+  }
+
   async function confirmSession() {
     const searchParams = new URLSearchParams(window.location.search);
-    const hashParams = new URLSearchParams(window.location.hash.replace(/^#/, ""));
+    const hashParams = getHashParams();
     const error = searchParams.get("error_description") || hashParams.get("error_description");
 
     if (error) {
@@ -38,11 +50,21 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 
     const next = getSafeNext(searchParams.get("next") || hashParams.get("next"));
     const code = searchParams.get("code");
+    const tokenHash = searchParams.get("token_hash") || hashParams.get("token_hash");
+    const type = searchParams.get("type") || hashParams.get("type");
     const accessToken = hashParams.get("access_token");
     const refreshToken = hashParams.get("refresh_token");
+    const detected = [
+      code ? "code" : null,
+      tokenHash ? "token_hash" : null,
+      accessToken ? "access_token" : null,
+      refreshToken ? "refresh_token" : null,
+      type ? `type=${type}` : null
+    ].filter(Boolean);
 
-    if (!code && (!accessToken || !refreshToken)) {
+    if (!code && !tokenHash && (!accessToken || !refreshToken)) {
       setMessage("El enlace no trae una sesión válida. Vuelve a pedir un enlace de acceso.");
+      setDebug(`Parámetros detectados: ${detected.join(", ") || "ninguno"}.`);
       return;
     }
 
@@ -51,6 +73,8 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         code,
+        tokenHash,
+        type,
         accessToken,
         refreshToken
       })
@@ -60,6 +84,7 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 
     if (!response.ok || !payload?.ok) {
       setMessage(payload?.message ?? "No he podido confirmar la sesión. Vuelve a pedir un enlace de acceso.");
+      setDebug(`Parámetros detectados: ${detected.join(", ") || "ninguno"}.`);
       return;
     }
 
@@ -89,5 +114,11 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     box-shadow: var(--shadow-soft);
+  }
+
+  .auth-callback__debug {
+    margin: 0;
+    color: var(--color-muted);
+    font-size: 0.9rem;
   }
 </style>

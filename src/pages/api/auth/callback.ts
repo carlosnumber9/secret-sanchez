@@ -1,4 +1,5 @@
 import type { APIRoute } from "astro";
+import type { EmailOtpType } from "@supabase/supabase-js";
 import { z } from "zod";
 import { createSupabaseServerClient } from "@/lib/supabase/server";
 
@@ -6,9 +7,11 @@ const schema = z
   .object({
     accessToken: z.string().optional(),
     refreshToken: z.string().optional(),
-    code: z.string().optional()
+    code: z.string().optional(),
+    tokenHash: z.string().optional(),
+    type: z.string().optional()
   })
-  .refine((value) => Boolean(value.code || (value.accessToken && value.refreshToken)), {
+  .refine((value) => Boolean(value.code || value.tokenHash || (value.accessToken && value.refreshToken)), {
     message: "Faltan credenciales de Supabase."
   });
 
@@ -24,10 +27,15 @@ export const POST: APIRoute = async ({ cookies, request }) => {
 
   const { data, error } = parsed.data.code
     ? await supabase.auth.exchangeCodeForSession(parsed.data.code)
-    : await supabase.auth.setSession({
-        access_token: parsed.data.accessToken ?? "",
-        refresh_token: parsed.data.refreshToken ?? ""
-      });
+    : parsed.data.tokenHash
+      ? await supabase.auth.verifyOtp({
+          token_hash: parsed.data.tokenHash,
+          type: (parsed.data.type ?? "magiclink") as EmailOtpType
+        })
+      : await supabase.auth.setSession({
+          access_token: parsed.data.accessToken ?? "",
+          refresh_token: parsed.data.refreshToken ?? ""
+        });
 
   if (error || !data.session) {
     return Response.json(

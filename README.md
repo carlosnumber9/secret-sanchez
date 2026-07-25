@@ -1,19 +1,15 @@
 # Secret Sánchez
 
-App familiar de Amigo Invisible para Reyes, pensada para que Juan pueda organizar el sorteo sin fricción.
+Secret Sánchez es una aplicación familiar de Amigo Invisible para Reyes. Permite preparar la familia, aplicar
+restricciones al sorteo y entregar a cada participante un enlace privado para descubrir a quién hace el regalo.
 
-## Stack
+El proyecto está construido con Astro en modo SSR, React Islands y TypeScript. Usa Supabase para autenticación y
+Postgres, Drizzle como ORM, Resend para email y está preparado para incorporar WhatsApp mediante Kapso. El despliegue
+objetivo es Vercel.
 
-- Astro con SSR en Vercel
-- React Islands para edición interactiva
-- TypeScript
-- CSS normal por componente, sin Tailwind
-- Supabase Cloud para Auth y Postgres
-- Drizzle ORM
-- Resend para email
-- Kapso preparado para WhatsApp en una fase posterior
+## Puesta en marcha
 
-## Desarrollo local
+Necesitas Node.js, un proyecto de Supabase y, para disponer de todas las integraciones, cuentas de Resend y Kapso.
 
 ```bash
 npm install
@@ -21,43 +17,20 @@ cp .env.example .env
 npm run dev
 ```
 
-El entorno local apunta a Supabase Cloud. No hace falta Supabase local ni Docker para el MVP.
-
-## Scripts
+Configura en `.env` las URLs y claves de tus propios servicios. Para crear las tablas en Postgres puedes generar y
+ejecutar las migraciones con:
 
 ```bash
-npm run dev
-npm run build
-npm run preview
 npm run db:generate
 npm run db:migrate
-npm run db:push
-npm run db:studio
 ```
 
-## Variables
-
-`PUBLIC_SUPABASE_URL` y `PUBLIC_SUPABASE_ANON_KEY` se usan en cliente y servidor.
-
-`SUPABASE_SERVICE_ROLE_KEY`, `DATABASE_URL`, `RESEND_API_KEY` y `KAPSO_API_KEY` son solo de servidor.
-
-Para Drizzle con Supabase Cloud, define `DATABASE_URL` con la cadena de conexión Postgres del proyecto:
+Valida el proyecto antes de desplegar:
 
 ```bash
-DATABASE_URL=postgresql://postgres.PROJECT_REF:PASSWORD@aws-0-region.pooler.supabase.com:6543/postgres
+npm run build
 ```
 
-En despliegues serverless usa el Transaction pooler de Supabase. Con la variable configurada, `npm run db:generate` crea migraciones desde `src/db/schema.ts`, `npm run db:migrate` ejecuta las migraciones pendientes y `npm run db:push` sincroniza el schema directamente contra la base.
+## Documentación
 
-## Rutas
-
-- `/login`: acceso de organizador por Magic Link.
-- `/inicio`: estado general del sorteo.
-- `/familia`: gestión de núcleos y familiares.
-- `/sorteo`: reglas y generación del reparto.
-- `/envios`: estado de mensajes.
-- `/r/[token]`: revelación pública sin login.
-
-## Estado del MVP
-
-La app arranca con datos demo si faltan variables de entorno, para poder iterar el diseño desde el primer minuto. Al configurar Supabase Cloud y ejecutar migraciones, las capas de Drizzle, Auth, tokens, sorteo y notificaciones quedan listas para conectarse a datos reales.
+La documentación funcional, técnica y operativa está en [`docs/`](./docs/README.md).

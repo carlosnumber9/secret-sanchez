@@ -31,22 +31,34 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 </BaseLayout>
 
 <script>
+  import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
+
   const form = document.querySelector<HTMLFormElement>("#magic-link-form");
   const message = document.querySelector<HTMLElement>("#login-message");
+  const supabase = createSupabaseBrowserClient();
 
   if (form && message) {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = new FormData(form);
+      const email = data.get("email");
       message.textContent = "Enviando enlace...";
 
-      const response = await fetch("/api/auth/magic-link", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: data.get("email") })
+      if (typeof email !== "string") {
+        message.textContent = "Escribe un email válido.";
+        return;
+      }
+
+      const { error } = await supabase.auth.signInWithOtp({
+        email,
+        options: {
+          emailRedirectTo: `${window.location.origin}/auth/callback?next=/inicio`
+        }
       });
-      const payload = (await response.json()) as { message: string };
-      message.textContent = payload.message;
+
+      message.textContent = error
+        ? error.message
+        : "Te hemos enviado un enlace de acceso. Revisa tu correo.";
     });
   }
 </script>
