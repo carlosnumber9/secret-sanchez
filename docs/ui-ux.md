@@ -10,6 +10,11 @@ Los contenedores son la única adaptación deliberada al preset: tarjetas, panel
 colores semánticos con transparencia y `backdrop-filter`. Los tokens de vidrio viven en `src/styles/tokens.css`; el
 resto de controles debe mantenerse alineado con el preset.
 
+El layout base incorpora un regalo 3D ambiental de Kenney. Se mantiene desenfocado y con baja opacidad en una capa
+fija situada siempre detrás de la interfaz. Rota y rebota por el viewport, puede salir parcialmente de pantalla y no
+captura interacción. La animación se detiene cuando la pestaña queda oculta y se muestra estática si el sistema
+solicita movimiento reducido.
+
 ## Navegación
 
 La administración dispone de cuatro destinos:
@@ -125,5 +130,7 @@ Las mutaciones principales implementan carga, feedback y prevención de doble en
 - `public/favicon.svg` es la fuente vectorial del icono.
 - La cabecera reutiliza esa fuente vectorial como marca del producto.
 - El layout base publica favicon PNG, `apple-touch-icon` y `site.webmanifest`.
+- El fondo 3D reutiliza `present-a-cube.glb` y su textura del Holiday Kit de Kenney bajo licencia CC0; la procedencia
+  queda registrada junto al asset.
 - El manifest incluye iconos de 192 y 512 píxeles, además de una variante `maskable`, para accesos directos e
   instalación desde navegadores móviles compatibles.

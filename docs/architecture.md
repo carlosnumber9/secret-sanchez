@@ -25,6 +25,7 @@ flowchart LR
 - **TypeScript:** contratos y tipos de aplicación.
 - **UI:** shadcn/ui con preset `base-rhea`, Base UI y Tailwind CSS 4 mediante el plugin de Vite.
 - **CSS:** tema y utilidades globales con CSS específico para layout y contenedores translúcidos.
+- **Three.js:** escena WebGL cliente del fondo 3D ambiental, cargada desde el layout base.
 - **Supabase Auth:** Magic Link y sesión.
 - **Supabase Postgres:** persistencia relacional.
 - **Drizzle ORM:** schema y acceso tipado a la base.
@@ -40,6 +41,7 @@ flowchart LR
 - `src/pages`: páginas Astro y endpoints.
 - `src/layouts`: layouts base, administrativo y público.
 - `src/components`: componentes Astro.
+- `src/components/ThreeGiftBackground`: escena, carga del modelo y ciclo de vida del fondo 3D.
 - `src/components/ui`: componentes React generados por shadcn/ui.
 - `src/components/react`: estado e interacción cliente.
 - `src/styles`: tokens, tipografía, animaciones y utilidades.
