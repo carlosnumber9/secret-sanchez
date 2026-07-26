@@ -11,7 +11,9 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
     <div class="page-shell login-page">
       <section class="login-page__hero">
         <a class="login-page__brand" href="/" aria-label="Secret Sánchez">
-          <span class="login-page__brand-mark">S</span>
+          <span class="login-page__brand-mark" aria-hidden="true">
+            <img src="/favicon.svg" alt="" width="44" height="44" />
+          </span>
           <span>
             <strong>Secret Sánchez</strong>
             <small>Reyes en familia</small>
@@ -169,16 +171,16 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
   }
 
   .login-page__brand-mark {
-    display: grid;
     width: 44px;
     height: 44px;
-    place-items: center;
-    color: var(--primary);
-    background: var(--primary-foreground);
     border-radius: var(--radius-2xl);
-    font-family: var(--font-heading);
-    font-size: 1.25rem;
-    font-weight: 700;
+    overflow: hidden;
+  }
+
+  .login-page__brand-mark img {
+    display: block;
+    width: 100%;
+    height: 100%;
   }
 
   .login-page__brand strong,
