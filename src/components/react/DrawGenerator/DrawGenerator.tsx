@@ -1,3 +1,5 @@
+import { Button, buttonVariants } from "@/components/ui/button";
+import { cn } from "@/lib/utils";
 import { Gift, Send } from "lucide-react";
 import { useState } from "react";
 import "./DrawGenerator.css";
@@ -38,16 +40,25 @@ export default function DrawGenerator({ groupId, participantCount }: Props) {
       </div>
       <div className="draw-generator__content">
         <h2>Repartir amigo invisible</h2>
-        <p>{message}</p>
+        <p role="status" aria-live="polite">{message}</p>
         <p className="draw-generator__count">{participantCount} participantes activos preparados</p>
       </div>
       <div className="draw-generator__actions">
-        <button disabled={state === "loading"} type="button" onClick={generateDraw}>
+        <Button
+          className="min-h-11"
+          size="lg"
+          disabled={state === "loading"}
+          type="button"
+          onClick={generateDraw}
+        >
           <Gift size={22} />
           {state === "loading" ? "Repartiendo..." : "Repartir amigo invisible"}
-        </button>
+        </Button>
         {state === "done" && (
-          <a href="/envios">
+          <a
+            className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "min-h-11")}
+            href="/envios"
+          >
             <Send size={20} />
             Ver estado de envíos
           </a>

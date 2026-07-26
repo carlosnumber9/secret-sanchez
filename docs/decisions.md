@@ -6,7 +6,7 @@
 | --- | --- |
 | Producto | El MVP está orientado al Amigo Invisible familiar de Reyes organizado inicialmente por Juan. |
 | Frontend | Astro para páginas y React Islands para interacción. |
-| Estilos | CSS propio por componente y global; no Tailwind. |
+| Estilos | shadcn/ui `base-rhea` y Tailwind CSS 4; CSS propio para layout y contenedores translúcidos. |
 | Runtime | SSR con adapter de Vercel. |
 | Datos | Supabase Postgres con schema Drizzle. |
 | Auth | Magic Link de Supabase y allowlist `admin_users`. |
@@ -32,7 +32,7 @@
 | Permisos multiadministrador | Define propiedad y colaboración. |
 | Framework de pruebas | Habilita la estrategia de calidad. |
 | Lint y formato | Reduce divergencia de estilo. |
-| Design system final | Determina consistencia y coste de UI. |
+| Alcance final del catálogo UI | Determina qué componentes adicionales de shadcn deben incorporarse al MVP. |
 | Semántica de `delivered` y `opened` | Define webhooks y panel de envíos. |
 | Flujo definitivo de Kapso | Define plantillas, webhooks, coste y privacidad. |
 

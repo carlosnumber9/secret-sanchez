@@ -1,13 +1,22 @@
 ---
-import "./Card.css";
+import { Card as CardPrimitive, CardContent } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 interface Props {
   tone?: "plain" | "warm" | "accent";
+  class?: string;
 }
 
-const { tone = "plain" } = Astro.props;
+const { tone = "plain", class: className } = Astro.props;
+const toneClasses = {
+  plain: "bg-card/75 backdrop-blur-xl",
+  warm: "bg-secondary/70 backdrop-blur-xl",
+  accent: "bg-card/80 backdrop-blur-xl ring-primary/20"
+} as const;
 ---
 
-<section class={`card card--${tone}`}>
-  <slot />
-</section>
+<CardPrimitive className={cn(toneClasses[tone], "supports-[backdrop-filter]:bg-card/65", className)}>
+  <CardContent>
+    <slot />
+  </CardContent>
+</CardPrimitive>

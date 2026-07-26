@@ -13,7 +13,7 @@ const { title, eyebrow } = Astro.props;
 <BaseLayout title={`${title} | Secret Sánchez`}>
   <Header />
   <main>
-    <div class="page-shell stack">
+    <div class="page-shell page-stack">
       {eyebrow && <p class="muted">{eyebrow}</p>}
       <slot />
     </div>

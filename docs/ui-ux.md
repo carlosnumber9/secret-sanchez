@@ -2,12 +2,13 @@
 
 ## Dirección actual
 
-La interfaz usa una estética navideña cálida con superficies redondeadas, sombras de claymorphism, tipografía grande y
-acciones primarias muy visibles. La prioridad es que un organizador no técnico pueda completar el sorteo sin
-interpretar conceptos internos.
+La base visual implementada usa el preset shadcn `bgo6OSRWs` (`base-rhea`): paleta stone con primario rojo,
+tipografías Outfit y Noto Sans, radios amplios y componentes compactos basados en Base UI. La prioridad es que un
+organizador no técnico pueda completar el sorteo sin interpretar conceptos internos.
 
-Los criterios finales de design system siguen abiertos. Los tokens actuales en `src/styles/tokens.css` deben
-considerarse la base existente, no una especificación cerrada.
+Los contenedores son la única adaptación deliberada al preset: tarjetas, paneles, filas y cabecera usan los mismos
+colores semánticos con transparencia y `backdrop-filter`. Los tokens de vidrio viven en `src/styles/tokens.css`; el
+resto de controles debe mantenerse alineado con el preset.
 
 ## Navegación
 
@@ -71,12 +72,27 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 
 - Astro para contenido estático y estructura.
 - React solo para interacción y estado cliente.
-- CSS junto al componente cuando es específico.
-- Tokens globales para color, espacio, radio y sombra.
-- Lucide para iconografía React.
+- Tailwind CSS 4 mediante el plugin oficial de Vite para Astro.
+- shadcn/ui con configuración en `components.json` y componentes generados en `src/components/ui`.
+- Wrappers Astro existentes conectados a las variantes del preset para mantener una API estable en las páginas.
+- CSS junto al componente solo para layout o superficies translúcidas específicas.
+- Colores, tipografías, radios, controles e iconos Lucide definidos por el preset.
 
-Antes de crear un componente nuevo se debe comprobar si `Button`, `Card`, `StatusBadge` o los patrones existentes
-cubren el caso.
+Antes de crear un componente nuevo se debe comprobar si existe en `src/components/ui` o puede añadirse con el CLI de
+shadcn. `Button`, `Card` y `StatusBadge` conservan wrappers Astro para las páginas existentes.
+
+## Ritmo y composición
+
+- `page-shell` controla el ancho máximo y el gutter lateral fluido de todas las páginas.
+- `page-stack` separa cabecera de página, acciones y contenido principal; `stack` se reserva para contenido interno.
+- Las superficies usan `CardContent` o `--surface-padding`; no se inserta contenido directamente contra el borde de
+  una tarjeta.
+- Los formularios mantienen etiqueta, control, ayuda, acción y feedback en ese orden.
+- Las acciones primarias alcanzan al menos 40–44 px de altura y ocupan todo el ancho disponible en móvil cuando
+  compiten por espacio.
+- Las filas y paneles conservan un padding mínimo de 16 px en móvil y aumentan de forma fluida en escritorio.
+- La navegación móvil se desplaza horizontalmente en una sola línea para evitar saltos de altura impredecibles.
+- Los estados asíncronos deshabilitan su acción, exponen feedback textual y usan regiones `aria-live` cuando procede.
 
 ## Accesibilidad mínima
 
@@ -101,3 +117,13 @@ Cada bloque que cargue datos reales debe diseñar:
 - Acción en curso y prevención de doble envío.
 
 La UI demo actual no cubre todos estos estados.
+
+## Identidad visual e instalación
+
+- El icono implementado combina una caja de regalo crema con una cinta dorada en forma de interrogación sobre fondo
+  rojo. El regalo comunica la celebración y la interrogación representa el carácter anónimo del sorteo.
+- `public/favicon.svg` es la fuente vectorial del icono.
+- La cabecera reutiliza esa fuente vectorial como marca del producto.
+- El layout base publica favicon PNG, `apple-touch-icon` y `site.webmanifest`.
+- El manifest incluye iconos de 192 y 512 píxeles, además de una variante `maskable`, para accesos directos e
+  instalación desde navegadores móviles compatibles.

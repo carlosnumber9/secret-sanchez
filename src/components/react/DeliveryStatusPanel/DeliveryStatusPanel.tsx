@@ -1,3 +1,5 @@
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 import { Copy, Mail, MessageCircle, RefreshCw } from "lucide-react";
 import { useState } from "react";
 import "./DeliveryStatusPanel.css";
@@ -21,6 +23,25 @@ const labels = {
   missing: "Falta contacto"
 };
 
+const statusAppearance = {
+  sent: {
+    variant: "secondary",
+    className: "bg-chart-2/15 text-chart-5"
+  },
+  pending: {
+    variant: "outline",
+    className: "bg-secondary text-secondary-foreground"
+  },
+  failed: {
+    variant: "destructive",
+    className: ""
+  },
+  missing: {
+    variant: "outline",
+    className: "text-muted-foreground"
+  }
+} as const;
+
 export default function DeliveryStatusPanel({ deliveries }: Props) {
   const [copiedId, setCopiedId] = useState<string | null>(null);
 
@@ -34,25 +55,44 @@ export default function DeliveryStatusPanel({ deliveries }: Props) {
     <section className="delivery-panel">
       {deliveries.map((delivery) => (
         <article className="delivery-panel__row" key={delivery.id}>
-          <div>
+          <div className="delivery-panel__person">
             <h3>{delivery.name}</h3>
-            <p>{copiedId === delivery.id ? "Enlace copiado" : "Enlace secreto preparado"}</p>
+            <p aria-live="polite">{copiedId === delivery.id ? "Enlace copiado" : "Enlace secreto preparado"}</p>
           </div>
-          <span className={`delivery-panel__status delivery-panel__status--${delivery.emailStatus}`}>
+          <Badge
+            variant={statusAppearance[delivery.emailStatus].variant}
+            className={`min-h-7 px-2.5 ${statusAppearance[delivery.emailStatus].className}`}
+          >
             <Mail size={18} />
             Email {labels[delivery.emailStatus]}
-          </span>
-          <span className={`delivery-panel__status delivery-panel__status--${delivery.whatsappStatus}`}>
+          </Badge>
+          <Badge
+            variant={statusAppearance[delivery.whatsappStatus].variant}
+            className={`min-h-7 px-2.5 ${statusAppearance[delivery.whatsappStatus].className}`}
+          >
             <MessageCircle size={18} />
             WhatsApp {labels[delivery.whatsappStatus]}
-          </span>
+          </Badge>
           <div className="delivery-panel__actions">
-            <button type="button" aria-label={`Reintentar envío de ${delivery.name}`}>
+            <Button
+              className="size-10"
+              variant="outline"
+              size="icon-lg"
+              type="button"
+              aria-label={`Reintentar envío de ${delivery.name}`}
+            >
               <RefreshCw size={19} />
-            </button>
-            <button type="button" onClick={() => copyLink(delivery)} aria-label={`Copiar enlace de ${delivery.name}`}>
+            </Button>
+            <Button
+              variant="outline"
+              className="size-10"
+              size="icon-lg"
+              type="button"
+              onClick={() => copyLink(delivery)}
+              aria-label={`Copiar enlace de ${delivery.name}`}
+            >
               <Copy size={19} />
-            </button>
+            </Button>
           </div>
         </article>
       ))}

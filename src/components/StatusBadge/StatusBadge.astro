@@ -1,13 +1,25 @@
 ---
-import "./StatusBadge.css";
+import { Badge } from "@/components/ui/badge";
 
 interface Props {
   tone?: "ok" | "warning" | "danger" | "neutral";
 }
 
 const { tone = "neutral" } = Astro.props;
+const variants = {
+  ok: "secondary",
+  warning: "outline",
+  danger: "destructive",
+  neutral: "outline"
+} as const;
+const toneClasses = {
+  ok: "min-h-6 bg-chart-2/15 px-2.5 text-chart-5",
+  warning: "min-h-6 bg-secondary px-2.5 text-secondary-foreground",
+  danger: "min-h-6 px-2.5",
+  neutral: "min-h-6 px-2.5 text-muted-foreground"
+} as const;
 ---
 
-<span class={`status-badge status-badge--${tone}`}>
+<Badge variant={variants[tone]} className={toneClasses[tone]}>
   <slot />
-</span>
+</Badge>

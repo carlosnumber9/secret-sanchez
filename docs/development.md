@@ -2,7 +2,7 @@
 
 ## Requisitos
 
-- Node.js compatible con Astro 5.
+- Node.js compatible con Astro 5; `20.18.1` o superior para ejecutar el CLI actual de shadcn sin avisos de engine.
 - npm.
 - Proyecto de Supabase para autenticación y Postgres.
 - Opcional para cada integración: cuenta de Resend y cuenta de Kapso.
@@ -18,6 +18,18 @@ npm run dev
 ```
 
 La aplicación queda disponible por defecto en `http://localhost:4321`.
+
+## Arranque desde VS Code
+
+El repositorio incluye dos accesos para ejecutar `npm run dev`:
+
+- En `Run and Debug`, seleccionar `Secret Sánchez: arrancar app` y pulsar el botón de reproducción. Esta opción
+  abre el navegador cuando Astro está listo.
+- Desde `Terminal > Run Task...`, seleccionar la tarea del mismo nombre. También se puede lanzar con el atajo de
+  la tarea de build predeterminada (`Cmd+Shift+B` en macOS y `Ctrl+Shift+B` en Windows/Linux).
+
+La tarea permite una sola instancia para evitar arrancar accidentalmente dos servidores de desarrollo. En ambos
+casos, las dependencias deben haberse instalado previamente con `npm install`.
 
 ## Variables
 
@@ -71,6 +83,7 @@ Nunca se debe activar un bypass de autenticación en producción.
 src/
   actions/                 Casos de uso de aplicación
   components/              Componentes Astro
+  components/ui/           Componentes React generados por shadcn
   components/react/        Islas React
   db/                      Schema, cliente y queries
   layouts/                 Layouts de páginas
@@ -91,7 +104,8 @@ docs/                      Documentación del producto
 - Textos de interfaz en español.
 - Zod para entradas externas.
 - Astro para estructura; React para interacción real.
-- CSS normal, sin Tailwind.
+- Tailwind CSS 4 y shadcn/ui para la base; CSS normal para layout y contenedores translúcidos.
+- `components.json` conserva el preset y los aliases usados por el CLI de shadcn.
 - Cambios pequeños y coherentes con el código cercano.
 - No añadir librerías si los patrones actuales o la plataforma resuelven el caso.
 - No consultar la base directamente desde componentes de navegador.

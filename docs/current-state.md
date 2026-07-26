@@ -1,6 +1,6 @@
 # Estado actual
 
-Última revisión documental: **25 de julio de 2026**.
+Última revisión documental: **26 de julio de 2026**.
 
 ## Resumen
 
@@ -15,7 +15,8 @@ Supabase SSR y Zod, sin bloquear el build.
 
 - Astro con SSR y adapter de Vercel.
 - React Islands para edición de familia, sorteo, envíos y revelación.
-- Diseño responsive con CSS por componente y estilos globales.
+- Base UI responsive con shadcn/ui `base-rhea`, Tailwind CSS 4 y contenedores translúcidos.
+- Ritmo responsive común para gutters, separación de secciones, padding de superficies, formularios y acciones.
 - Magic Link con Supabase, callback y sesión mediante cookies.
 - Middleware para proteger las páginas administrativas y `/api/draw`.
 - Allowlist de administradores mediante `admin_users`.
@@ -81,7 +82,7 @@ reales no están implementados.
 
 - Rama principal: `main`.
 - La rama local estaba alineada con `origin/main`.
-- Último cambio confirmado: actualización visual de estilo claymorphism.
+- Último cambio confirmado: estandarización de la base visual con el preset shadcn `bgo6OSRWs`.
 - Existían tres archivos de autenticación modificados y sin commit; se consideran trabajo en curso y no deben
   sobrescribirse.
 - `.env` está ignorado por Git y dispone de los nombres de variables esperados. Sus valores no forman parte de la

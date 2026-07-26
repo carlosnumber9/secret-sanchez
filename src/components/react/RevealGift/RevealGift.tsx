@@ -1,3 +1,4 @@
+import { Button } from "@/components/ui/button";
 import { Gift } from "lucide-react";
 import { useState } from "react";
 import "./RevealGift.css";
@@ -22,9 +23,9 @@ export default function RevealGift({ giverName, receiverName, alreadyOpened = fa
         {open ? (
           <strong className="reveal-gift__name animate-pop">{receiverName}</strong>
         ) : (
-          <button type="button" onClick={() => setOpen(true)}>
+          <Button className="min-h-11 px-6" size="lg" variant="secondary" type="button" onClick={() => setOpen(true)}>
             Abrir regalo
-          </button>
+          </Button>
         )}
       </div>
     </section>

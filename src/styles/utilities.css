@@ -1,6 +1,12 @@
 .page-shell {
-  width: min(1120px, calc(100% - 32px));
+  width: min(1180px, 100%);
   margin: 0 auto;
+  padding-inline: var(--page-gutter);
+}
+
+.page-stack {
+  display: grid;
+  gap: var(--section-gap);
 }
 
 .stack {
@@ -8,32 +14,60 @@
   gap: var(--space-lg);
 }
 
+.stack--tight {
+  gap: var(--space-md);
+}
+
 .cluster {
   display: flex;
   flex-wrap: wrap;
-  gap: var(--space-md);
+  gap: 0.75rem;
   align-items: center;
 }
 
 .muted {
-  color: var(--color-muted);
+  color: var(--muted-foreground);
 }
 
 .section-header {
   display: grid;
-  gap: var(--space-sm);
-  max-width: 760px;
+  gap: 0.75rem;
+  max-width: 720px;
+}
+
+.section-header > p:first-child:not(:last-child) {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
 }
 
 .two-column {
   display: grid;
   grid-template-columns: minmax(0, 1.1fr) minmax(280px, 0.9fr);
-  gap: var(--space-xl);
-  align-items: start;
+  gap: clamp(1rem, 3vw, 2rem);
+  align-items: stretch;
+}
+
+.two-column > [data-slot="card"] {
+  height: 100%;
 }
 
 @media (max-width: 780px) {
   .two-column {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .cluster--actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .cluster--actions > a,
+  .cluster--actions > button {
+    width: 100%;
   }
 }

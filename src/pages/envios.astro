@@ -10,9 +10,9 @@ import { demoDeliveries } from "@/lib/demo";
     <h1>Envíos</h1>
     <p>Estado de mensajes por persona, con acciones sencillas para reintentar o copiar el enlace secreto.</p>
   </div>
-  <div class="cluster">
-    <Button variant="secondary">Reintentar fallidos</Button>
-    <Button variant="ghost">Marcar manual</Button>
+  <div class="cluster cluster--actions">
+    <Button class="min-h-10" variant="secondary">Reintentar fallidos</Button>
+    <Button class="min-h-10" variant="ghost">Marcar manual</Button>
   </div>
   <DeliveryStatusPanel client:load deliveries={demoDeliveries} />
 </AdminLayout>

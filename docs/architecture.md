@@ -23,7 +23,8 @@ flowchart LR
 - **Astro 5:** routing, SSR, layouts, endpoints y composición de páginas.
 - **React:** islas interactivas en el navegador.
 - **TypeScript:** contratos y tipos de aplicación.
-- **CSS:** estilos globales y por componente; no se usa Tailwind.
+- **UI:** shadcn/ui con preset `base-rhea`, Base UI y Tailwind CSS 4 mediante el plugin de Vite.
+- **CSS:** tema y utilidades globales con CSS específico para layout y contenedores translúcidos.
 - **Supabase Auth:** Magic Link y sesión.
 - **Supabase Postgres:** persistencia relacional.
 - **Drizzle ORM:** schema y acceso tipado a la base.
@@ -39,6 +40,7 @@ flowchart LR
 - `src/pages`: páginas Astro y endpoints.
 - `src/layouts`: layouts base, administrativo y público.
 - `src/components`: componentes Astro.
+- `src/components/ui`: componentes React generados por shadcn/ui.
 - `src/components/react`: estado e interacción cliente.
 - `src/styles`: tokens, tipografía, animaciones y utilidades.
 
@@ -109,7 +111,7 @@ Los pasos 1, 4, 5 y 6 todavía no están conectados completamente.
 - React solo donde aporta interacción.
 - Tokens de revelación aleatorios; en base se almacena únicamente el hash.
 - Datos demo aislados en `src/lib/demo.ts`.
-- CSS propio sin framework de utilidades.
+- shadcn/ui y Tailwind CSS 4 como base de componentes; CSS propio limitado a composición y superficies.
 - Textos de producto en español.
 - No incorporar dependencias si la plataforma o los patrones existentes resuelven el problema.
 

@@ -1,30 +1,81 @@
 ---
 import Button from "@/components/Button/Button.astro";
 import Card from "@/components/Card/Card.astro";
+import { Input } from "@/components/ui/input";
 import BaseLayout from "@/layouts/BaseLayout.astro";
+import { Mail, ShieldCheck, Sparkles } from "lucide-react";
 ---
 
 <BaseLayout title="Entrar como organizador | Secret Sánchez">
-  <main>
+  <main class="login-main">
     <div class="page-shell login-page">
       <section class="login-page__hero">
-        <p>Organizador familiar</p>
-        <h1>Entrar como organizador</h1>
-        <p>
-          Escribe tu email y te enviaremos un enlace seguro para entrar. La sesión queda guardada para que no tengas
-          que repetirlo cada vez.
-        </p>
+        <a class="login-page__brand" href="/" aria-label="Secret Sánchez">
+          <span class="login-page__brand-mark">S</span>
+          <span>
+            <strong>Secret Sánchez</strong>
+            <small>Reyes en familia</small>
+          </span>
+        </a>
+
+        <div class="login-page__hero-copy">
+          <p class="login-page__eyebrow">Organizador familiar</p>
+          <h1>Todo el sorteo, sin estropear la sorpresa</h1>
+          <p>
+            Prepara la familia, genera el reparto y comparte cada enlace secreto desde un único lugar.
+          </p>
+        </div>
+
+        <ul class="login-page__benefits">
+          <li>
+            <ShieldCheck size={20} aria-hidden="true" />
+            <span>Acceso seguro sin contraseña</span>
+          </li>
+          <li>
+            <Sparkles size={20} aria-hidden="true" />
+            <span>Los regalos siguen siendo secretos</span>
+          </li>
+        </ul>
       </section>
 
-      <Card tone="accent">
+      <Card tone="accent" class="login-page__card">
+        <div class="login-page__form-header">
+          <span class="login-page__form-icon" aria-hidden="true">
+            <Mail size={22} />
+          </span>
+          <div>
+            <h2>Entrar como organizador</h2>
+            <p>Te enviaremos un enlace de acceso de un solo uso.</p>
+          </div>
+        </div>
+
         <form class="login-page__form" id="magic-link-form">
           <label class="form-field">
             Email
-            <input class="input" name="email" type="email" placeholder="juan@email.com" required />
+            <Input
+              className="h-11"
+              name="email"
+              type="email"
+              inputMode="email"
+              autoComplete="email"
+              aria-describedby="email-help"
+              placeholder="juan@email.com"
+              required
+            />
           </label>
-          <Button type="submit" size="large">Enviarme enlace de acceso</Button>
-          <p class="login-page__message" id="login-message" role="status"></p>
+          <p class="login-page__field-help" id="email-help">
+            Usa el email autorizado para gestionar el sorteo.
+          </p>
+          <Button id="login-submit" class="min-h-11 w-full" type="submit" size="large">
+            Enviarme enlace de acceso
+          </Button>
+          <p class="login-page__message" id="login-message" role="status" aria-live="polite"></p>
         </form>
+
+        <div class="login-page__assurance">
+          <ShieldCheck size={17} aria-hidden="true" />
+          <p>No guardamos contraseñas. El enlace se valida de forma segura y solo sirve para acceder.</p>
+        </div>
       </Card>
     </div>
   </main>
@@ -35,79 +86,250 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
 
   const form = document.querySelector<HTMLFormElement>("#magic-link-form");
   const message = document.querySelector<HTMLElement>("#login-message");
+  const submitButton = document.querySelector<HTMLButtonElement>("#login-submit");
   const supabase = createSupabaseBrowserClient();
 
-  if (form && message) {
+  if (form && message && submitButton) {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
       const data = new FormData(form);
       const email = data.get("email");
       message.textContent = "Enviando enlace...";
+      message.dataset.state = "loading";
+      submitButton.disabled = true;
+      submitButton.setAttribute("aria-busy", "true");
+      submitButton.textContent = "Enviando...";
 
       if (typeof email !== "string") {
         message.textContent = "Escribe un email válido.";
+        message.dataset.state = "error";
+        submitButton.disabled = false;
+        submitButton.removeAttribute("aria-busy");
+        submitButton.textContent = "Enviarme enlace de acceso";
         return;
       }
 
-      const { error } = await supabase.auth.signInWithOtp({
-        email,
-        options: {
-          emailRedirectTo: `${window.location.origin}/auth/callback?next=/inicio`
-        }
-      });
+      try {
+        const { error } = await supabase.auth.signInWithOtp({
+          email,
+          options: {
+            emailRedirectTo: `${window.location.origin}/auth/callback?next=/inicio`
+          }
+        });
 
-      message.textContent = error
-        ? error.message
-        : "Te hemos enviado un enlace de acceso. Revisa tu correo.";
+        message.textContent = error
+          ? error.message
+          : "Te hemos enviado un enlace de acceso. Revisa tu correo.";
+        message.dataset.state = error ? "error" : "success";
+      } catch {
+        message.textContent = "No se pudo enviar el enlace. Revisa la conexión y vuelve a intentarlo.";
+        message.dataset.state = "error";
+      } finally {
+        submitButton.disabled = false;
+        submitButton.removeAttribute("aria-busy");
+        submitButton.textContent = "Enviarme enlace de acceso";
+      }
     });
   }
 </script>
 
 <style>
+  .login-main {
+    display: grid;
+    min-height: 100svh;
+    align-items: center;
+  }
+
   .login-page {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(320px, 440px);
-    gap: var(--space-xl);
+    grid-template-columns: minmax(0, 1.1fr) minmax(340px, 460px);
+    gap: clamp(1.5rem, 5vw, 4.5rem);
     align-items: center;
-    min-height: calc(100vh - 96px);
   }
 
   .login-page__hero {
     display: grid;
-    gap: var(--space-lg);
-    padding: clamp(2rem, 5vw, 4rem);
-    color: white;
-    background:
-      linear-gradient(135deg, rgba(127, 29, 29, 0.9), rgba(184, 50, 50, 0.78)),
-      url("https://images.unsplash.com/photo-1543589077-47d81606c1bf?auto=format&fit=crop&w=1600&q=80");
-    background-position: center;
-    background-size: cover;
-    border-radius: var(--radius-lg);
-    box-shadow:
-      18px 22px 50px rgba(83, 45, 20, 0.24),
-      -12px -12px 30px rgba(255, 255, 255, 0.48),
-      inset 1px 1px 0 rgba(255, 255, 255, 0.34),
-      inset -3px -4px 12px rgba(47, 36, 29, 0.12);
+    gap: clamp(2rem, 4vw, 3rem);
+    min-height: min(680px, calc(100svh - var(--page-block-space) - var(--page-block-space)));
+    align-content: space-between;
+    padding: clamp(1.5rem, 5vw, 3.5rem);
+    color: var(--primary-foreground);
+    background: var(--glass-primary);
+    border: 1px solid color-mix(in oklch, var(--primary) 82%, var(--border));
+    border-radius: var(--radius-4xl);
+    backdrop-filter: var(--glass-blur);
+    box-shadow: var(--shadow-sm);
   }
 
-  .login-page__hero p {
-    color: rgba(255, 255, 255, 0.88);
-    font-size: 1.08rem;
+  .login-page__brand {
+    display: inline-flex;
+    width: fit-content;
+    align-items: center;
+    gap: 0.75rem;
+  }
+
+  .login-page__brand-mark {
+    display: grid;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    color: var(--primary);
+    background: var(--primary-foreground);
+    border-radius: var(--radius-2xl);
+    font-family: var(--font-heading);
+    font-size: 1.25rem;
+    font-weight: 700;
+  }
+
+  .login-page__brand strong,
+  .login-page__brand small {
+    display: block;
+  }
+
+  .login-page__brand small {
+    margin-top: 0.15rem;
+    color: color-mix(in oklch, var(--primary-foreground) 76%, transparent);
+    font-size: 0.8rem;
+  }
+
+  .login-page__hero-copy {
+    display: grid;
+    gap: var(--space-md);
+    max-width: 660px;
+  }
+
+  .login-page__hero-copy p {
+    color: color-mix(in oklch, var(--primary-foreground) 84%, transparent);
+    max-width: 56ch;
+    font-size: 1.05rem;
+  }
+
+  .login-page__eyebrow {
+    font-size: 0.8rem !important;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+  }
+
+  .login-page__benefits {
+    display: grid;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .login-page__benefits li {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: color-mix(in oklch, var(--primary-foreground) 88%, transparent);
+    font-size: 0.9rem;
+    font-weight: 500;
+  }
+
+  :global(.login-page__card) {
+    width: 100%;
+  }
+
+  .login-page__form-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+  }
+
+  .login-page__form-header > div {
+    display: grid;
+    gap: 0.4rem;
+  }
+
+  .login-page__form-icon {
+    display: grid;
+    flex: 0 0 auto;
+    width: 44px;
+    height: 44px;
+    place-items: center;
+    color: var(--primary);
+    background: color-mix(in oklch, var(--primary) 10%, transparent);
+    border-radius: var(--radius-2xl);
   }
 
   .login-page__form {
     display: grid;
-    gap: var(--space-lg);
+    gap: var(--space-md);
+  }
+
+  .login-page__field-help {
+    margin-top: -0.25rem;
+    font-size: 0.8rem;
   }
 
   .login-page__message {
-    min-height: 1.5rem;
-    font-weight: 800;
+    display: none;
+    padding: 0.75rem;
+    border-radius: var(--radius-2xl);
+    font-size: 0.875rem;
+    font-weight: 500;
+  }
+
+  .login-page__message:not(:empty) {
+    display: block;
+  }
+
+  .login-page__message[data-state="loading"] {
+    color: var(--muted-foreground);
+    background: var(--muted);
+  }
+
+  .login-page__message[data-state="success"] {
+    color: var(--chart-5);
+    background: color-mix(in oklch, var(--chart-2) 14%, transparent);
+  }
+
+  .login-page__message[data-state="error"] {
+    color: var(--destructive);
+    background: color-mix(in oklch, var(--destructive) 10%, transparent);
+  }
+
+  .login-page__assurance {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.65rem;
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    color: var(--muted-foreground);
+    border-top: 1px solid var(--glass-border);
+  }
+
+  .login-page__assurance svg {
+    flex: 0 0 auto;
+    margin-top: 0.15rem;
+  }
+
+  .login-page__assurance p {
+    font-size: 0.8rem;
+    line-height: 1.5;
   }
 
   @media (max-width: 780px) {
     .login-page {
       grid-template-columns: 1fr;
+    }
+
+    .login-page__hero {
+      min-height: auto;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .login-page__hero {
+      gap: var(--space-xl);
+      padding: var(--space-lg);
+    }
+
+    .login-page__form-header {
+      align-items: center;
     }
   }
 </style>

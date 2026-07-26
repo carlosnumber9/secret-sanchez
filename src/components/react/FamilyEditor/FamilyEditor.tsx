@@ -1,3 +1,5 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Plus, UserRound } from "lucide-react";
 import { useMemo, useState } from "react";
 import ParticipantForm, { type ParticipantDraft } from "../ParticipantForm/ParticipantForm";
@@ -91,15 +93,16 @@ export default function FamilyEditor({ initialIslands }: Props) {
       <section className="family-editor__board" aria-label="Núcleos familiares">
         {islands.map((island) => (
           <article className="family-editor__island" key={island.id} style={{ borderTopColor: island.color }}>
-            <button
+            <Button
               className="family-editor__island-title"
+              variant="ghost"
               type="button"
               onClick={() => setSelectedIslandId(island.id)}
               aria-pressed={selectedIslandId === island.id}
             >
               <span style={{ background: island.color }} />
               {island.name}
-            </button>
+            </Button>
             <div className="family-editor__people">
               {island.participants.map((person) => (
                 <div className="family-editor__person" key={person.id}>
@@ -108,12 +111,19 @@ export default function FamilyEditor({ initialIslands }: Props) {
                     <strong>{person.name}</strong>
                     <small>{person.email || person.phone || "Falta contacto"}</small>
                   </div>
-                  <button type="button" onClick={() => toggleParticipant(island.id, person.id)}>
+                  <Button
+                    variant="secondary"
+                    size="sm"
+                    type="button"
+                    onClick={() => toggleParticipant(island.id, person.id)}
+                  >
                     {person.active ? "Activo" : "Inactivo"}
-                  </button>
+                  </Button>
                 </div>
               ))}
-              {island.participants.length === 0 && <p>Este núcleo todavía está vacío.</p>}
+              {island.participants.length === 0 && (
+                <p className="family-editor__empty">Este núcleo todavía está vacío.</p>
+              )}
             </div>
           </article>
         ))}
@@ -123,15 +133,21 @@ export default function FamilyEditor({ initialIslands }: Props) {
         <div className="family-editor__panel">
           <h2>Añadir núcleo</h2>
           <div className="family-editor__inline">
-            <input
-              className="input"
+            <Input
+              className="h-10"
               value={newIslandName}
               onChange={(event) => setNewIslandName(event.target.value)}
               placeholder="Ej. Núcleo Juan"
             />
-            <button type="button" onClick={addIsland} aria-label="Añadir núcleo familiar">
+            <Button
+              className="size-10"
+              size="icon"
+              type="button"
+              onClick={addIsland}
+              aria-label="Añadir núcleo familiar"
+            >
               <Plus size={22} />
-            </button>
+            </Button>
           </div>
         </div>
         <div className="family-editor__panel">

@@ -1,3 +1,6 @@
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
 import "./ParticipantForm.css";
 
 export type ParticipantDraft = {
@@ -24,8 +27,8 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
     >
       <label className="form-field">
         Nombre
-        <input
-          className="input"
+        <Input
+          className="h-10"
           value={value.name}
           onChange={(event) => onChange({ ...value, name: event.target.value })}
           placeholder="Ej. Mari Carmen"
@@ -33,8 +36,8 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
       </label>
       <label className="form-field">
         Email
-        <input
-          className="input"
+        <Input
+          className="h-10"
           value={value.email}
           onChange={(event) => onChange({ ...value, email: event.target.value })}
           placeholder="nombre@email.com"
@@ -43,8 +46,8 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
       </label>
       <label className="form-field">
         Teléfono
-        <input
-          className="input"
+        <Input
+          className="h-10"
           value={value.phone}
           onChange={(event) => onChange({ ...value, phone: event.target.value })}
           placeholder="+34 600 000 000"
@@ -52,22 +55,22 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
       </label>
       <label className="form-field">
         Contacto preferido
-        <select
-          className="select"
+        <NativeSelect
+          className="w-full"
           value={value.preferredChannel}
           onChange={(event) =>
             onChange({ ...value, preferredChannel: event.target.value as ParticipantDraft["preferredChannel"] })
           }
         >
-          <option value="email">Email</option>
-          <option value="whatsapp">WhatsApp</option>
-          <option value="both">Ambos</option>
-          <option value="manual">Manual</option>
-        </select>
+          <NativeSelectOption value="email">Email</NativeSelectOption>
+          <NativeSelectOption value="whatsapp">WhatsApp</NativeSelectOption>
+          <NativeSelectOption value="both">Ambos</NativeSelectOption>
+          <NativeSelectOption value="manual">Manual</NativeSelectOption>
+        </NativeSelect>
       </label>
-      <button className="participant-form__button" type="submit">
+      <Button className="min-h-10 w-full" size="lg" type="submit">
         Añadir persona
-      </button>
+      </Button>
     </form>
   );
 }

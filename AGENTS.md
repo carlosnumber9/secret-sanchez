@@ -28,6 +28,8 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - Astro
 - React
 - TypeScript
+- shadcn/ui con Base UI
+- Tailwind CSS 4
 - CSS por componente y estilos globales en `src/styles`
 - Supabase Auth y Postgres
 - Drizzle ORM
@@ -153,7 +155,8 @@ Estados y enums principales:
 - TypeScript con imports usando alias `@/`.
 - Astro para paginas, layouts y componentes estaticos.
 - React solo para interaccion cliente.
-- CSS normal por componente; no hay Tailwind.
+- Tailwind CSS 4 y shadcn/ui para componentes base.
+- CSS normal por componente para layout y contenedores translúcidos.
 - Componentes Astro y React suelen tener su `.css` junto al componente.
 - Validacion de inputs de API con Zod.
 - Preferir cambios pequenos y coherentes con los patrones existentes.
