@@ -72,11 +72,11 @@ import BaseLayout from "@/layouts/BaseLayout.astro";
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        code,
-        tokenHash,
-        type,
-        accessToken,
-        refreshToken
+        ...(code ? { code } : {}),
+        ...(tokenHash ? { tokenHash } : {}),
+        ...(type ? { type } : {}),
+        ...(accessToken ? { accessToken } : {}),
+        ...(refreshToken ? { refreshToken } : {})
       })
     });
 
