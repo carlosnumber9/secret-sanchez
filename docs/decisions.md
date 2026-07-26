@@ -16,6 +16,9 @@
 | WhatsApp | Kapso está previsto, pero no forma parte del MVP operativo actual. |
 | Idioma | Textos de interfaz y documentación en español. |
 | Commits | Prefijo tipado y descripción inglesa en pasado simple. |
+| Entornos | Local y Vercel comparten el mismo Supabase/Postgres. |
+| Migraciones | Drizzle es la única autoridad y se ejecuta manualmente. |
+| Tokens recuperables | Hash para búsqueda y AES-256-GCM para entrega autorizada. |
 
 ## Abiertas
 
@@ -23,8 +26,6 @@
 | --- | --- |
 | Solicitud Magic Link desde cliente o servidor | Evita mantener dos caminos y contratos diferentes. |
 | Bootstrap del primer administrador | Sin registro en `admin_users`, una sesión válida no accede. |
-| Modo demo | Debe ser útil localmente sin abrir un bypass en producción. |
-| Estrategia Drizzle frente a Supabase migrations | Evita divergencia y dobles aplicaciones. |
 | Política de regeneración | Afecta sorpresa, invalidación y auditoría. |
 | Entrega de tokens efímeros | Los hashes no permiten reconstruir URLs. |
 | Transacciones e idempotencia | Evita sorteos parciales o duplicados. |

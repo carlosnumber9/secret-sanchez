@@ -8,8 +8,8 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 
 - La app usa Astro con SSR y adapter de Vercel.
 - Hay React Islands para las partes interactivas de administracion.
-- Hay datos demo en `src/lib/demo.ts` para poder iterar UI cuando faltan variables de entorno o base de datos.
-- Supabase se usa para Auth y Postgres cuando esta configurado.
+- Supabase se usa siempre para Auth y Postgres, tambien desde local.
+- Local, Preview y Production comparten la misma base y los mismos datos.
 - Drizzle define el schema relacional en `src/db/schema.ts`.
 - Resend esta preparado para email.
 - Kapso esta preparado para WhatsApp en una fase posterior.
@@ -18,7 +18,7 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 
 - `docs/README.md` es el indice y la fuente de verdad documental del proyecto.
 - Actualizar las docs en el mismo cambio que modifica el comportamiento descrito.
-- Distinguir entre comportamiento implementado, parcial, demo, previsto y por decidir.
+- Distinguir entre comportamiento implementado, parcial, previsto y por decidir.
 - Los commits usan `<type>(<scope opcional>): <descripcion en ingles y pasado simple>`.
 - Ejemplo: `feat: Added Whatsapp integration over participants`.
 - La convencion completa vive en `docs/git-workflow.md`.
@@ -41,6 +41,8 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - Instalar dependencias: `npm install`
 - Desarrollo: `npm run dev`
 - Validar tipos y build: `npm run build`
+- Pruebas unitarias: `npm test`
+- Preparar admin: `npm run admin:bootstrap -- --email ... --name ...`
 - Preview local: `npm run preview`
 - Generar migraciones Drizzle: `npm run db:generate`
 - Ejecutar migraciones Drizzle: `npm run db:migrate`
@@ -58,16 +60,14 @@ Variables publicas:
 
 Variables solo servidor:
 
-- `SUPABASE_SERVICE_ROLE_KEY`
 - `DATABASE_URL`
+- `REVEAL_TOKEN_ENCRYPTION_KEY`
 - `RESEND_API_KEY`
 - `KAPSO_API_KEY`
 
 Variable de app:
 
-- `APP_URL`, con fallback actual a `http://localhost:4321`.
-
-`src/lib/env.ts` tambien acepta `SUPABASE_URL` y `SUPABASE_KEY` como fallback para las variables publicas de Supabase.
+- `APP_URL`, obligatorio y apuntando al origen canonico de Production.
 
 No exponer variables privadas en codigo cliente, paginas publicas, logs o payloads JSON.
 
@@ -77,18 +77,17 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 - `src/pages/api`: API routes.
 - `src/pages/auth/callback.astro`: pantalla cliente que procesa el callback de Supabase.
 - `src/pages/api/auth/callback.ts`: endpoint que confirma la sesion de Supabase y escribe cookies.
-- `src/pages/r/[token].astro`: revelacion publica por token.
+- `src/pages/r.astro`: revelacion publica; el token vive en el fragmento.
 - `src/layouts`: layouts base, admin y revelacion publica.
 - `src/components`: componentes Astro reutilizables.
 - `src/components/react`: islas React interactivas.
 - `src/actions`: acciones de aplicacion; varias reexportan queries de `src/db/queries`.
 - `src/db/schema.ts`: schema Drizzle.
 - `src/db/queries`: acceso persistente a datos.
-- `src/lib`: utilidades de entorno, Supabase, tokens, hashing, Resend, Kapso y demo.
+- `src/lib`: utilidades de entorno, Supabase, tokens, hashing, logging, Resend y Kapso.
 - `src/services/draw`: reglas, validacion y generacion del sorteo.
 - `src/services/notifications`: envio de notificaciones.
 - `drizzle`: migraciones y snapshots generados por Drizzle.
-- `supabase/migrations`: migraciones SQL para Supabase.
 
 ## Rutas Existentes
 
@@ -99,17 +98,20 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 - `/familia`: gestion de nucleos y participantes.
 - `/sorteo`: reglas y generacion del reparto.
 - `/envios`: estado de mensajes.
-- `/r/[token]`: revelacion publica sin login.
+- `/r#token`: revelacion publica sin login.
 - `/api/auth/magic-link`: API para solicitar Magic Link.
 - `/api/auth/callback`: API para confirmar sesion.
-- `/api/draw/generate`: API protegida para generar sorteo.
+- `/api/admin/draws/generate`: API protegida para generar sorteo.
+- `/api/admin/*`: mutaciones administrativas protegidas.
+- `/api/reveal/resolve` y `/api/reveal/open`: resolucion y apertura publica.
+- `/api/health`: comprobacion de configuracion y base.
 
 ## Auth Y Proteccion
 
 - El login usa Magic Link de Supabase.
-- `src/middleware.ts` protege `/inicio`, `/familia`, `/sorteo`, `/envios` y APIs bajo `/api/draw`.
+- `src/middleware.ts` protege `/inicio`, `/familia`, `/sorteo`, `/envios` y APIs bajo `/api/admin`.
 - Las paginas protegidas redirigen a `/login?next=...` cuando no hay admin.
-- Las APIs protegidas responden `401` con JSON cuando no hay admin.
+- Las APIs protegidas responden `401` cuando no hay sesión y `403` cuando la cuenta no está autorizada como admin.
 - La sesion de Supabase se confirma en servidor mediante `src/pages/api/auth/callback.ts`.
 
 ## Modelo De Datos
@@ -131,7 +133,7 @@ Estados y enums principales:
 - Grupos: `draft`, `ready`, `drawn`, `sent`, `archived`
 - Sorteos: `draft`, `generated`, `locked`, `sent`
 - Canal preferido: `email`, `whatsapp`, `both`, `manual`
-- Canal de notificacion: `email`, `whatsapp`
+- Canal de notificacion: `email`, `whatsapp`, `manual`
 - Estado de notificacion: `pending`, `sent`, `delivered`, `failed`, `opened`, `manual`
 
 ## Sorteo
@@ -141,14 +143,15 @@ Estados y enums principales:
 - Hay soporte para exclusiones manuales mediante pares `fromParticipantId` y `toParticipantId`.
 - La generacion usa backtracking y barajado con `crypto.randomInt`.
 - La validacion vive en `src/services/draw/validateDraw.ts`.
-- La generacion persistida vive en `src/actions/generateDraw.ts`; la ruta API cae a modo demo si no hay base de datos configurada.
+- La generacion persistida vive en `src/actions/generateDraw.ts`, usa transaccion y rechaza otro sorteo activo.
+- Los tokens se guardan como hash y ciphertext AES-256-GCM.
 
 ## Notificaciones
 
-- `sendDrawNotifications` decide envios segun `preferredChannel`.
-- Email se envia si el canal es `email` o `both` y existe email.
-- WhatsApp se envia si el canal es `whatsapp` o `both` y existe telefono.
-- `manual` no dispara envio automatico.
+- El panel exige confirmacion antes de enviar emails reales.
+- Los intentos se guardan con clave de idempotencia.
+- La entrega manual descifra y copia el enlace bajo autorizacion.
+- WhatsApp permanece deshabilitado hasta completar Kapso.
 
 ## Estilo Y Convenciones Existentes
 
@@ -166,8 +169,8 @@ Estados y enums principales:
 ## Reglas Para Agentes
 
 - Leer el codigo cercano antes de editar.
-- No asumir que Supabase, Resend, Kapso o la base de datos estan configurados en local.
-- Mantener el modo demo funcionando cuando sea posible.
+- La configuracion de Supabase y base es obligatoria.
+- Recordar que cualquier escritura local afecta a los datos reales.
 - No escribir secretos ni valores reales de `.env` en documentacion, tests, logs o commits.
 - No revertir cambios del usuario.
 - Si se modifica schema, actualizar o generar migraciones de forma explicita y explicar el impacto.
@@ -183,4 +186,3 @@ Estas decisiones no estan fijadas en el repo. No asumirlas sin confirmacion o si
 - Criterios finales de UI/design system.
 - Flujo definitivo de WhatsApp con Kapso.
 - Politica de permisos para multiples administradores.
-- Estrategia final entre migraciones Drizzle y migraciones de Supabase cuando ambas existan.

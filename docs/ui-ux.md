@@ -35,7 +35,7 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 - Mostrar el grupo y año activos.
 - Resumir participantes, contactos incompletos y estado del sorteo.
 - Destacar una única siguiente acción.
-- Permitir abrir una revelación demo solamente en modo desarrollo o demo.
+- Advertir que local y Vercel comparten los mismos datos reales.
 
 ### Familia
 
@@ -116,7 +116,7 @@ Cada bloque que cargue datos reales debe diseñar:
 - Éxito.
 - Acción en curso y prevención de doble envío.
 
-La UI demo actual no cubre todos estos estados.
+Las mutaciones principales implementan carga, feedback y prevención de doble envío.
 
 ## Identidad visual e instalación
 

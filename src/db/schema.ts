@@ -15,7 +15,7 @@ import {
 export const groupStatus = pgEnum("group_status", ["draft", "ready", "drawn", "sent", "archived"]);
 export const drawStatus = pgEnum("draw_status", ["draft", "generated", "locked", "sent"]);
 export const preferredChannel = pgEnum("preferred_channel", ["email", "whatsapp", "both", "manual"]);
-export const notificationChannel = pgEnum("notification_channel", ["email", "whatsapp"]);
+export const notificationChannel = pgEnum("notification_channel", ["email", "whatsapp", "manual"]);
 export const notificationStatus = pgEnum("notification_status", [
   "pending",
   "sent",
@@ -137,6 +137,7 @@ export const assignments = pgTable("assignments", {
     .notNull()
     .references(() => participants.id, { onDelete: "cascade" }),
   revealTokenHash: varchar("reveal_token_hash", { length: 64 }).notNull().unique(),
+  revealTokenCiphertext: text("reveal_token_ciphertext"),
   tokenCreatedAt: timestamp("token_created_at", { withTimezone: true }).defaultNow().notNull(),
   openedAt: timestamp("opened_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
@@ -152,6 +153,7 @@ export const notificationLogs = pgTable("notification_logs", {
   status: notificationStatus("status").default("pending").notNull(),
   providerMessageId: text("provider_message_id"),
   error: text("error"),
+  idempotencyKey: varchar("idempotency_key", { length: 128 }).unique(),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
 });

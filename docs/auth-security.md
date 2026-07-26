@@ -18,10 +18,9 @@ Los participantes no crean cuenta.
 5. `/api/auth/callback` confirma la sesión con Supabase.
 6. El cliente de servidor escribe las cookies de sesión.
 7. El middleware obtiene el usuario y busca el email en `admin_users`.
-8. Si existe, permite continuar; si no, redirige a `/login` o responde `401`.
+8. Si existe, permite continuar; sin sesión redirige a `/login` o responde `401`; una sesión sin admin recibe `403`.
 
-Hay también un endpoint `/api/auth/magic-link`. El trabajo local actual mueve la solicitud al cliente de navegador;
-se debe decidir un único camino y retirar o justificar el duplicado.
+El navegador solicita siempre el enlace mediante `/api/auth/magic-link`; no crea una segunda sesión de Supabase.
 
 ## Rutas protegidas
 
@@ -29,17 +28,15 @@ se debe decidir un único camino y retirar o justificar el duplicado.
 - `/familia`
 - `/sorteo`
 - `/envios`
-- Prefijo `/api/draw`
+- Prefijo `/api/admin`
 
-La lista está codificada en `src/middleware.ts`. Todo nuevo endpoint administrativo debe añadirse a la protección o
-usar una política común más amplia.
+Todo nuevo endpoint administrativo debe vivir bajo `/api/admin` o aplicar una protección equivalente.
 
 ## Autorización
 
 Autenticación responde “quién es”; autorización responde “qué grupo puede modificar”.
 
-Actualmente se comprueba la presencia del administrador, pero no se verifica que el grupo enviado a la API
-pertenezca a ese administrador. Antes de admitir más de uno, cada caso de uso debe:
+Cada mutación obtiene el administrador desde la sesión y comprueba la propiedad en servidor:
 
 1. Obtener el administrador desde la sesión, nunca desde el payload.
 2. Cargar el grupo solicitado.
@@ -50,8 +47,8 @@ pertenezca a ese administrador. Antes de admitir más de uno, cada caso de uso d
 ## Tokens de revelación
 
 - Se crean con 32 bytes aleatorios y se codifican como Base64 URL-safe.
-- La URL contiene el token en claro.
-- La base guarda únicamente SHA-256.
+- La URL lleva el token en el fragmento `#`, que no se envía como path HTTP.
+- La base guarda SHA-256 y una copia cifrada AES-256-GCM.
 - La búsqueda calcula el hash recibido.
 
 El token funciona como credencial: quien posee la URL puede ver la asignación. Por ello:
@@ -70,8 +67,8 @@ El token funciona como credencial: quien posee la URL puede ver la asignación. 
 
 ### Solo servidor
 
-- `SUPABASE_SERVICE_ROLE_KEY`
 - `DATABASE_URL`
+- `REVEAL_TOKEN_ENCRYPTION_KEY`
 - `RESEND_API_KEY`
 - `KAPSO_API_KEY`
 
@@ -102,14 +99,12 @@ Row Level Security. Antes de producción se debe:
 - Confirmar grants efectivos de los roles `anon` y `authenticated`.
 - Habilitar RLS o revocar acceso API a las tablas que no deban consultarse desde el cliente.
 - Proteger especialmente participantes, asignaciones, hashes y logs.
-- Mantener la service role exclusivamente en servidor.
 
 ## Riesgos y trabajo pendiente
 
-- Crear de forma segura el primer `admin_users`.
+- Ejecutar el bootstrap del primer `admin_users`.
 - Añadir logout y revocación de sesión.
-- Aplicar propiedad del grupo en todos los casos de uso.
-- Proteger automáticamente futuros endpoints administrativos.
+- Mantener la propiedad en todos los casos de uso nuevos.
 - Añadir rate limiting al envío de Magic Links y a operaciones sensibles.
 - Definir expiración e invalidación de tokens de revelación.
 - Evitar enumeración de emails administrativos.

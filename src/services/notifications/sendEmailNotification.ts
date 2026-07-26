@@ -6,6 +6,19 @@ type Input = {
   revealUrl: string;
 };
 
+function escapeHtml(value: string) {
+  return value.replace(/[&<>"']/g, (character) => {
+    const entities: Record<string, string> = {
+      "&": "&amp;",
+      "<": "&lt;",
+      ">": "&gt;",
+      '"': "&quot;",
+      "'": "&#39;"
+    };
+    return entities[character];
+  });
+}
+
 export async function sendEmailNotification({ to, name, revealUrl }: Input) {
   const resend = getResendClient();
   if (!resend) {
@@ -20,7 +33,7 @@ export async function sendEmailNotification({ to, name, revealUrl }: Input) {
     to,
     subject: "Tu Amigo Invisible de Reyes ya está listo",
     text: `Ya está listo el Amigo Invisible de Reyes.\n\nHola ${name}, abre tu enlace secreto para descubrir a quién regalas:\n\n${revealUrl}\n\nNo lo compartas.`,
-    html: `<p>Ya está listo el Amigo Invisible de Reyes.</p><p>Hola ${name}, abre tu enlace secreto para descubrir a quién regalas:</p><p><a href="${revealUrl}">${revealUrl}</a></p><p>No lo compartas.</p>`
+    html: `<p>Ya está listo el Amigo Invisible de Reyes.</p><p>Hola ${escapeHtml(name)}, abre tu enlace secreto para descubrir a quién regalas:</p><p><a href="${escapeHtml(revealUrl)}">${escapeHtml(revealUrl)}</a></p><p>No lo compartas.</p>`
   });
 
   if (result.error) {

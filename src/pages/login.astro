@@ -84,12 +84,9 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
 </BaseLayout>
 
 <script>
-  import { createSupabaseBrowserClient } from "@/lib/supabase/browser";
-
   const form = document.querySelector<HTMLFormElement>("#magic-link-form");
   const message = document.querySelector<HTMLElement>("#login-message");
   const submitButton = document.querySelector<HTMLButtonElement>("#login-submit");
-  const supabase = createSupabaseBrowserClient();
 
   if (form && message && submitButton) {
     form.addEventListener("submit", async (event) => {
@@ -112,17 +109,14 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
       }
 
       try {
-        const { error } = await supabase.auth.signInWithOtp({
-          email,
-          options: {
-            emailRedirectTo: `${window.location.origin}/auth/callback?next=/inicio`
-          }
+        const response = await fetch("/api/auth/magic-link", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email })
         });
-
-        message.textContent = error
-          ? error.message
-          : "Te hemos enviado un enlace de acceso. Revisa tu correo.";
-        message.dataset.state = error ? "error" : "success";
+        const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
+        message.textContent = payload?.message ?? "No se pudo solicitar el enlace.";
+        message.dataset.state = response.ok && payload?.ok ? "success" : "error";
       } catch {
         message.textContent = "No se pudo enviar el enlace. Revisa la conexión y vuelve a intentarlo.";
         message.dataset.state = "error";

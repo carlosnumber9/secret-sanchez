@@ -1,51 +1,43 @@
+import type { AstroCookieSetOptions, AstroCookies } from "astro";
 import { createServerClient } from "@supabase/ssr";
-import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "../env";
-import { serverRealtimeTransport } from "./realtime";
 
-type AstroCookies = {
-  get: (name: string) => { value: string } | undefined;
-  set: (name: string, value: string, options?: Record<string, unknown>) => void;
-  delete: (name: string, options?: Record<string, unknown>) => void;
+type SupabaseServerContext = {
+  cookies: AstroCookies;
+  request: Request;
 };
 
-export function createSupabaseServerClient(cookies: AstroCookies) {
-  const env = getEnv();
-  if (!env.publicSupabaseUrl || !env.publicSupabaseAnonKey) {
-    throw new Error("Supabase public env vars are missing.");
-  }
+function getRequestCookies(request: Request) {
+  const cookieHeader = request.headers.get("cookie");
+  if (!cookieHeader) return [];
 
-  return createServerClient(env.publicSupabaseUrl, env.publicSupabaseAnonKey, {
-    realtime: {
-      transport: serverRealtimeTransport
-    },
-    cookies: {
-      get(name) {
-        return cookies.get(name)?.value;
-      },
-      set(name, value, options) {
-        cookies.set(name, value, options);
-      },
-      remove(name, options) {
-        cookies.delete(name, options);
-      }
-    }
+  return cookieHeader.split(";").flatMap((cookie) => {
+    const separatorIndex = cookie.indexOf("=");
+    if (separatorIndex < 0) return [];
+
+    const name = cookie.slice(0, separatorIndex).trim();
+    if (!name) return [];
+
+    return [{ name, value: cookie.slice(separatorIndex + 1).trim() }];
   });
 }
 
-export function createSupabaseAdminClient() {
+export function createSupabaseServerClient({ cookies, request }: SupabaseServerContext) {
   const env = getEnv();
-  if (!env.publicSupabaseUrl || !env.supabaseServiceRoleKey) {
-    throw new Error("Supabase service role env vars are missing.");
-  }
+  let requestCookies = getRequestCookies(request);
 
-  return createClient(env.publicSupabaseUrl, env.supabaseServiceRoleKey, {
-    auth: {
-      persistSession: false,
-      autoRefreshToken: false
-    },
-    realtime: {
-      transport: serverRealtimeTransport
+  return createServerClient(env.publicSupabaseUrl, env.publicSupabaseAnonKey, {
+    cookies: {
+      getAll() {
+        return requestCookies;
+      },
+      setAll(cookiesToSet) {
+        for (const { name, value, options } of cookiesToSet) {
+          requestCookies = requestCookies.filter((cookie) => cookie.name !== name);
+          if (value) requestCookies.push({ name, value });
+          cookies.set(name, value, options as AstroCookieSetOptions);
+        }
+      }
     }
   });
 }

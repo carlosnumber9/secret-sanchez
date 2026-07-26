@@ -7,17 +7,22 @@ El proyecto está construido con Astro en modo SSR, React Islands y TypeScript. 
 Postgres, Drizzle como ORM, Resend para email y está preparado para incorporar WhatsApp mediante Kapso. El despliegue
 objetivo es Vercel.
 
+Local y Vercel utilizan el mismo Supabase y los mismos datos. No hay fixtures ni fallbacks: configuración,
+migraciones, sorteos y envíos locales tienen efectos reales.
+
 ## Puesta en marcha
 
-Necesitas Node.js, un proyecto de Supabase y, para disponer de todas las integraciones, cuentas de Resend y Kapso.
+Necesitas Node.js 22, un proyecto de Supabase y, para disponer de todas las integraciones, cuentas de Resend y
+Kapso. Si utilizas nvm, el repositorio selecciona la versión compatible mediante `.nvmrc`.
 
 ```bash
+nvm use
 npm install
-cp .env.example .env
+cp .env.example .env.local
 npm run dev
 ```
 
-Configura en `.env` las URLs y claves de tus propios servicios. Para crear las tablas en Postgres puedes generar y
+Configura en `.env.local` las URLs y claves de tus propios servicios. Para crear las tablas en Postgres puedes generar y
 ejecutar las migraciones con:
 
 ```bash
@@ -29,6 +34,7 @@ Valida el proyecto antes de desplegar:
 
 ```bash
 npm run build
+npm test
 ```
 
 ## Documentación

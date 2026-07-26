@@ -2,17 +2,27 @@
 import Button from "@/components/Button/Button.astro";
 import Card from "@/components/Card/Card.astro";
 import StatusBadge from "@/components/StatusBadge/StatusBadge.astro";
+import GroupSetup from "@/components/react/GroupSetup/GroupSetup";
 import AdminLayout from "@/layouts/AdminLayout.astro";
-import { demoGroup, getDemoStats } from "@/lib/demo";
+import { getAdminAppState } from "@/actions/adminData";
 
-const stats = getDemoStats();
+const state = await getAdminAppState(Astro.locals.admin.id);
+const activeParticipants = state.participants.filter((participant) => participant.active);
+const missingContactCount = activeParticipants.filter(
+  (participant) =>
+    (participant.preferredChannel === "email" && !participant.email) ||
+    participant.preferredChannel === "whatsapp" ||
+    participant.preferredChannel === "both"
+).length;
 ---
 
 <AdminLayout title="Inicio">
-  <section class="hero-panel">
+  {
+    state.group ? (
+      <section class="hero-panel">
     <div class="section-header">
       <p>Preparando Reyes sin líos</p>
-      <h1>{demoGroup.name}</h1>
+      <h1>{state.group.name}</h1>
       <p>
         Todo lo importante a la vista: familia, contactos, sorteo y mensajes secretos para cada persona.
       </p>
@@ -24,24 +34,34 @@ const stats = getDemoStats();
       </div>
       <div class="hero-kpi">
         <span>Participantes</span>
-        <strong>{stats.participantCount}</strong>
+        <strong>{activeParticipants.length}</strong>
       </div>
       <div class="hero-kpi">
         <span>Sin contacto</span>
-        <strong>{stats.missingContactCount}</strong>
+        <strong>{missingContactCount}</strong>
       </div>
       <div class="hero-kpi">
         <span>Sorteo</span>
-        <strong>No realizado</strong>
+        <strong>{state.draw ? "Realizado" : "No realizado"}</strong>
       </div>
     </div>
     <div class="cluster cluster--actions">
       <Button class="min-h-11" href="/familia" size="large">Preparar sorteo</Button>
       <Button class="min-h-11" href="/sorteo" variant="secondary" size="large">Ir al reparto</Button>
     </div>
-  </section>
+      </section>
+    ) : (
+      <Card tone="accent">
+        <div class="stack">
+          <h1>Crea el grupo familiar</h1>
+          <p>Este formulario creará el primer grupo directamente en Supabase.</p>
+          <GroupSetup client:load />
+        </div>
+      </Card>
+    )
+  }
 
-  <section class="two-column">
+  {state.group && <section class="two-column">
     <Card>
       <div class="stack">
         <div class="section-header">
@@ -50,17 +70,17 @@ const stats = getDemoStats();
         </div>
         <div class="cluster">
           <StatusBadge tone="ok">Familia creada</StatusBadge>
-          <StatusBadge tone="warning">{stats.missingContactCount} sin contacto</StatusBadge>
-          <StatusBadge tone="neutral">Sorteo pendiente</StatusBadge>
+          <StatusBadge tone={missingContactCount ? "warning" : "ok"}>{missingContactCount} por corregir</StatusBadge>
+          <StatusBadge tone={state.draw ? "ok" : "neutral"}>{state.draw ? "Sorteo realizado" : "Sorteo pendiente"}</StatusBadge>
         </div>
       </div>
     </Card>
     <Card tone="warm">
       <div class="stack">
-        <h2>Enlace de prueba</h2>
-        <p>Para comprobar la experiencia familiar sin login, abre la revelación demo.</p>
-        <Button class="min-h-10" href="/r/demo" variant="secondary">Ver regalo secreto</Button>
+        <h2>Datos reales</h2>
+        <p>Local y Vercel comparten esta misma familia. Revisa bien los datos antes de sortear o enviar.</p>
+        <Button class="min-h-10" href="/familia" variant="secondary">Revisar familia</Button>
       </div>
     </Card>
-  </section>
+  </section>}
 </AdminLayout>

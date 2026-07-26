@@ -5,7 +5,7 @@ type SendWhatsappInput = {
   message: string;
 };
 
-export async function sendKapsoMessage(input: SendWhatsappInput) {
+export async function sendKapsoMessage(_input: SendWhatsappInput) {
   const { kapsoApiKey } = getEnv();
   if (!kapsoApiKey) {
     return {
@@ -16,6 +16,6 @@ export async function sendKapsoMessage(input: SendWhatsappInput) {
 
   return {
     ok: false,
-    error: `Integración pendiente para ${input.phone}. Mensaje preparado: ${input.message}`
+    error: "La integración de WhatsApp todavía no está disponible."
   };
 }

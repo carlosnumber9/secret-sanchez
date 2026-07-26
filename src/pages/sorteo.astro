@@ -3,9 +3,15 @@ import Card from "@/components/Card/Card.astro";
 import StatusBadge from "@/components/StatusBadge/StatusBadge.astro";
 import DrawGenerator from "@/components/react/DrawGenerator/DrawGenerator";
 import AdminLayout from "@/layouts/AdminLayout.astro";
-import { demoGroup, getDemoStats } from "@/lib/demo";
+import { getAdminAppState } from "@/actions/adminData";
 
-const stats = getDemoStats();
+const state = await getAdminAppState(Astro.locals.admin.id);
+const participantCount = state.participants.filter((participant) => participant.active).length;
+const invalidChannels = state.participants.filter(
+  (participant) => participant.active && (participant.preferredChannel === "whatsapp" || participant.preferredChannel === "both")
+).length;
+const noSameIslandEnabled =
+  state.rules.find((rule) => rule.type === "NO_SAME_ISLAND")?.enabled ?? true;
 ---
 
 <AdminLayout title="Sorteo">
@@ -16,14 +22,24 @@ const stats = getDemoStats();
 
   <section class="two-column">
     <div class="stack">
-      <DrawGenerator client:load groupId={demoGroup.id} participantCount={stats.participantCount} />
+      {
+        state.group ? (
+          state.draw ? (
+            <Card tone="accent"><div class="stack"><h2>Sorteo realizado</h2><p>Ya existe un sorteo activo. Consulta y prepara las entregas desde Envíos.</p></div></Card>
+          ) : (
+            <DrawGenerator client:load groupId={state.group.id} participantCount={participantCount} />
+          )
+        ) : (
+          <Card><p>Crea primero el grupo desde Inicio.</p></Card>
+        )
+      }
       <Card>
         <div class="stack">
           <h2>Después de repartir</h2>
           <p>La app genera un token secreto por participante, guarda solo el hash y prepara los mensajes.</p>
           <div class="cluster">
             <StatusBadge tone="neutral">Emails con Resend</StatusBadge>
-            <StatusBadge tone="neutral">WhatsApp preparado</StatusBadge>
+            <StatusBadge tone={invalidChannels ? "warning" : "neutral"}>WhatsApp no disponible</StatusBadge>
           </div>
         </div>
       </Card>
@@ -34,9 +50,17 @@ const stats = getDemoStats();
         <h2>Reglas activas</h2>
         <ul class="rules-list">
           <li>Nadie se regala a sí mismo.</li>
-          <li>Nadie regala dentro de su núcleo familiar.</li>
+          <li>
+            {noSameIslandEnabled
+              ? "No se permiten regalos dentro del mismo núcleo familiar."
+              : "Sí se permiten regalos dentro del mismo núcleo familiar."}
+          </li>
           <li>Todos reciben un regalo.</li>
-          <li>Se respetan exclusiones manuales.</li>
+          <li>
+            {state.exclusions.length
+              ? `${state.exclusions.length} exclusiones manuales activas.`
+              : "No hay exclusiones manuales."}
+          </li>
         </ul>
       </div>
     </Card>

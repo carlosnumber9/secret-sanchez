@@ -10,8 +10,8 @@ un estado fiable de cada intento.
 | Preferencia | Comportamiento previsto |
 | --- | --- |
 | `email` | Enviar email si existe dirección. |
-| `whatsapp` | Enviar WhatsApp si existe teléfono. |
-| `both` | Intentar ambos canales disponibles. |
+| `whatsapp` | No disponible; bloquea la preparación hasta corregirlo. |
+| `both` | No disponible mientras Kapso esté pendiente. |
 | `manual` | No enviar automáticamente; ofrecer copia segura. |
 
 Si falta el contacto requerido, el participante debe aparecer como pendiente de corrección o entrega manual.
@@ -31,7 +31,7 @@ Requisitos antes de producción:
 - Confirmar la dirección `from`.
 - Probar enlaces con el `APP_URL` de producción.
 - Registrar resultado, identificador de proveedor y error.
-- Definir reintentos sin duplicar envíos innecesariamente.
+- Reutilizar claves de idempotencia para no duplicar peticiones.
 
 ## WhatsApp
 
@@ -49,14 +49,13 @@ Queda por decidir:
 
 ## Entrega manual
 
-Debe permitir copiar la URL una vez generada y marcar la asignación como entregada manualmente. La pantalla demo ya
-incluye la acción de copiar, pero no persiste el estado manual.
+El panel obtiene la URL bajo demanda, la copia y registra un intento `manual` sin mostrar el receptor.
 
 El organizador nunca debería tener que ver el receptor para compartir el enlace.
 
 ## Logs
 
-Cada intento debería crear un `notification_logs` con:
+Cada intento crea un `notification_logs` con:
 
 - Asignación.
 - Canal.
@@ -71,7 +70,7 @@ Los webhooks o consultas posteriores actualizarían `delivered`. La apertura rea
 
 ## Idempotencia y reintentos
 
-- Cada acción de reintento debe identificar el intento original.
+- Cada lote deriva una clave única por asignación y canal.
 - Un timeout desconocido no equivale necesariamente a un fallo definitivo.
 - Debe evitarse enviar varias veces por doble clic.
 - El reintento masivo debe operar solo sobre estados elegibles.
@@ -96,5 +95,5 @@ flowchart TD
 
 ## Privacidad
 
-Los logs pueden contener email o teléfono, pero nunca el token o URL completos. Las respuestas del proveedor y los
-mensajes de error deben sanearse antes de guardarse o registrarse.
+La tabla conserva el destinatario necesario para auditoría. Los Runtime Logs no incluyen email, teléfono, token,
+hash ni URL completa. Las respuestas del proveedor se normalizan antes de persistirse.

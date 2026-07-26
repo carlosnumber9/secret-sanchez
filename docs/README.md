@@ -26,7 +26,7 @@ cómo está construido, cómo operarlo y qué decisiones siguen abiertas.
 ## Cómo mantener estas docs
 
 - Actualizar la documentación en el mismo cambio que modifica el comportamiento descrito.
-- Distinguir siempre entre comportamiento **implementado**, **parcial**, **demo**, **previsto** o **por decidir**.
+- Distinguir siempre entre comportamiento **implementado**, **parcial**, **previsto** o **por decidir**.
 - No documentar secretos, valores reales de `.env`, tokens de revelación ni datos personales.
 - Enlazar al código cuando ayude a comprobar una afirmación.
 - Añadir las decisiones que afecten a varios módulos en [decisions.md](./decisions.md) o en un ADR.

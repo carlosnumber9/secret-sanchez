@@ -69,7 +69,7 @@ pruebas.
 - `src/db/client.ts`: conexión Postgres.
 - `src/db/queries`: operaciones de lectura y escritura.
 - `drizzle`: migraciones generadas por Drizzle.
-- `supabase/migrations`: migraciones destinadas a Supabase.
+- `drizzle/meta`: snapshots versionados de las migraciones.
 
 ### Infraestructura
 
@@ -110,7 +110,7 @@ Los pasos 1, 4, 5 y 6 todavía no están conectados completamente.
 - SSR para mantener base de datos, claves y reglas sensibles en servidor.
 - React solo donde aporta interacción.
 - Tokens de revelación aleatorios; en base se almacena únicamente el hash.
-- Datos demo aislados en `src/lib/demo.ts`.
+- Configuración obligatoria y una única base compartida por local y Vercel.
 - shadcn/ui y Tailwind CSS 4 como base de componentes; CSS propio limitado a composición y superficies.
 - Textos de producto en español.
 - No incorporar dependencias si la plataforma o los patrones existentes resuelven el problema.

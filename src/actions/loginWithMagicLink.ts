@@ -1,35 +1,24 @@
 import { createClient } from "@supabase/supabase-js";
 import { getEnv } from "@/lib/env";
-import { serverRealtimeTransport } from "@/lib/supabase/realtime";
 
-export async function loginWithMagicLink(email: string) {
+export async function loginWithMagicLink(email: string, origin?: string) {
   const env = getEnv();
-  if (!env.publicSupabaseUrl || !env.publicSupabaseAnonKey) {
-    return {
-      ok: false,
-      message: "Supabase no está configurado todavía."
-    };
-  }
-
   const supabase = createClient(env.publicSupabaseUrl, env.publicSupabaseAnonKey, {
     auth: {
-      persistSession: true,
-      autoRefreshToken: true
-    },
-    realtime: {
-      transport: serverRealtimeTransport
+      persistSession: false,
+      autoRefreshToken: false
     }
   });
 
   const { error } = await supabase.auth.signInWithOtp({
     email,
     options: {
-      emailRedirectTo: `${env.appUrl.replace(/\/$/, "")}/auth/callback?next=/inicio`
+          emailRedirectTo: `${(origin ?? env.appUrl).replace(/\/$/, "")}/auth/callback?next=/inicio`
     }
   });
 
   if (error) {
-    return { ok: false, message: error.message };
+    return { ok: false, message: "No se pudo enviar el enlace. Vuelve a intentarlo." };
   }
 
   return {

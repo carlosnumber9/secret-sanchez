@@ -1,135 +1,43 @@
 # Desarrollo
 
-## Requisitos
+## Entorno
 
-- Node.js compatible con Astro 5; `20.18.1` o superior para ejecutar el CLI actual de shadcn sin avisos de engine.
-- npm.
-- Proyecto de Supabase para autenticación y Postgres.
-- Opcional para cada integración: cuenta de Resend y cuenta de Kapso.
+Local usa el mismo Supabase/Postgres que Vercel. No existe base aislada ni fallback de datos. Cualquier mutación,
+sorteo, migración o envío realizado desde local tiene efectos reales.
 
-No se necesita Supabase local ni Docker para el flujo previsto actualmente.
-
-## Instalación
+El runtime requerido es Node.js 22.x, alineado entre `.nvmrc`, `package.json` y Vercel. Node.js 20 no es compatible
+con el transporte WebSocket nativo que usa actualmente Supabase.
 
 ```bash
+nvm use
 npm install
-cp .env.example .env
+cp .env.example .env.local
 npm run dev
 ```
 
-La aplicación queda disponible por defecto en `http://localhost:4321`.
+Variables obligatorias:
 
-## Arranque desde VS Code
+- `PUBLIC_SUPABASE_URL`
+- `PUBLIC_SUPABASE_ANON_KEY`
+- `DATABASE_URL`
+- `APP_URL`, con el origen canónico de Production
+- `REVEAL_TOKEN_ENCRYPTION_KEY`, Base64 de 32 bytes
 
-El repositorio incluye dos accesos para ejecutar `npm run dev`:
+Opcionales: `RESEND_API_KEY` y `KAPSO_API_KEY`. La misma clave de cifrado debe usarse en local y Vercel.
 
-- En `Run and Debug`, seleccionar `Secret Sánchez: arrancar app` y pulsar el botón de reproducción. Esta opción
-  abre el navegador cuando Astro está listo.
-- Desde `Terminal > Run Task...`, seleccionar la tarea del mismo nombre. También se puede lanzar con el atajo de
-  la tarea de build predeterminada (`Cmd+Shift+B` en macOS y `Ctrl+Shift+B` en Windows/Linux).
-
-La tarea permite una sola instancia para evitar arrancar accidentalmente dos servidores de desarrollo. En ambos
-casos, las dependencias deben haberse instalado previamente con `npm install`.
-
-## Variables
-
-| Variable | Exposición | Uso |
-| --- | --- | --- |
-| `PUBLIC_SUPABASE_URL` | Pública | URL del proyecto Supabase. |
-| `PUBLIC_SUPABASE_ANON_KEY` | Pública | Cliente público de Supabase. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Servidor | Operaciones administrativas de Supabase. |
-| `DATABASE_URL` | Servidor | Conexión Postgres para Drizzle. |
-| `APP_URL` | Servidor | Base de callbacks y enlaces de revelación. |
-| `RESEND_API_KEY` | Servidor | Envío de email. |
-| `KAPSO_API_KEY` | Servidor | WhatsApp futuro. |
-
-`src/lib/env.ts` acepta también `SUPABASE_URL` y `SUPABASE_KEY` como fallback de las variables públicas.
-
-No copiar valores reales en issues, commits, documentación, fixtures, logs o mensajes de error.
-
-## Scripts
+## Comandos
 
 | Comando | Propósito |
 | --- | --- |
-| `npm run dev` | Servidor de desarrollo. |
-| `npm run build` | `astro check` y build SSR para Vercel. |
-| `npm run preview` | Preview local del build. |
-| `npm run db:generate` | Genera migraciones desde el schema Drizzle. |
-| `npm run db:migrate` | Ejecuta migraciones pendientes. |
-| `npm run db:push` | Sincroniza directamente el schema con la base. |
-| `npm run db:studio` | Abre Drizzle Studio. |
+| `npm run dev` | Desarrollo conectado a los datos reales. |
+| `npm run build` | Comprobación Astro y build de Vercel. |
+| `npm test` | Pruebas unitarias sin acceso a Supabase. |
+| `npm run admin:bootstrap -- --email ... --name ...` | Alta idempotente del administrador. |
+| `npm run db:generate` | Generar migración y snapshot Drizzle. |
+| `npm run db:migrate` | Aplicar migraciones a la base real. |
+| `npm run db:studio` | Abrir Drizzle Studio. |
 
-`db:push` puede modificar una base directamente. No debe usarse contra producción sin confirmar el entorno y la
-estrategia de migraciones.
+Drizzle es la única autoridad de schema. `drizzle/` y `drizzle/meta/` se versionan. Antes de migrar se debe hacer
+backup, revisar el SQL y confirmar que la migración inicial está baselinada.
 
-## Modo demo
-
-Los datos viven en `src/lib/demo.ts`. Sirven para diseñar y probar componentes sin depender de datos familiares
-reales.
-
-Limitación actual: aunque las páginas cargan datos demo, el middleware exige administrador en todas las pantallas
-administrativas. Por tanto, el modo demo sin variables no es todavía un recorrido completo. `/r/demo` sí es público.
-
-Al corregirlo se debe elegir un comportamiento explícito:
-
-- Habilitar administración demo solo en desarrollo, o
-- Mantener login obligatorio y definir datos demo tras autenticación.
-
-Nunca se debe activar un bypass de autenticación en producción.
-
-## Estructura
-
-```text
-src/
-  actions/                 Casos de uso de aplicación
-  components/              Componentes Astro
-  components/ui/           Componentes React generados por shadcn
-  components/react/        Islas React
-  db/                      Schema, cliente y queries
-  layouts/                 Layouts de páginas
-  lib/                     Entorno e integraciones
-  pages/                   Páginas y endpoints
-  services/draw/           Dominio del sorteo
-  services/notifications/  Dominio de entrega
-  styles/                  Tokens y estilos globales
-drizzle/                   Migraciones Drizzle
-supabase/migrations/       Migraciones Supabase
-docs/                      Documentación del producto
-```
-
-## Convenciones de código
-
-- TypeScript estricto.
-- Imports internos mediante `@/`.
-- Textos de interfaz en español.
-- Zod para entradas externas.
-- Astro para estructura; React para interacción real.
-- Tailwind CSS 4 y shadcn/ui para la base; CSS normal para layout y contenedores translúcidos.
-- `components.json` conserva el preset y los aliases usados por el CLI de shadcn.
-- Cambios pequeños y coherentes con el código cercano.
-- No añadir librerías si los patrones actuales o la plataforma resuelven el caso.
-- No consultar la base directamente desde componentes de navegador.
-- No confiar en identificadores de administrador recibidos desde el cliente.
-
-## Cambios de schema
-
-1. Modificar `src/db/schema.ts`.
-2. Generar o escribir una migración explícita.
-3. Revisar el SQL generado.
-4. Mantener coordinados `drizzle/` y `supabase/migrations/` mientras haya dos estrategias.
-5. Actualizar [data-model.md](./data-model.md).
-6. Explicar compatibilidad, backfill y rollback.
-7. No ejecutar contra una base remota sin confirmar el entorno.
-
-## Criterio de cierre
-
-Antes de considerar terminado un cambio:
-
-1. Revisar el diff y preservar cambios ajenos.
-2. Validar errores, vacíos y carga.
-3. Ejecutar `npm run build`.
-4. Ejecutar las pruebas aplicables cuando existan.
-5. Revisar auth, cookies y middleware si se tocó el acceso.
-6. Revisar schema y migraciones si se tocó persistencia.
-7. Actualizar la documentación relacionada.
-8. Usar el formato de commit definido en [git-workflow.md](./git-workflow.md).
+No registrar ni copiar secretos, contactos, tokens, hashes o URLs de revelación.

@@ -1,10 +1,29 @@
-import { desc, eq } from "drizzle-orm";
+import { and, desc, eq, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawRules, familyGroups } from "@/db/schema";
 import { DRAW_RULES } from "@/services/draw/rules";
 
 export async function getLatestFamilyGroup() {
   const [group] = await db.select().from(familyGroups).orderBy(desc(familyGroups.createdAt)).limit(1);
+  return group ?? null;
+}
+
+export async function getActiveFamilyGroupForAdmin(ownerAdminId: string) {
+  const [group] = await db
+    .select()
+    .from(familyGroups)
+    .where(and(eq(familyGroups.ownerAdminId, ownerAdminId), ne(familyGroups.status, "archived")))
+    .orderBy(desc(familyGroups.year), desc(familyGroups.createdAt))
+    .limit(1);
+  return group ?? null;
+}
+
+export async function getOwnedFamilyGroup(groupId: string, ownerAdminId: string) {
+  const [group] = await db
+    .select()
+    .from(familyGroups)
+    .where(and(eq(familyGroups.id, groupId), eq(familyGroups.ownerAdminId, ownerAdminId)))
+    .limit(1);
   return group ?? null;
 }
 

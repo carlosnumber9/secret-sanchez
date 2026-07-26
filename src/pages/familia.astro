@@ -1,7 +1,26 @@
 ---
 import FamilyEditor from "@/components/react/FamilyEditor/FamilyEditor";
 import AdminLayout from "@/layouts/AdminLayout.astro";
-import { demoIslands } from "@/lib/demo";
+import { getAdminAppState } from "@/actions/adminData";
+
+const state = await getAdminAppState(Astro.locals.admin.id);
+const islands = state.islands.map((island) => ({
+  id: island.id,
+  name: island.name,
+  color: island.color ?? "#d6a84f",
+  participants: state.participants
+    .filter((participant) => participant.familyIslandId === island.id)
+    .map((participant) => ({
+      id: participant.id,
+      name: participant.name,
+      email: participant.email ?? "",
+      phone: participant.phone ?? "",
+      preferredChannel: participant.preferredChannel,
+      active: participant.active,
+      canGive: participant.canGive,
+      canReceive: participant.canReceive
+    }))
+}));
 ---
 
 <AdminLayout title="Familia">
@@ -12,5 +31,11 @@ import { demoIslands } from "@/lib/demo";
       núcleos para evitar regalos dentro de casa.
     </p>
   </div>
-  <FamilyEditor client:load initialIslands={demoIslands} />
+  {
+    state.group ? (
+      <FamilyEditor client:load groupId={state.group.id} initialIslands={islands} />
+    ) : (
+      <p>No hay un grupo activo. Créalo primero desde <a href="/inicio">Inicio</a>.</p>
+    )
+  }
 </AdminLayout>

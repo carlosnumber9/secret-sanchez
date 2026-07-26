@@ -11,3 +11,13 @@ export async function createDraw(input: typeof draws.$inferInsert) {
   const [draw] = await db.insert(draws).values(input).returning();
   return draw;
 }
+
+export async function getLatestOwnedDraw(groupId: string) {
+  const [draw] = await db
+    .select()
+    .from(draws)
+    .where(eq(draws.groupId, groupId))
+    .orderBy(desc(draws.createdAt))
+    .limit(1);
+  return draw ?? null;
+}

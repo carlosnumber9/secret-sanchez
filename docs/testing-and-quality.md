@@ -4,8 +4,7 @@
 
 - `npm run build` ejecuta `astro check` y el build SSR.
 - TypeScript usa la configuración estricta de Astro.
-- No existe suite de pruebas propia.
-- No hay framework de testing decidido.
+- Existe una suite unitaria con el runner nativo de Node y `tsx`.
 - No hay scripts separados de lint o formato.
 - No hay CI en el repositorio.
 
@@ -79,7 +78,7 @@ También debe cubrir sesión ausente, grupo ajeno, token inválido y sorteo impo
 - Comprobar mensajes de carga, error y éxito.
 - Confirmar que la consola y las respuestas no muestran secretos.
 - Probar sesión válida, inválida y usuario no autorizado.
-- Probar `/r/demo` y un token inexistente.
+- Probar `/r` sin fragmento y con un token inexistente.
 - Para cambios de algoritmo, ejecutar casos pequeños e imposibles con datos controlados.
 
 ## CI objetivo

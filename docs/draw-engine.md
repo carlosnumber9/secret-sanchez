@@ -60,49 +60,24 @@ El servicio devuelve mensajes comprensibles cuando:
 
 Estos errores deben mostrarse sin crear registros parciales.
 
-## Persistencia actual
-
-La acción de aplicación:
-
-1. Carga participantes del grupo.
-2. Ejecuta el dominio con `noSameIsland: true` y sin exclusiones.
-3. Inserta un sorteo `generated`.
-4. Crea un token por asignación.
-5. Guarda el hash y devuelve temporalmente la URL.
-
-## Bloqueo actual de los tokens
-
-El endpoint reduce el resultado a `{ ok, message }`. No devuelve las URLs ni llama a notificaciones. Como el token en
-claro no se almacena —decisión correcta de seguridad—, al terminar la petición desaparece la única información que
-permite construir los enlaces.
-
-No se debe habilitar el sorteo persistente en la UI hasta que la misma operación:
-
-- Envíe inmediatamente las URLs por los canales elegidos, o
-- Devuelva las URLs una única vez a una superficie segura para copia manual, o
-- Combine ambos comportamientos con una política explícita.
-
-Nunca se debe resolver el problema guardando tokens en claro de forma indefinida.
-
-## Flujo persistente objetivo
+## Persistencia
 
 1. Autorizar al administrador sobre el grupo.
 2. Cargar participantes, `draw_rules` y `exclusion_rules`.
 3. Validar contactos y viabilidad.
-4. Generar todo el reparto en memoria.
-5. Abrir una transacción.
-6. Crear el sorteo y las asignaciones con hashes.
-7. Actualizar estados del sorteo y grupo.
-8. Confirmar la transacción.
-9. Entregar los enlaces y crear logs por intento.
-10. Mostrar un resumen sin receptores.
+4. Bloquear el grupo y rechazar otro sorteo activo.
+5. Generar todo el reparto en memoria.
+6. Crear el sorteo bloqueado y las asignaciones con hash y token cifrado.
+7. Actualizar el grupo y confirmar la transacción.
+8. Preparar envíos posteriores, fuera de la transacción.
 
-El envío externo no debe mantener una transacción de base de datos abierta. Se puede confirmar el sorteo y procesar
-notificaciones de forma idempotente después.
+El panel administrativo nunca devuelve receptores. Los tokens solo se descifran en servidor para email o copia
+manual autorizada.
 
 ## Regeneración
 
-Antes de implementarla se debe decidir:
+La regeneración no está implementada. Mientras exista un sorteo `generated`, `locked` o `sent`, la API responde
+`409`. Antes de habilitarla se debe decidir:
 
 - Quién puede regenerar.
 - Si requiere confirmación reforzada.

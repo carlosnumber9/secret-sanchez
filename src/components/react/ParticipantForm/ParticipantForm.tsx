@@ -7,7 +7,7 @@ export type ParticipantDraft = {
   name: string;
   email: string;
   phone: string;
-  preferredChannel: "email" | "whatsapp" | "both" | "manual";
+  preferredChannel: "email" | "manual";
 };
 
 type Props = {
@@ -63,8 +63,6 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
           }
         >
           <NativeSelectOption value="email">Email</NativeSelectOption>
-          <NativeSelectOption value="whatsapp">WhatsApp</NativeSelectOption>
-          <NativeSelectOption value="both">Ambos</NativeSelectOption>
           <NativeSelectOption value="manual">Manual</NativeSelectOption>
         </NativeSelect>
       </label>

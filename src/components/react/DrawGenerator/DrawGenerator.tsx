@@ -16,13 +16,16 @@ export default function DrawGenerator({ groupId, participantCount }: Props) {
   const [message, setMessage] = useState("Listo para repartir cuando Juan lo vea claro.");
 
   async function generateDraw() {
+    if (!groupId || !window.confirm("¿Confirmas el sorteo? Esta acción crea asignaciones reales y no se puede repetir.")) {
+      return;
+    }
     setState("loading");
     setMessage("Buscando un reparto válido...");
     try {
-      const response = await fetch("/api/draw/generate", {
+      const response = await fetch("/api/admin/draws/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId })
+        body: JSON.stringify({ groupId, confirmed: true })
       });
       const payload = (await response.json()) as { ok: boolean; message: string };
       setState(payload.ok ? "done" : "error");

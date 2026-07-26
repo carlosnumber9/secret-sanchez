@@ -7,27 +7,23 @@
 - **Resend:** email transaccional.
 - **Kapso:** WhatsApp cuando se complete.
 
-El repositorio contiene el adapter de Vercel, pero no documenta un proyecto desplegado ni garantiza que exista un
-entorno de producción activo.
+El repositorio está vinculado al proyecto Vercel `carlos-projects-fa17cb11/secret-sanchez`, conectado a GitHub con
+`main` como rama de Production. El dominio reservado es `https://secret-sanchez.vercel.app`. No se debe crear el
+primer despliegue hasta haber aplicado la migración pendiente.
 
 ## Entornos
 
-Como mínimo deben existir:
-
-- **Desarrollo local:** datos no sensibles y servicios de prueba.
-- **Producción:** familia real, dominio y proveedores verificados.
-
-Si se añade staging, debe usar un proyecto Supabase y claves independientes. Nunca se debe apuntar el desarrollo
-local a producción por comodidad.
+El proyecto usa deliberadamente un único Supabase/Postgres desde local y Vercel. No hay aislamiento de datos:
+cualquier escritura local o de Preview es real. Las acciones de sorteo y envío requieren confirmación.
 
 ## Configuración de Vercel
 
-1. Conectar el repositorio.
-2. Usar `npm run build`.
-3. Configurar las variables del entorno correspondiente.
-4. Definir `APP_URL` con el origen público exacto, sin path.
-5. Configurar en Supabase el dominio y callback permitidos.
-6. Verificar que las variables privadas no se exponen al cliente.
+1. Mantener Astro como preset, Node.js 22.x, `npm install` y `npm run build`.
+2. Configurar las mismas variables en Production y Preview.
+3. Definir `APP_URL` como `https://secret-sanchez.vercel.app`.
+4. Configurar en Supabase el dominio y callback permitidos.
+5. Verificar que las variables privadas no se exponen al cliente.
+6. Configurar la misma clave `REVEAL_TOKEN_ENCRYPTION_KEY` en todos los contextos.
 7. Ejecutar migraciones antes de habilitar código que dependa de ellas.
 
 Para funciones serverless, `DATABASE_URL` debe usar una conexión compatible con el pooler de transacciones de
@@ -35,16 +31,8 @@ Supabase. El cliente Drizzle desactiva prepared statements y limita conexiones.
 
 ## Migraciones
 
-No está decidida la autoridad definitiva entre Drizzle y Supabase migrations.
-
-Hasta resolverlo:
-
-- Revisar manualmente el SQL.
-- Aplicar primero en un entorno no productivo.
-- Hacer copia de seguridad antes de una migración destructiva.
-- Separar despliegue de schema y código cuando haya incompatibilidad temporal.
-- Documentar rollback o forward fix.
-- Registrar qué mecanismo aplicó cada migración.
+Drizzle es la única autoridad. Revisar manualmente el SQL, hacer backup y aplicar `npm run db:migrate` una sola vez
+antes de desplegar código dependiente. No se ejecutan migraciones durante el build.
 
 No usar `db:push` en producción como procedimiento habitual.
 
@@ -64,7 +52,7 @@ No usar `db:push` en producción como procedimiento habitual.
 - Configurar SPF/DKIM según el proveedor.
 - Probar remitente y reputación.
 - Gestionar errores y límites.
-- No enviar enlaces reales desde desarrollo.
+- Confirmar explícitamente cualquier envío iniciado desde local: utiliza el proveedor y los datos reales.
 
 ### Kapso
 
@@ -73,16 +61,13 @@ pruebas.
 
 ## Observabilidad
 
-Todavía no hay una solución de observabilidad definida. El mínimo operativo debe incluir:
-
-- Errores de servidor con identificador de correlación.
-- Métricas de generación fallida.
-- Intentos y resultados de notificación.
-- Errores de callback de autenticación.
-- Alertas por tasa anormal de fallos.
+El servidor emite JSON estructurado para Runtime Logs de Vercel: autenticación, autorización, mutaciones, sorteo,
+notificaciones, revelación y health check. Los errores técnicos incluyen `errorId`, etapa, tipo, código y una
+cadena limitada de causas cuando existe.
 
 Nunca registrar tokens, URLs de revelación completas, claves, cookies ni payloads de callback. Reducir datos
-personales en logs y aplicar retención limitada.
+personales en logs y aplicar retención limitada. Los mensajes técnicos se sanean antes de registrarse para ocultar
+URLs de conexión, emails y credenciales largas.
 
 ## Backups y recuperación
 

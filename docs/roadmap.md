@@ -13,11 +13,11 @@ El orden prioriza un recorrido real completo antes que nuevas funcionalidades.
 
 ## Hito 1 — Acceso fiable
 
-- [ ] Terminar el callback de Magic Link en curso.
-- [ ] Elegir entre solicitud OTP cliente o endpoint servidor.
-- [ ] Crear un proceso seguro para el primer administrador.
+- [x] Terminar el callback de Magic Link.
+- [x] Solicitar OTP mediante endpoint servidor.
+- [x] Crear un proceso seguro para el primer administrador.
 - [ ] Añadir logout.
-- [ ] Resolver el comportamiento del modo demo.
+- [x] Eliminar fixtures y exigir Supabase real en todos los entornos.
 - [ ] Actualizar APIs obsoletas de Supabase SSR.
 - [ ] Añadir pruebas del callback y middleware.
 
@@ -25,13 +25,13 @@ Resultado: Juan puede entrar y salir de forma fiable en local y producción.
 
 ## Hito 2 — Familia persistente
 
-- [ ] Cargar o crear el grupo activo.
-- [ ] Conectar dashboard con datos reales.
-- [ ] Crear y editar núcleos.
-- [ ] Crear, editar y desactivar participantes.
-- [ ] Validar contactos y canales.
-- [ ] Comprobar propiedad del grupo en servidor.
-- [ ] Diseñar estados vacíos, carga y error.
+- [x] Cargar o crear el grupo activo.
+- [x] Conectar dashboard con datos reales.
+- [x] Crear núcleos.
+- [x] Crear y desactivar participantes.
+- [x] Validar contactos y canales antes de sortear.
+- [x] Comprobar propiedad del grupo en servidor.
+- [x] Diseñar estados vacíos y feedback de mutación.
 
 Resultado: recargar la página conserva la familia preparada.
 
@@ -39,36 +39,36 @@ Resultado: recargar la página conserva la familia preparada.
 
 - [ ] Mantener `NO_SAME_ISLAND` desde UI y base.
 - [ ] Crear y eliminar exclusiones manuales.
-- [ ] Validar viabilidad antes de generar.
-- [ ] Ejecutar persistencia transaccional.
-- [ ] Añadir idempotencia y prevención de doble clic.
-- [ ] Resolver entrega efímera de URLs.
-- [ ] Definir bloqueo y regeneración.
-- [ ] Actualizar estados de grupo y sorteo.
-- [ ] Añadir pruebas exhaustivas del dominio.
+- [x] Validar viabilidad antes de generar.
+- [x] Ejecutar persistencia transaccional.
+- [x] Prevenir doble generación y confirmar la acción.
+- [x] Cifrar tokens para entrega posterior.
+- [x] Bloquear otro sorteo activo; regeneración permanece fuera de alcance.
+- [x] Actualizar estados de grupo y sorteo.
+- [x] Añadir pruebas repetidas de invariantes del dominio.
 
 Resultado: existe un sorteo real válido, recuperable operacionalmente y sin pérdida de enlaces.
 
 ## Hito 4 — Entrega por email y manual
 
-- [ ] Integrar Resend en el caso de uso de generación.
-- [ ] Crear y actualizar `notification_logs`.
-- [ ] Conectar `/envios` con datos reales.
-- [ ] Implementar copia y marcado manual persistentes.
-- [ ] Reintento individual y masivo idempotente.
+- [x] Integrar Resend como acción posterior confirmada.
+- [x] Crear y actualizar `notification_logs`.
+- [x] Conectar `/envios` con datos reales.
+- [x] Implementar copia y marcado manual persistentes.
+- [x] Reintento masivo idempotente.
 - [ ] Verificar dominio y plantillas.
-- [ ] Mostrar aperturas.
+- [x] Mostrar aperturas.
 
 Resultado: todos reciben su enlace por email o mediante Juan y el estado queda registrado.
 
 ## Hito 5 — Seguridad y producción
 
 - [ ] Verificar RLS y grants.
-- [ ] Aplicar autorización por recurso.
+- [x] Aplicar autorización por recurso.
 - [ ] Añadir rate limiting.
 - [ ] Definir backups y recuperación.
 - [ ] Incorporar CI.
-- [ ] Añadir observabilidad sin secretos.
+- [x] Añadir observabilidad sin secretos.
 - [ ] Ejecutar una prueba completa con datos ficticios.
 - [ ] Documentar y probar rollback.
 

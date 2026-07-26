@@ -33,7 +33,7 @@ Allowlist de organizadores autorizados.
 - `email`: identificador efectivo actual; se normaliza a minúsculas y tiene índice único case-insensitive.
 - `name`: nombre visible del administrador.
 
-Pendiente: decidir bootstrap del primer administrador y política para múltiples administradores.
+El primer administrador se crea de forma idempotente con `npm run admin:bootstrap`.
 
 ### `family_groups`
 
@@ -71,7 +71,7 @@ Antes de insertar o mover un participante debe validarse que `group_id` coincide
 Reglas configurables del grupo. El tipo implementado en dominio es `NO_SAME_ISLAND`; `config` permite guardar
 parámetros adicionales.
 
-La creación de un grupo inserta por defecto esta regla activada. Todavía no se lee al generar un sorteo.
+La creación de un grupo inserta por defecto esta regla activada y la generación la carga desde Postgres.
 
 ### `exclusion_rules`
 
@@ -97,7 +97,8 @@ Relación secreta entre participante que regala y participante que recibe.
 
 - Pertenece a un sorteo.
 - `reveal_token_hash` es SHA-256 del token y es único.
-- El token en claro no se persiste.
+- `reveal_token_ciphertext` conserva una copia cifrada con AES-256-GCM para envío y entrega manual.
+- Las filas antiguas pueden tener ciphertext nulo porque el token original no es recuperable.
 - `opened_at` registra la primera apertura.
 
 Se deben añadir garantías de unicidad por sorteo para `giver_id` y `receiver_id`, o mantenerlas de manera
@@ -107,11 +108,11 @@ transaccional y validada en aplicación. Actualmente el schema no tiene esos ín
 
 Intento de notificación asociado a una asignación.
 
-- Canal: email o WhatsApp.
+- Canal: email, WhatsApp o manual.
 - Destinatario utilizado en el intento.
 - Estado, identificador del proveedor, error y fecha de envío.
 
-Las queries existen, pero el envío actual no escribe estos registros.
+`idempotency_key` evita repetir un intento por reenvío de la misma petición.
 
 ## Estados
 
@@ -153,10 +154,5 @@ una semántica más precisa.
 
 ## Migraciones
 
-Existen dos copias de la migración inicial:
-
-- `drizzle/0000_tiresome_rogue.sql`
-- `supabase/migrations/20260628120000_initial_schema.sql`
-
-Son equivalentes en la revisión actual. Sigue pendiente decidir cuál es la fuente operativa y cómo se sincronizan.
-Hasta resolverlo, cualquier cambio de schema debe actualizar explícitamente ambos destinos o documentar por qué no.
+Drizzle es la única fuente operativa. Los SQL y snapshots se versionan en `drizzle/`; nunca se ejecutan
+automáticamente durante el build de Vercel.
