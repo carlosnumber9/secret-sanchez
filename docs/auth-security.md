@@ -9,18 +9,17 @@ Hay dos superficies:
 
 Los participantes no crean cuenta.
 
-## Flujo de Magic Link
+## Flujo de contraseña
 
-1. El organizador escribe su email en `/login`.
-2. Supabase recibe `signInWithOtp` y envía el Magic Link.
-3. El enlace vuelve a `/auth/callback?next=/inicio`.
-4. El callback acepta, según el formato, un código, `token_hash` o tokens de sesión.
-5. `/api/auth/callback` confirma la sesión con Supabase.
-6. El cliente de servidor escribe las cookies de sesión.
-7. El middleware obtiene el usuario y busca el email en `admin_users`.
-8. Si existe, permite continuar; sin sesión redirige a `/login` o responde `401`; una sesión sin admin recibe `403`.
+1. El organizador escribe su email y contraseña en `/login`.
+2. `/api/auth/login` valida el payload y llama a `signInWithPassword` desde el cliente SSR de Supabase.
+3. Supabase devuelve la sesión y el cliente de servidor escribe sus cookies.
+4. El middleware obtiene el usuario y busca primero su UUID en `admin_users.auth_user_id`.
+5. Si la fila es legacy y `auth_user_id` sigue a `NULL`, puede coincidir por email y enlaza el UUID de forma atómica.
+6. Sin sesión redirige a `/login` o responde `401`; una sesión sin administrador autorizado recibe `403`.
 
-El navegador solicita siempre el enlace mediante `/api/auth/magic-link`; no crea una segunda sesión de Supabase.
+No existe alta pública. Las cuentas se crean de forma controlada en Supabase, se añaden a `admin_users` y reciben o
+restablecen su contraseña mediante `npm run admin:set-password -- --user-id <uuid>`.
 
 ## Rutas protegidas
 
@@ -43,6 +42,10 @@ Cada mutación obtiene el administrador desde la sesión y comprueba la propieda
 3. Confirmar `owner_admin_id`.
 4. Rechazar con `403` si no corresponde.
 5. Registrar el administrador generador en el sorteo.
+
+El UUID es la identidad estable. El fallback por email solo puede reclamar filas cuyo `auth_user_id` sea nulo; una
+coincidencia de email nunca sustituye un UUID ya enlazado. Un índice único impide enlazar el mismo UUID a dos
+administradores.
 
 ## Tokens de revelación
 
@@ -76,17 +79,23 @@ El token funciona como credencial: quien posee la URL puede ver la asignación. 
 
 - `APP_URL`
 
+### Operación local
+
+- `SUPABASE_SECRET_KEY` o `SUPABASE_SERVICE_ROLE_KEY`, opcionales en el entorno de terminal porque el comando de
+  contraseña puede solicitarlas de forma oculta.
+
 Las variables de servidor no pueden importarse en componentes cliente, incorporarse a HTML, enviarse en JSON ni
-registrarse. `.env` y `.env.local` están ignorados por Git.
+registrarse. `.env` y `.env.local` están ignorados por Git. Las claves administrativas de Supabase no forman parte
+de `AppEnv` y no deben configurarse en Vercel.
 
-## Cookies y callback
+## Cookies y sesiones
 
-El callback debe conservar:
-
-- Cookies `Secure` en producción según las opciones entregadas por Supabase SSR.
-- Redirección `next` limitada a rutas locales; valores con `//` o sin `/` inicial se rechazan.
-- Limpieza de tokens del historial del navegador cuando se procesen fragmentos.
-- Mensajes de error útiles sin imprimir credenciales.
+- El login conserva el formato de cookies administrado por Supabase SSR, incluidas sus opciones `Secure` en
+  producción.
+- La redirección `next` se limita al mismo origen; destinos externos o mal formados vuelven a `/inicio`.
+- Los errores de credenciales son genéricos para no revelar si existe un email.
+- Cambiar el método de login no invalida por sí mismo las cookies existentes. Asignar o cambiar la contraseña desde
+  la API administrativa puede revocar las sesiones de ese UUID y exigir una nueva autenticación.
 
 Las APIs de cookies usadas por la versión actual de Supabase SSR presentan avisos de obsolescencia y deben
 actualizarse siguiendo la documentación oficial antes de una actualización mayor.
@@ -102,10 +111,10 @@ Row Level Security. Antes de producción se debe:
 
 ## Riesgos y trabajo pendiente
 
-- Ejecutar el bootstrap del primer `admin_users`.
+- Ejecutar el bootstrap y asignar contraseña al primer `admin_users`.
 - Añadir logout y revocación de sesión.
 - Mantener la propiedad en todos los casos de uso nuevos.
-- Añadir rate limiting al envío de Magic Links y a operaciones sensibles.
+- Añadir rate limiting adicional y protección contra fuerza bruta en operaciones sensibles.
 - Definir expiración e invalidación de tokens de revelación.
 - Evitar enumeración de emails administrativos.
 - Revisar políticas RLS y grants.

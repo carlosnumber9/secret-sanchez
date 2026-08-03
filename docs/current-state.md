@@ -1,13 +1,14 @@
 # Estado actual
 
-Última revisión documental: **26 de julio de 2026**.
+Última revisión documental: **3 de agosto de 2026**.
 
 ## Implementado
 
 - Astro SSR con adapter de Vercel y Node.js 22.
 - Un único Supabase/Postgres compartido por local y Vercel.
 - Configuración obligatoria, sin fixtures ni conexiones placeholder.
-- Magic Link solicitado por API, callback de servidor y allowlist `admin_users`.
+- Login administrativo con email y contraseña, cookies SSR y allowlist enlazada al UUID de Supabase.
+- Índice único aplicado sobre `admin_users.auth_user_id`, manteniendo filas legacy con valor nulo.
 - Grupo activo por administrador, dashboard real y alta inicial del grupo.
 - Persistencia de núcleos, participantes y activación desde la interfaz.
 - Sorteo transaccional con propiedad, reglas, exclusiones, bloqueo e idempotencia por estado.
@@ -31,4 +32,4 @@
 - Local, Preview y Production modifican la misma base.
 - Ejecutar migraciones, sortear o enviar desde local tiene efectos reales.
 - Antes de aplicar migraciones se debe revisar y respaldar Supabase.
-- El primer administrador debe prepararse explícitamente con `npm run admin:bootstrap`.
+- El primer administrador debe prepararse con `admin:bootstrap` y recibir contraseña con `admin:set-password`.

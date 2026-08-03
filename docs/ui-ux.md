@@ -30,9 +30,9 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 
 ### Login
 
-- Explicar el acceso sin contraseña.
-- Solicitar un único email.
-- Informar de envío, error o configuración ausente.
+- Explicar que el acceso está reservado a organizadores autorizados.
+- Solicitar email y contraseña con autocompletado apropiado.
+- Informar de validación, error o exceso de intentos.
 - Evitar revelar si el email pertenece a la allowlist.
 
 ### Inicio

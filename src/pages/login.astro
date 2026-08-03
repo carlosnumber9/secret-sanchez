@@ -3,7 +3,10 @@ import Button from "@/components/Button/Button.astro";
 import Card from "@/components/Card/Card.astro";
 import { Input } from "@/components/ui/input";
 import BaseLayout from "@/layouts/BaseLayout.astro";
-import { Mail, ShieldCheck, Sparkles } from "lucide-react";
+import { getSafeRedirectPath } from "@/lib/auth-redirect";
+import { LockKeyhole, ShieldCheck, Sparkles } from "lucide-react";
+
+const next = getSafeRedirectPath(Astro.url.searchParams.get("next"));
 ---
 
 <BaseLayout title="Entrar como organizador | Secret Sánchez">
@@ -31,7 +34,7 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
         <ul class="login-page__benefits">
           <li>
             <ShieldCheck size={20} aria-hidden="true" />
-            <span>Acceso seguro sin contraseña</span>
+            <span>Acceso protegido para organizadores</span>
           </li>
           <li>
             <Sparkles size={20} aria-hidden="true" />
@@ -43,15 +46,15 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
       <Card tone="accent" class="login-page__card">
         <div class="login-page__form-header">
           <span class="login-page__form-icon" aria-hidden="true">
-            <Mail size={22} />
+            <LockKeyhole size={22} />
           </span>
           <div>
             <h2>Entrar como organizador</h2>
-            <p>Te enviaremos un enlace de acceso de un solo uso.</p>
+            <p>Usa las credenciales de tu cuenta autorizada.</p>
           </div>
         </div>
 
-        <form class="login-page__form" id="magic-link-form">
+        <form class="login-page__form" id="password-login-form" data-next={next}>
           <label class="form-field">
             Email
             <Input
@@ -68,15 +71,26 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
           <p class="login-page__field-help" id="email-help">
             Usa el email autorizado para gestionar el sorteo.
           </p>
+          <label class="form-field">
+            Contraseña
+            <Input
+              className="h-11"
+              name="password"
+              type="password"
+              autoComplete="current-password"
+              placeholder="Tu contraseña"
+              required
+            />
+          </label>
           <Button id="login-submit" class="min-h-11 w-full" type="submit" size="large">
-            Enviarme enlace de acceso
+            Entrar
           </Button>
           <p class="login-page__message" id="login-message" role="status" aria-live="polite"></p>
         </form>
 
         <div class="login-page__assurance">
           <ShieldCheck size={17} aria-hidden="true" />
-          <p>No guardamos contraseñas. El enlace se valida de forma segura y solo sirve para acceder.</p>
+          <p>Supabase valida la contraseña de forma segura. La aplicación no la almacena ni la registra.</p>
         </div>
       </Card>
     </div>
@@ -84,7 +98,7 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
 </BaseLayout>
 
 <script>
-  const form = document.querySelector<HTMLFormElement>("#magic-link-form");
+  const form = document.querySelector<HTMLFormElement>("#password-login-form");
   const message = document.querySelector<HTMLElement>("#login-message");
   const submitButton = document.querySelector<HTMLButtonElement>("#login-submit");
 
@@ -93,37 +107,45 @@ import { Mail, ShieldCheck, Sparkles } from "lucide-react";
       event.preventDefault();
       const data = new FormData(form);
       const email = data.get("email");
-      message.textContent = "Enviando enlace...";
+      const password = data.get("password");
+      message.textContent = "Comprobando credenciales...";
       message.dataset.state = "loading";
       submitButton.disabled = true;
       submitButton.setAttribute("aria-busy", "true");
-      submitButton.textContent = "Enviando...";
+      submitButton.textContent = "Entrando...";
 
-      if (typeof email !== "string") {
-        message.textContent = "Escribe un email válido.";
+      if (typeof email !== "string" || typeof password !== "string" || !password) {
+        message.textContent = "Escribe un email y una contraseña válidos.";
         message.dataset.state = "error";
         submitButton.disabled = false;
         submitButton.removeAttribute("aria-busy");
-        submitButton.textContent = "Enviarme enlace de acceso";
+        submitButton.textContent = "Entrar";
         return;
       }
 
       try {
-        const response = await fetch("/api/auth/magic-link", {
+        const response = await fetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email })
+          body: JSON.stringify({ email, password })
         });
         const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
-        message.textContent = payload?.message ?? "No se pudo solicitar el enlace.";
-        message.dataset.state = response.ok && payload?.ok ? "success" : "error";
+        if (response.ok && payload?.ok) {
+          message.textContent = "Acceso correcto. Entrando...";
+          message.dataset.state = "success";
+          window.location.replace(form.dataset.next || "/inicio");
+          return;
+        }
+
+        message.textContent = payload?.message ?? "No se pudo iniciar sesión.";
+        message.dataset.state = "error";
       } catch {
-        message.textContent = "No se pudo enviar el enlace. Revisa la conexión y vuelve a intentarlo.";
+        message.textContent = "No se pudo iniciar sesión. Revisa la conexión y vuelve a intentarlo.";
         message.dataset.state = "error";
       } finally {
         submitButton.disabled = false;
         submitButton.removeAttribute("aria-busy");
-        submitButton.textContent = "Enviarme enlace de acceso";
+        submitButton.textContent = "Entrar";
       }
     });
   }

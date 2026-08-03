@@ -13,13 +13,15 @@ El orden prioriza un recorrido real completo antes que nuevas funcionalidades.
 
 ## Hito 1 — Acceso fiable
 
-- [x] Terminar el callback de Magic Link.
-- [x] Solicitar OTP mediante endpoint servidor.
+- [x] Iniciar sesión con email y contraseña mediante endpoint servidor.
+- [x] Enlazar la allowlist con el UUID de Supabase conservando filas legacy.
 - [x] Crear un proceso seguro para el primer administrador.
+- [x] Añadir asignación y reset manual de contraseña por UUID.
 - [ ] Añadir logout.
 - [x] Eliminar fixtures y exigir Supabase real en todos los entornos.
 - [ ] Actualizar APIs obsoletas de Supabase SSR.
-- [ ] Añadir pruebas del callback y middleware.
+- [x] Añadir pruebas de identidad administrativa y redirección de login.
+- [ ] Añadir pruebas de integración del endpoint y middleware.
 
 Resultado: Juan puede entrar y salir de forma fiable en local y producción.
 

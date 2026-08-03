@@ -1,6 +1,10 @@
-import { eq } from "drizzle-orm";
+import { and, eq, isNull, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { adminUsers } from "@/db/schema";
+import {
+  resolveAdminIdentity,
+  type AdminIdentityStore
+} from "@/services/auth/resolveAdminIdentity";
 import { createSupabaseServerClient } from "./server";
 
 type AuthContext = {
@@ -18,6 +22,44 @@ export class AuthCheckError extends Error {
   }
 }
 
+type Admin = typeof adminUsers.$inferSelect;
+
+const adminIdentityStore: AdminIdentityStore<Admin> = {
+  async findByAuthUserId(authUserId) {
+    const [admin] = await db
+      .select()
+      .from(adminUsers)
+      .where(eq(adminUsers.authUserId, authUserId))
+      .limit(1);
+    return admin ?? null;
+  },
+  async findUnlinkedByEmail(email) {
+    const [admin] = await db
+      .select()
+      .from(adminUsers)
+      .where(
+        and(
+          isNull(adminUsers.authUserId),
+          eq(sql`lower(${adminUsers.email})`, email.toLowerCase())
+        )
+      )
+      .limit(1);
+    return admin ?? null;
+  },
+  async linkAuthUserId(adminId, authUserId) {
+    const [admin] = await db
+      .update(adminUsers)
+      .set({ authUserId })
+      .where(and(eq(adminUsers.id, adminId), isNull(adminUsers.authUserId)))
+      .returning();
+    return admin ?? null;
+  }
+};
+
+function findAdminForUser(user: { id: string; email?: string }) {
+  return resolveAdminIdentity(user, adminIdentityStore);
+}
+
 export async function getCurrentAdmin(context: AuthContext) {
   const supabase = createSupabaseServerClient(context);
   const {
@@ -25,16 +67,8 @@ export async function getCurrentAdmin(context: AuthContext) {
     error
   } = await supabase.auth.getUser();
 
-  if (error || !user?.email) return null;
-
-  const [admin] = await db
-    .select()
-    .from(adminUsers)
-    .where(eq(adminUsers.email, user.email.toLowerCase()))
-    .limit(1);
-
-  if (!admin) return null;
-  return admin;
+  if (error || !user) return null;
+  return findAdminForUser(user);
 }
 
 export async function requireAdmin(context: AuthContext) {
@@ -49,7 +83,7 @@ export async function requireAdmin(context: AuthContext) {
     throw new AuthCheckError("session_lookup", cause);
   }
 
-  if (error || !user?.email) {
+  if (error || !user) {
     return {
       admin: null,
       status: 401 as const,
@@ -57,18 +91,14 @@ export async function requireAdmin(context: AuthContext) {
     };
   }
 
-  let admin: typeof adminUsers.$inferSelect | undefined;
+  let admin: Admin | null;
   try {
-    [admin] = await db
-      .select()
-      .from(adminUsers)
-      .where(eq(adminUsers.email, user.email.toLowerCase()))
-      .limit(1);
+    admin = await findAdminForUser(user);
   } catch (cause) {
     throw new AuthCheckError("admin_lookup", cause);
   }
 
-  if (!admin) {
+  if (admin === null) {
     return {
       admin: null,
       status: 403 as const,

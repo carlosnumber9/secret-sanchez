@@ -40,7 +40,8 @@ export const adminUsers = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => ({
-    emailIdx: uniqueIndex("admin_users_email_idx").on(sql`lower(${table.email})`)
+    emailIdx: uniqueIndex("admin_users_email_idx").on(sql`lower(${table.email})`),
+    authUserIdIdx: uniqueIndex("admin_users_auth_user_id_idx").on(table.authUserId)
   })
 );
 

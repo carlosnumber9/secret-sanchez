@@ -26,7 +26,7 @@ flowchart LR
 - **UI:** shadcn/ui con preset `base-rhea`, Base UI y Tailwind CSS 4 mediante el plugin de Vite.
 - **CSS:** tema y utilidades globales con CSS específico para layout y contenedores translúcidos.
 - **Three.js:** escena WebGL cliente del fondo 3D ambiental, cargada desde el layout base.
-- **Supabase Auth:** Magic Link y sesión.
+- **Supabase Auth:** email, contraseña y sesión.
 - **Supabase Postgres:** persistencia relacional.
 - **Drizzle ORM:** schema y acceso tipado a la base.
 - **Resend:** email transaccional.
@@ -82,11 +82,11 @@ atravesar el límite del servidor.
 
 ### Acceso administrativo
 
-1. El organizador solicita un Magic Link.
-2. Supabase envía el enlace al callback de la aplicación.
-3. El callback confirma la sesión y escribe cookies.
-4. El middleware obtiene el usuario autenticado.
-5. La aplicación valida su email contra `admin_users`.
+1. El organizador envía email y contraseña a `/api/auth/login`.
+2. El servidor valida las credenciales con Supabase y escribe las cookies SSR.
+3. El middleware obtiene el usuario autenticado.
+4. La aplicación busca primero su UUID en `admin_users.auth_user_id`.
+5. Para una fila legacy aún no enlazada, usa el email como fallback y guarda el UUID de forma atómica.
 6. Si está autorizado, permite acceder a las rutas administrativas.
 
 ### Sorteo objetivo

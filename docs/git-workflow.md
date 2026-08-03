@@ -37,7 +37,7 @@ El scope es opcional, breve y estable:
 
 ```text
 feat(draw): Added manual exclusions
-fix(auth): Handled token hash callbacks
+fix(auth): Handled invalid password attempts
 docs(api): Documented draw responses
 ```
 

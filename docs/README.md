@@ -11,7 +11,7 @@ cómo está construido, cómo operarlo y qué decisiones siguen abiertas.
 | [Estado actual](./current-state.md) | Fotografía honesta de lo implementado, lo simulado y los riesgos conocidos. |
 | [Arquitectura](./architecture.md) | Contexto técnico, módulos, límites y flujos de ejecución. |
 | [Modelo de datos](./data-model.md) | Entidades, relaciones, estados y política de migraciones. |
-| [Autenticación y seguridad](./auth-security.md) | Magic Link, autorización, secretos y riesgos de seguridad. |
+| [Autenticación y seguridad](./auth-security.md) | Contraseña, autorización, sesiones, secretos y riesgos. |
 | [Motor de sorteo](./draw-engine.md) | Reglas, algoritmo, persistencia e invariantes. |
 | [Notificaciones](./notifications.md) | Email, WhatsApp, entrega manual y seguimiento. |
 | [API y rutas](./api-and-routes.md) | Páginas, endpoints y contratos actuales. |

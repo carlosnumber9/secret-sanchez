@@ -4,8 +4,7 @@
 
 | Ruta | Acceso | Comportamiento |
 | --- | --- | --- |
-| `/login` | Público | Solicita Magic Link mediante API. |
-| `/auth/callback` | Público | Confirma la sesión y escribe cookies. |
+| `/login` | Público | Inicia sesión con email y contraseña. |
 | `/inicio` | Administrador | Grupo activo, estadísticas y alta inicial. |
 | `/familia` | Administrador | Núcleos y participantes persistentes. |
 | `/sorteo` | Administrador | Generación real y transaccional. |
@@ -15,8 +14,8 @@
 ## APIs públicas
 
 - `GET /api/health`: configuración y conexión a Postgres.
-- `POST /api/auth/magic-link`: solicita acceso.
-- `POST /api/auth/callback`: confirma código, `token_hash` o sesión.
+- `POST /api/auth/login`: valida `{ email, password }` con Supabase y escribe las cookies SSR. Devuelve `400` para
+  payload inválido, `401` para credenciales incorrectas y `429` para exceso de intentos sin revelar si existe el email.
 - `POST /api/reveal/resolve`: valida el token sin devolver el receptor.
 - `POST /api/reveal/open`: registra la apertura y devuelve el receptor.
 

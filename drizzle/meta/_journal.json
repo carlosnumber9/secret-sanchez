@@ -15,6 +15,13 @@
       "when": 1785063278692,
       "tag": "0001_nappy_puma",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1785776335024,
+      "tag": "0002_cooing_scarlet_spider",
+      "breakpoints": true
     }
   ]
 }

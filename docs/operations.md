@@ -8,8 +8,8 @@
 - **Kapso:** WhatsApp cuando se complete.
 
 El repositorio está vinculado al proyecto Vercel `carlos-projects-fa17cb11/secret-sanchez`, conectado a GitHub con
-`main` como rama de Production. El dominio reservado es `https://secret-sanchez.vercel.app`. No se debe crear el
-primer despliegue hasta haber aplicado la migración pendiente.
+`main` como rama de Production. El dominio reservado es `https://secret-sanchez.vercel.app`. Las migraciones que
+requiera una versión deben aplicarse antes de publicar su código dependiente.
 
 ## Entornos
 
@@ -21,7 +21,7 @@ cualquier escritura local o de Preview es real. Las acciones de sorteo y envío 
 1. Mantener Astro como preset, Node.js 22.x, `npm install` y `npm run build`.
 2. Configurar las mismas variables en Production y Preview.
 3. Definir `APP_URL` como `https://secret-sanchez.vercel.app`.
-4. Configurar en Supabase el dominio y callback permitidos.
+4. Mantener habilitado Email/Password y deshabilitar `Allow new users to sign up` en Supabase Auth.
 5. Verificar que las variables privadas no se exponen al cliente.
 6. Configurar la misma clave `REVEAL_TOKEN_ENCRYPTION_KEY` en todos los contextos.
 7. Ejecutar migraciones antes de habilitar código que dependa de ellas.
@@ -36,13 +36,42 @@ antes de desplegar código dependiente. No se ejecutan migraciones durante el bu
 
 No usar `db:push` en producción como procedimiento habitual.
 
+Antes de aplicar la migración que hace único `admin_users.auth_user_id`, ejecutar una comprobación de solo lectura y
+confirmar que no devuelve filas:
+
+```sql
+SELECT auth_user_id, count(*)
+FROM admin_users
+WHERE auth_user_id IS NOT NULL
+GROUP BY auth_user_id
+HAVING count(*) > 1;
+```
+
+## Migración a contraseña
+
+El cambio se realiza sobre los usuarios existentes de Supabase; no se deben recrear cuentas ni cambiar sus UUID.
+
+1. Hacer backup, confirmar que la consulta de duplicados no devuelve filas y aplicar la migración revisada.
+2. Mantener desplegada temporalmente la versión anterior mientras se preparan las credenciales.
+3. Para cada UUID ejecutar `npm run admin:set-password -- --user-id <uuid>` y escribir dos veces la contraseña.
+4. El comando carga `PUBLIC_SUPABASE_URL` desde `.env.local` o `.env`. La clave administrativa se toma primero de
+   `SUPABASE_SECRET_KEY`, después de `SUPABASE_SERVICE_ROLE_KEY` y, si ninguna existe, se solicita de forma oculta.
+5. Desplegar el login por contraseña.
+6. Verificar el acceso de cada administrador y que `auth_user_id` haya quedado enlazado.
+7. Deshabilitar el signup público en Supabase.
+
+La actualización de contraseña puede revocar las sesiones del usuario afectado. El código no borra las sesiones
+existentes durante el despliegue, pero cada administrador debe estar preparado para autenticarse de nuevo. El mismo
+comando es el procedimiento de recuperación mientras no exista autoservicio.
+
 ## Proveedores
 
 ### Supabase
 
-- Configurar URL del sitio y redirects.
-- Crear el administrador inicial de forma controlada.
-- Revisar email templates y caducidad de Magic Links.
+- Mantener habilitado el proveedor Email/Password y bloqueado el signup público.
+- Crear el usuario y su fila de `admin_users` de forma controlada.
+- Asignar y restablecer contraseñas exclusivamente por UUID con el comando administrativo.
+- Revisar la política de fortaleza y protección de contraseñas.
 - Verificar RLS y grants.
 - Activar backups apropiados al valor de los datos.
 
@@ -65,7 +94,7 @@ El servidor emite JSON estructurado para Runtime Logs de Vercel: autenticación,
 notificaciones, revelación y health check. Los errores técnicos incluyen `errorId`, etapa, tipo, código y una
 cadena limitada de causas cuando existe.
 
-Nunca registrar tokens, URLs de revelación completas, claves, cookies ni payloads de callback. Reducir datos
+Nunca registrar tokens, URLs de revelación completas, contraseñas, claves, cookies ni payloads de autenticación. Reducir datos
 personales en logs y aplicar retención limitada. Los mensajes técnicos se sanean antes de registrarse para ocultar
 URLs de conexión, emails y credenciales largas.
 
@@ -86,7 +115,8 @@ no intentar derivarlos desde sus hashes.
 - Build y pruebas completados.
 - Migraciones revisadas y aplicadas.
 - Administrador inicial verificado.
-- Callbacks de Supabase correctos.
+- Email/Password habilitado y signup público deshabilitado en Supabase.
+- Contraseñas asignadas a los UUID administrativos.
 - `APP_URL` correcto.
 - RLS/grants revisados.
 - Dominio de Resend verificado.

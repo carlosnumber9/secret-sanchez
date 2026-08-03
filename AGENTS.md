@@ -43,6 +43,7 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - Validar tipos y build: `npm run build`
 - Pruebas unitarias: `npm test`
 - Preparar admin: `npm run admin:bootstrap -- --email ... --name ...`
+- Asignar contraseña: `npm run admin:set-password -- --user-id ...`
 - Preview local: `npm run preview`
 - Generar migraciones Drizzle: `npm run db:generate`
 - Ejecutar migraciones Drizzle: `npm run db:migrate`
@@ -75,8 +76,7 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 
 - `src/pages`: paginas Astro y rutas dinamicas.
 - `src/pages/api`: API routes.
-- `src/pages/auth/callback.astro`: pantalla cliente que procesa el callback de Supabase.
-- `src/pages/api/auth/callback.ts`: endpoint que confirma la sesion de Supabase y escribe cookies.
+- `src/pages/api/auth/login.ts`: endpoint que valida email y contraseña y escribe cookies de Supabase.
 - `src/pages/r.astro`: revelacion publica; el token vive en el fragmento.
 - `src/layouts`: layouts base, admin y revelacion publica.
 - `src/components`: componentes Astro reutilizables.
@@ -92,15 +92,13 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 ## Rutas Existentes
 
 - `/`: entrada inicial.
-- `/login`: acceso de administrador por Magic Link.
-- `/auth/callback`: callback visual del login.
+- `/login`: acceso de administrador por email y contraseña.
 - `/inicio`: estado general del sorteo.
 - `/familia`: gestion de nucleos y participantes.
 - `/sorteo`: reglas y generacion del reparto.
 - `/envios`: estado de mensajes.
 - `/r#token`: revelacion publica sin login.
-- `/api/auth/magic-link`: API para solicitar Magic Link.
-- `/api/auth/callback`: API para confirmar sesion.
+- `/api/auth/login`: API para iniciar sesion por contraseña.
 - `/api/admin/draws/generate`: API protegida para generar sorteo.
 - `/api/admin/*`: mutaciones administrativas protegidas.
 - `/api/reveal/resolve` y `/api/reveal/open`: resolucion y apertura publica.
@@ -108,11 +106,12 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 
 ## Auth Y Proteccion
 
-- El login usa Magic Link de Supabase.
+- El login usa email y contraseña de Supabase.
+- La autorización busca primero `admin_users.auth_user_id` y solo usa email para enlazar filas legacy sin UUID.
 - `src/middleware.ts` protege `/inicio`, `/familia`, `/sorteo`, `/envios` y APIs bajo `/api/admin`.
 - Las paginas protegidas redirigen a `/login?next=...` cuando no hay admin.
 - Las APIs protegidas responden `401` cuando no hay sesión y `403` cuando la cuenta no está autorizada como admin.
-- La sesion de Supabase se confirma en servidor mediante `src/pages/api/auth/callback.ts`.
+- La sesion de Supabase se crea en servidor mediante `src/pages/api/auth/login.ts`.
 
 ## Modelo De Datos
 
@@ -174,7 +173,7 @@ Estados y enums principales:
 - No escribir secretos ni valores reales de `.env` en documentacion, tests, logs o commits.
 - No revertir cambios del usuario.
 - Si se modifica schema, actualizar o generar migraciones de forma explicita y explicar el impacto.
-- Si se toca auth, callbacks, cookies o middleware, revisar tambien las rutas relacionadas antes de cerrar.
+- Si se toca auth, credenciales, cookies o middleware, revisar tambien las rutas relacionadas antes de cerrar.
 
 ## Decisiones Pendientes
 

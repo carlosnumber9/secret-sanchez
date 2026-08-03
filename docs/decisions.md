@@ -9,7 +9,7 @@
 | Estilos | shadcn/ui `base-rhea` y Tailwind CSS 4; CSS propio para layout y contenedores translúcidos. |
 | Runtime | SSR con adapter de Vercel. |
 | Datos | Supabase Postgres con schema Drizzle. |
-| Auth | Magic Link de Supabase y allowlist `admin_users`. |
+| Auth | Email y contraseña de Supabase; allowlist `admin_users` enlazada por UUID con fallback legacy por email. |
 | Revelación | Pública mediante token, sin cuenta de participante. |
 | Tokens | Aleatorios; solo se persiste SHA-256. |
 | Email | Resend. |
@@ -24,8 +24,6 @@
 
 | Decisión | Por qué importa |
 | --- | --- |
-| Solicitud Magic Link desde cliente o servidor | Evita mantener dos caminos y contratos diferentes. |
-| Bootstrap del primer administrador | Sin registro en `admin_users`, una sesión válida no accede. |
 | Política de regeneración | Afecta sorpresa, invalidación y auditoría. |
 | Entrega de tokens efímeros | Los hashes no permiten reconstruir URLs. |
 | Transacciones e idempotencia | Evita sorteos parciales o duplicados. |

@@ -29,11 +29,13 @@ erDiagram
 
 Allowlist de organizadores autorizados.
 
-- `auth_user_id`: vínculo opcional con el usuario de Supabase Auth.
-- `email`: identificador efectivo actual; se normaliza a minúsculas y tiene índice único case-insensitive.
+- `auth_user_id`: vínculo único con el usuario de Supabase Auth; permanece nullable para migrar filas antiguas.
+- `email`: identificador de acceso y fallback temporal para filas que todavía no tienen `auth_user_id`; se normaliza a
+  minúsculas y tiene índice único case-insensitive.
 - `name`: nombre visible del administrador.
 
-El primer administrador se crea de forma idempotente con `npm run admin:bootstrap`.
+El primer administrador se crea de forma idempotente con `npm run admin:bootstrap`. En la primera sesión válida, la
+aplicación enlaza atómicamente el UUID de Supabase cuando la fila legacy coincide por email y aún no estaba enlazada.
 
 ### `family_groups`
 

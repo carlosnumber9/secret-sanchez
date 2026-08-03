@@ -40,7 +40,7 @@ Las pruebas del sorteo deben repetir generaciones y validar invariantes, no afir
 - Queries contra una base aislada.
 - Creación atómica de sorteo y asignaciones.
 - Restricciones e índices.
-- Callback y cookies de Supabase con dobles controlados.
+- Login por contraseña y cookies de Supabase con dobles controlados.
 - Registro de notificaciones y reintentos.
 - Lectura y marcado de una revelación.
 
@@ -66,7 +66,7 @@ También debe cubrir sesión ausente, grupo ajeno, token inválido y sorteo impo
 | Autorización | Acceso a otro grupo | Crítica |
 | Migraciones | Pérdida de datos | Alta |
 | Notificaciones | Duplicados o entrega incorrecta | Alta |
-| Auth | Sesión no confirmada | Alta |
+| Auth | Credenciales o sesión rechazadas incorrectamente | Alta |
 | UI administrativa | Estado inconsistente | Media |
 | Estilos | Regresión visual | Media |
 

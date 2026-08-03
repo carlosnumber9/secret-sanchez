@@ -47,7 +47,7 @@ Cada familiar necesita:
 
 El MVP queda completo cuando existe un recorrido real y verificable:
 
-1. Un administrador autorizado entra por Magic Link.
+1. Un administrador autorizado entra con email y contraseña.
 2. Crea o selecciona el grupo del año.
 3. Añade núcleos y participantes.
 4. Corrige contactos y restricciones.

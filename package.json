@@ -12,6 +12,7 @@
     "preview": "astro preview",
     "test": "node --import tsx --test tests/*.test.ts",
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
+    "admin:set-password": "tsx scripts/set-admin-password.ts",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:push": "drizzle-kit push",
