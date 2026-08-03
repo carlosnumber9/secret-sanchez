@@ -7,8 +7,9 @@ tipografías Outfit y Noto Sans, radios amplios y componentes compactos basados 
 organizador no técnico pueda completar el sorteo sin interpretar conceptos internos.
 
 Los contenedores son la única adaptación deliberada al preset: tarjetas, paneles, filas y cabecera usan los mismos
-colores semánticos con transparencia y `backdrop-filter`. Los tokens de vidrio viven en `src/styles/tokens.css`; el
-resto de controles debe mantenerse alineado con el preset.
+colores semánticos con una translucidez contenida, saturación suave y `backdrop-filter`. Los tokens de vidrio viven
+en `src/styles/tokens.css` y también alimentan la primitiva `Card`; el resto de controles debe mantenerse alineado con
+el preset.
 
 El layout base incorpora un regalo 3D ambiental de Kenney. Se mantiene desenfocado y con baja opacidad en una capa
 fija situada siempre detrás de la interfaz. Rota y rebota por el viewport, puede salir parcialmente de pantalla y no

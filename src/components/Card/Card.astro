@@ -9,13 +9,13 @@ interface Props {
 
 const { tone = "plain", class: className } = Astro.props;
 const toneClasses = {
-  plain: "bg-card/75 backdrop-blur-xl",
-  warm: "bg-secondary/70 backdrop-blur-xl",
-  accent: "bg-card/80 backdrop-blur-xl ring-primary/20"
+  plain: "",
+  warm: "bg-[var(--glass-secondary)]",
+  accent: "bg-[var(--glass-card)] ring-primary/20"
 } as const;
 ---
 
-<CardPrimitive className={cn(toneClasses[tone], "supports-[backdrop-filter]:bg-card/65", className)}>
+<CardPrimitive className={cn(toneClasses[tone], className)}>
   <CardContent>
     <slot />
   </CardContent>

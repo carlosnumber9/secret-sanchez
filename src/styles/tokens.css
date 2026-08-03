@@ -1,10 +1,10 @@
 :root {
-  --glass-background: color-mix(in oklch, var(--background) 78%, transparent);
-  --glass-card: color-mix(in oklch, var(--card) 76%, transparent);
-  --glass-secondary: color-mix(in oklch, var(--secondary) 72%, transparent);
-  --glass-primary: color-mix(in oklch, var(--primary) 88%, transparent);
-  --glass-border: color-mix(in oklch, var(--border) 78%, transparent);
-  --glass-blur: blur(18px);
+  --glass-background: oklch(from var(--background) l c h / 86%);
+  --glass-card: oklch(from var(--card) l c h / 88%);
+  --glass-secondary: oklch(from var(--secondary) l c h / 84%);
+  --glass-primary: oklch(from var(--primary) l c h / 92%);
+  --glass-border: oklch(from var(--border) l c h / 82%);
+  --glass-blur: blur(16px) saturate(115%);
   --space-xs: 0.25rem;
   --space-sm: 0.5rem;
   --space-md: 1rem;
