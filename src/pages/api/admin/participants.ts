@@ -5,7 +5,7 @@ import { handleApiError } from "@/lib/api";
 import { logger } from "@/lib/logger";
 
 const schema = z.object({
-  groupId: z.uuid(),
+  familyId: z.uuid(),
   familyIslandId: z.uuid(),
   name: z.string().trim().min(1).max(180),
   email: z.union([z.email(), z.literal("")]).optional(),
@@ -19,7 +19,7 @@ export const POST: APIRoute = async ({ locals, request }) => {
     if (!parsed.success) return Response.json({ ok: false, message: "Datos de la persona no válidos." }, { status: 400 });
     const participant = await createOwnedParticipant(locals.admin.id, parsed.data);
     logger.info("participant.created", {
-      groupId: participant.groupId,
+      familyId: participant.familyId,
       participantId: participant.id,
       islandId: participant.familyIslandId
     });

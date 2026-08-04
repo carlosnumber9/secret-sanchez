@@ -4,6 +4,7 @@ type Input = {
   to: string;
   name: string;
   revealUrl: string;
+  testMode?: boolean;
 };
 
 function escapeHtml(value: string) {
@@ -19,7 +20,7 @@ function escapeHtml(value: string) {
   });
 }
 
-export async function sendEmailNotification({ to, name, revealUrl }: Input) {
+export async function sendEmailNotification({ to, name, revealUrl, testMode = false }: Input) {
   const resend = getResendClient();
   if (!resend) {
     return {
@@ -31,9 +32,9 @@ export async function sendEmailNotification({ to, name, revealUrl }: Input) {
   const result = await resend.emails.send({
     from: "Secret Sánchez <amigo-invisible@secret-sanchez.app>",
     to,
-    subject: "Tu Amigo Invisible de Reyes ya está listo",
-    text: `Ya está listo el Amigo Invisible de Reyes.\n\nHola ${name}, abre tu enlace secreto para descubrir a quién regalas:\n\n${revealUrl}\n\nNo lo compartas.`,
-    html: `<p>Ya está listo el Amigo Invisible de Reyes.</p><p>Hola ${escapeHtml(name)}, abre tu enlace secreto para descubrir a quién regalas:</p><p><a href="${escapeHtml(revealUrl)}">${escapeHtml(revealUrl)}</a></p><p>No lo compartas.</p>`
+    subject: `${testMode ? "[PRUEBA] " : ""}Tu Amigo Invisible de Reyes ya está listo`,
+    text: `${testMode ? `Este email de prueba simula la entrega destinada a ${name}.\n\n` : ""}Ya está listo el Amigo Invisible de Reyes.\n\nHola ${name}, abre tu enlace secreto para descubrir a quién regalas:\n\n${revealUrl}\n\nNo lo compartas.`,
+    html: `${testMode ? `<p><strong>PRUEBA:</strong> este mensaje simula la entrega destinada a ${escapeHtml(name)}.</p>` : ""}<p>Ya está listo el Amigo Invisible de Reyes.</p><p>Hola ${escapeHtml(name)}, abre tu enlace secreto para descubrir a quién regalas:</p><p><a href="${escapeHtml(revealUrl)}">${escapeHtml(revealUrl)}</a></p><p>No lo compartas.</p>`
   });
 
   if (result.error) {

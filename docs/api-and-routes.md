@@ -4,33 +4,27 @@
 
 | Ruta | Acceso | Comportamiento |
 | --- | --- | --- |
-| `/login` | Público | Inicia sesión con email y contraseña. |
-| `/inicio` | Administrador | Grupo activo, estadísticas y alta inicial. |
-| `/familia` | Administrador | Núcleos y participantes persistentes. |
-| `/sorteo` | Administrador | Generación real y transaccional. |
-| `/envios` | Administrador | Email, reintentos, entrega manual y aperturas. |
-| `/r#token` | Público con token | Revelación sin enviar el token en el path HTTP. |
+| `/inicio` | Administrador | Resumen de familia y ediciones. |
+| `/familia` | Administrador | Censo permanente, movimientos y borrado destructivo. |
+| `/ediciones` | Administrador | Historial y alta de ediciones. |
+| `/ediciones/[id]` | Administrador | Configuración, intentos y revocación. |
+| `/ediciones/[id]/sorteo` | Administrador | Generación del intento vigente. |
+| `/ediciones/[id]/envios` | Administrador | Entregas del intento vigente. |
+| `/r#token` | Público con token | Revelación de un token vigente. |
 
-## APIs públicas
-
-- `GET /api/health`: configuración y conexión a Postgres.
-- `POST /api/auth/login`: valida `{ email, password }` con Supabase y escribe las cookies SSR. Devuelve `400` para
-  payload inválido, `401` para credenciales incorrectas y `429` para exceso de intentos sin revelar si existe el email.
-- `POST /api/reveal/resolve`: valida el token sin devolver el receptor.
-- `POST /api/reveal/open`: registra la apertura y devuelve el receptor.
+`/sorteo` y `/envios` redirigen a `/ediciones` para evitar elegir implícitamente un sorteo.
 
 ## APIs administrativas
 
-Todas requieren sesión, allowlist y autorización por propietario:
+- Familia: `POST /api/admin/groups`, `POST /api/admin/islands`, `PATCH|DELETE /api/admin/islands/[id]`, `POST /api/admin/participants`, `PATCH|DELETE /api/admin/participants/[id]`.
+- Impacto destructivo: `GET /api/admin/participants/[id]/deletion-impact` y `GET /api/admin/islands/[id]/deletion-impact`.
+- Ediciones: `GET|POST /api/admin/editions`, `PATCH /api/admin/editions/[id]`.
+- Configuración: `PATCH /api/admin/editions/[id]/islands/[islandId]` y `PATCH /api/admin/editions/[id]/participants/[participantId]`.
+- Intentos: `POST /api/admin/editions/[id]/draws/generate` y `POST /api/admin/editions/[id]/draws/[drawId]/revoke`.
+- Entrega: `POST /api/admin/editions/[id]/notifications/send` y `POST /api/admin/notifications/manual`.
 
-- `POST /api/admin/groups`.
-- `POST /api/admin/islands`.
-- `PATCH /api/admin/islands/[id]`.
-- `POST /api/admin/participants`.
-- `PATCH /api/admin/participants/[id]`.
-- `POST /api/admin/draws/generate`.
-- `POST /api/admin/notifications/send`.
-- `POST /api/admin/notifications/manual`.
+Todas requieren sesión y autorización mediante la familia propietaria. Las respuestas mantienen `{ ok, data?, message?, code?, errorId? }`.
 
-Las respuestas usan `{ ok, data?, message?, code?, errorId? }`. Validación devuelve `400`, sesión `401`, propiedad
-`403`, inexistencia `404`, conflicto `409`, dominio `422` y error inesperado `500`.
+## APIs públicas
+
+`POST /api/reveal/resolve` y `POST /api/reveal/open` responden como token inválido cuando el intento fue revocado o eliminado, sin revelar la causa.

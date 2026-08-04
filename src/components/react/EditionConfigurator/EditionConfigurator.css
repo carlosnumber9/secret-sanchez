@@ -1,0 +1,23 @@
+.family-editor__island {
+  display: grid;
+  gap: var(--space-md);
+  padding: var(--surface-padding);
+  border: 1px solid var(--glass-border);
+  border-top: 4px solid;
+  border-radius: var(--radius-2xl);
+  background: var(--glass-card);
+}
+
+.delivery-panel__row {
+  display: grid;
+  grid-template-columns: minmax(10rem, 1fr) repeat(3, auto);
+  gap: var(--space-md);
+  align-items: center;
+  padding: var(--space-md);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-xl);
+}
+
+@media (max-width: 720px) {
+  .delivery-panel__row { grid-template-columns: 1fr 1fr; }
+}

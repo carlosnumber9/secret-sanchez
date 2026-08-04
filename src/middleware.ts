@@ -3,11 +3,13 @@ import { logger } from "@/lib/logger";
 import { AuthCheckError, requireAdmin } from "@/lib/supabase/auth";
 
 const protectedPagePaths = new Set(["/inicio", "/familia", "/sorteo", "/envios"]);
+const protectedPagePrefixes = ["/ediciones"];
 const protectedApiPrefixes = ["/api/admin"];
 
 function isProtectedPath(pathname: string) {
   return (
     protectedPagePaths.has(pathname) ||
+    protectedPagePrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`)) ||
     protectedApiPrefixes.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`))
   );
 }

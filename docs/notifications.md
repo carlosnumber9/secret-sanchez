@@ -18,6 +18,10 @@ Si falta el contacto requerido, el participante debe aparecer como pendiente de 
 
 ## Email
 
+En una edición de prueba todos los destinatarios se sustituyen por el email del administrador y asunto y contenido se marcan como prueba. Las ediciones definitivas utilizan el contacto congelado en el snapshot vigente.
+
+Los intentos revocados no admiten email ni copia manual.
+
 `sendEmailNotification` usa Resend y prepara texto y HTML con:
 
 - Saludo al participante.

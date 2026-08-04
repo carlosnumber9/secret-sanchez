@@ -51,7 +51,7 @@ proveedores.
 
 ### Aplicación
 
-`src/actions` representa casos de uso como crear un grupo, generar un sorteo o enviar notificaciones. Es el punto
+`src/actions` representa casos de uso como mantener la familia, crear una edición, generar un intento o enviar notificaciones. Es el punto
 adecuado para coordinar dominio, persistencia y proveedores.
 
 Algunas acciones actuales son reexportaciones directas de queries. Al conectar la UI deben incorporar autorización,
@@ -91,20 +91,17 @@ atravesar el límite del servidor.
 
 ### Sorteo objetivo
 
-1. La aplicación carga participantes, reglas y exclusiones del grupo.
-2. El dominio valida que el conjunto sea viable.
-3. Genera un reparto.
-4. Dentro de una transacción crea sorteo, asignaciones y tokens.
-5. Entrega los enlaces o los usa inmediatamente para enviar notificaciones.
-6. Bloquea el sorteo y actualiza su estado.
-
-Los pasos 1, 4, 5 y 6 todavía no están conectados completamente.
+1. La aplicación resuelve la configuración de núcleos y participantes de la edición.
+2. El dominio valida roles, reglas y exclusiones.
+3. Dentro de una transacción crea un intento numerado, snapshots, asignaciones y tokens.
+4. El intento vigente alimenta las entregas y revelaciones.
+5. Una revocación conserva la auditoría, invalida tokens y devuelve la edición a preparación.
 
 ### Revelación
 
-1. El participante abre `/r/:token`.
+1. El participante abre `/r#token`.
 2. El servidor calcula SHA-256 del token.
-3. Busca la asignación por el hash.
+3. Busca la asignación por el hash y comprueba que su intento no esté revocado.
 4. Muestra el receptor y registra la primera apertura.
 
 ## Decisiones arquitectónicas vigentes

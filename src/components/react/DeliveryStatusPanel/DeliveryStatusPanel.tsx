@@ -16,7 +16,7 @@ type Delivery = {
   opened: boolean;
 };
 
-type Props = { deliveries: Delivery[] };
+type Props = { deliveries: Delivery[]; editionId: string; testMode: boolean };
 
 const labels: Record<DeliveryStatus, string> = {
   sent: "Enviado",
@@ -29,17 +29,17 @@ const labels: Record<DeliveryStatus, string> = {
   skipped: "No usado"
 };
 
-export default function DeliveryStatusPanel({ deliveries: initialDeliveries }: Props) {
+export default function DeliveryStatusPanel({ deliveries: initialDeliveries, editionId, testMode }: Props) {
   const [deliveries, setDeliveries] = useState(initialDeliveries);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function send(mode: "pending" | "failed") {
-    if (!window.confirm("Esto enviará emails reales. ¿Quieres continuar?")) return;
+    if (!window.confirm(testMode ? "Los emails de prueba se enviarán únicamente al administrador. ¿Continuar?" : "Esto enviará emails reales a la familia. ¿Quieres continuar?")) return;
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/notifications/send", {
+      const response = await fetch(`/api/admin/editions/${editionId}/notifications/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ mode, confirmed: true, idempotencyKey: crypto.randomUUID() })
@@ -89,6 +89,7 @@ export default function DeliveryStatusPanel({ deliveries: initialDeliveries }: P
 
   return (
     <section className="stack">
+      {testMode && <p><strong>Modo prueba:</strong> todos los emails se redirigen al administrador.</p>}
       <div className="cluster cluster--actions">
         <Button disabled={busy} type="button" onClick={() => send("pending")}>
           <Send size={18} />

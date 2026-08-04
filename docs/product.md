@@ -48,14 +48,14 @@ Cada familiar necesita:
 El MVP queda completo cuando existe un recorrido real y verificable:
 
 1. Un administrador autorizado entra con email y contraseña.
-2. Crea o selecciona el grupo del año.
-3. Añade núcleos y participantes.
-4. Corrige contactos y restricciones.
-5. La aplicación valida que el sorteo es viable.
-6. Genera y bloquea un reparto persistente.
-7. Cada participante recibe o copia su enlace.
+2. Mantiene una familia maestra con núcleos, participantes y contactos.
+3. Crea una edición de prueba o definitiva.
+4. Activa personas y núcleos y configura quién regala o recibe.
+5. La aplicación valida que el reparto es viable.
+6. Genera un intento persistente que puede revocar y relanzar.
+7. Cada participante recibe o copia su enlace vigente.
 8. El participante abre la revelación sin login.
-9. El organizador consulta envíos, fallos y aperturas.
+9. El organizador consulta envíos, fallos, aperturas e intentos anulados.
 
 ## Fuera del alcance actual
 
@@ -71,10 +71,11 @@ Estas ideas pueden evaluarse más adelante, pero no deben retrasar el recorrido 
 
 ## Conceptos
 
-- **Grupo:** edición del Amigo Invisible asociada a una familia y un año.
+- **Familia:** censo permanente de núcleos y personas.
+- **Edición:** preparación de prueba o definitiva asociada a una familia y un año.
 - **Núcleo:** hogar o unidad familiar usada como restricción.
 - **Participante:** persona que puede regalar, recibir o ambas cosas.
-- **Sorteo:** ejecución concreta que contiene las asignaciones.
+- **Intento de sorteo:** ejecución concreta, vigente o revocada, que contiene snapshots y asignaciones.
 - **Asignación:** relación privada entre quien regala y quien recibe.
 - **Enlace de revelación:** URL con un token secreto de una asignación.
 - **Entrega manual:** el organizador copia y comparte el enlace fuera de la aplicación.

@@ -18,12 +18,13 @@ solicita movimiento reducido.
 
 ## Navegación
 
-La administración dispone de cuatro destinos:
+La administración dispone de tres destinos principales:
 
 - Inicio.
 - Familia.
-- Sorteo.
-- Envíos.
+- Ediciones.
+
+Sorteo y Envíos viven dentro de la edición elegida explícitamente.
 
 La revelación utiliza un layout público separado y no muestra navegación administrativa.
 
@@ -38,24 +39,25 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 
 ### Inicio
 
-- Mostrar el grupo y año activos.
-- Resumir participantes, contactos incompletos y estado del sorteo.
+- Mostrar la familia maestra.
+- Resumir núcleos, participantes y ediciones.
 - Destacar una única siguiente acción.
 - Advertir que local y Vercel comparten los mismos datos reales.
 
 ### Familia
 
 - Visualizar núcleos y sus personas.
-- Crear, editar y desactivar sin perder contexto.
+- Crear, editar, mover y eliminar con previsualización de impacto.
 - Mostrar email, teléfono y preferencia.
 - Señalar contactos incompatibles con el canal elegido.
-- Preparar exclusiones sin mostrar complejidad innecesaria.
+- No mezclar el censo con la participación de una edición.
 
-### Sorteo
+### Edición y sorteo
 
 - Mostrar reglas efectivamente cargadas, no texto fijo.
 - Validar viabilidad antes de habilitar el botón.
-- Solicitar confirmación si la acción es irreversible.
+- Configurar núcleos, participantes y roles antes del reparto.
+- Solicitar confirmación al generar, revocar o borrar.
 - No mostrar el mapa completo de asignaciones.
 - Tras completar, dirigir al panel de envíos.
 
@@ -135,3 +137,24 @@ Las mutaciones principales implementan carga, feedback y prevención de doble en
   queda registrada junto al asset.
 - El manifest incluye iconos de 192 y 512 píxeles, además de una variante `maskable`, para accesos directos e
   instalación desde navegadores móviles compatibles.
+# UI y experiencia
+
+## Navegación administrativa
+
+- `Inicio`: resumen de la familia y accesos principales.
+- `Familia`: censo permanente, contactos, movimientos y borrado destructivo.
+- `Ediciones`: historial, creación y selección explícita.
+- Dentro de una edición: configuración, reparto, reversión y envíos.
+
+La navegación nunca elige implícitamente “el último sorteo”. `/sorteo` y `/envios` redirigen al listado de ediciones.
+
+## Estados peligrosos
+
+- Revocar exige escribir `ANULAR REPARTO` y explica que lo ya visto no puede olvidarse.
+- Borrar una persona muestra intentos, asignaciones, logs y aperturas afectados y exige `ELIMINAR PERSONA`.
+- Borrar una unidad permite mover integrantes o confirmar `ELIMINAR UNIDAD`.
+- Las ediciones de prueba muestran de forma persistente que los emails se redirigen al administrador.
+
+## Configuración de participantes
+
+Cada edición agrupa a la familia por núcleos. El switch del núcleo prevalece sobre los controles individuales. Una persona activa debe regalar, recibir o ambas cosas, y la pantalla muestra los totales antes de generar.

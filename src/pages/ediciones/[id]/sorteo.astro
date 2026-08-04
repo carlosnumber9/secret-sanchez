@@ -1,0 +1,16 @@
+---
+import Button from "@/components/Button/Button.astro";
+import Card from "@/components/Card/Card.astro";
+import DrawGenerator from "@/components/react/DrawGenerator/DrawGenerator";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { getEditionAppState } from "@/actions/editionData";
+
+const id = Astro.params.id!;
+const state = await getEditionAppState(Astro.locals.admin.id, id);
+const enabledIslands = new Set(state.islands.filter(({ config }) => config.enabled).map(({ island }) => island.id));
+const participants = state.participants.filter(({ participant, config }) => enabledIslands.has(participant.familyIslandId) && config.enabled);
+---
+<AdminLayout title={`Sorteo · ${state.edition.name}`}>
+  <div class="section-header"><p>{state.edition.kind === "test" ? "Edición de prueba" : "Edición definitiva"}</p><h1>Reparto de {state.edition.name}</h1><p>Las asignaciones nunca se muestran completas en administración.</p></div>
+  {state.currentDraw ? <Card tone="accent"><div class="stack"><h2>Intento {state.currentDraw.attemptNumber} vigente</h2><p>El reparto está bloqueado. Puedes preparar las entregas o volver a la edición para revertirlo.</p><div class="cluster"><Button href={`/ediciones/${id}/envios`}>Preparar envíos</Button><Button href={`/ediciones/${id}`} variant="secondary">Volver a la edición</Button></div></div></Card> : <DrawGenerator client:load editionId={id} participantCount={participants.length} editionKind={state.edition.kind} />}
+</AdminLayout>

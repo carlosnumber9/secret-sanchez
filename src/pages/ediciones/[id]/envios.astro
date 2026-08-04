@@ -1,0 +1,13 @@
+---
+import Card from "@/components/Card/Card.astro";
+import DeliveryStatusPanel from "@/components/react/DeliveryStatusPanel/DeliveryStatusPanel";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { getEditionAppState } from "@/actions/editionData";
+
+const id = Astro.params.id!;
+const state = await getEditionAppState(Astro.locals.admin.id, id);
+---
+<AdminLayout title={`Envíos · ${state.edition.name}`}>
+  <div class="section-header"><p>{state.edition.kind === "test" ? "Modo prueba" : "Edición definitiva"}</p><h1>Envíos de {state.edition.name}</h1><p>Estado de mensajes, copias manuales y aperturas del intento vigente.</p></div>
+  {state.currentDraw ? <Card><DeliveryStatusPanel client:load deliveries={state.deliveries} editionId={id} testMode={state.edition.kind === "test"} /></Card> : <p>No hay un reparto vigente.</p>}
+</AdminLayout>

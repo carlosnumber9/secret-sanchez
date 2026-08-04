@@ -5,27 +5,28 @@ import { useState } from "react";
 import "./DrawGenerator.css";
 
 type Props = {
-  groupId?: string;
+  editionId: string;
   participantCount: number;
+  editionKind: "test" | "final";
 };
 
 type DrawState = "idle" | "loading" | "done" | "error";
 
-export default function DrawGenerator({ groupId, participantCount }: Props) {
+export default function DrawGenerator({ editionId, participantCount, editionKind }: Props) {
   const [state, setState] = useState<DrawState>("idle");
   const [message, setMessage] = useState("Listo para repartir cuando Juan lo vea claro.");
 
   async function generateDraw() {
-    if (!groupId || !window.confirm("¿Confirmas el sorteo? Esta acción crea asignaciones reales y no se puede repetir.")) {
+    if (!window.confirm(`¿Confirmas el reparto de esta edición ${editionKind === "test" ? "de prueba" : "definitiva"}? Podrás revertirlo, pero los enlaces que alguien abra no pueden olvidarse.`)) {
       return;
     }
     setState("loading");
     setMessage("Buscando un reparto válido...");
     try {
-      const response = await fetch("/api/admin/draws/generate", {
+      const response = await fetch(`/api/admin/editions/${editionId}/draws/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ groupId, confirmed: true })
+        body: JSON.stringify({ confirmed: true })
       });
       const payload = (await response.json()) as { ok: boolean; message: string };
       setState(payload.ok ? "done" : "error");

@@ -88,6 +88,18 @@ comando es el procedimiento de recuperación mientras no exista autoservicio.
 No está operativo. No debe anunciarse WhatsApp como disponible hasta completar integración, plantillas, webhooks y
 pruebas.
 
+## Migración de ediciones
+
+Antes de aplicar `0003_editions.sql`:
+
+1. Crear un backup verificable de Supabase.
+2. Contar familias, núcleos, participantes, sorteos, asignaciones y logs.
+3. Revisar que cada grupo actual se convertirá en una familia y edición definitiva.
+4. Ejecutar la migración una sola vez mediante `npm run db:migrate`.
+5. Repetir conteos y abrir un enlace existente controlado.
+
+No probar esta migración contra la conexión compartida sin backup y autorización explícita.
+
 ## Observabilidad
 
 El servidor emite JSON estructurado para Runtime Logs de Vercel: autenticación, autorización, mutaciones, sorteo,

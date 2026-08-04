@@ -65,28 +65,20 @@ Estos errores deben mostrarse sin crear registros parciales.
 1. Autorizar al administrador sobre el grupo.
 2. Cargar participantes, `draw_rules` y `exclusion_rules`.
 3. Validar contactos y viabilidad.
-4. Bloquear el grupo y rechazar otro sorteo activo.
+4. Bloquear la edición y rechazar otro intento vigente.
 5. Generar todo el reparto en memoria.
-6. Crear el sorteo bloqueado y las asignaciones con hash y token cifrado.
-7. Actualizar el grupo y confirmar la transacción.
+6. Crear el intento numerado, snapshots y asignaciones con hash y token cifrado.
+7. Actualizar la edición y confirmar la transacción.
 8. Preparar envíos posteriores, fuera de la transacción.
 
 El panel administrativo nunca devuelve receptores. Los tokens solo se descifran en servidor para email o copia
 manual autorizada.
 
-## Regeneración
+## Revocación y relanzamiento
 
-La regeneración no está implementada. Mientras exista un sorteo `generated`, `locked` o `sent`, la API responde
-`409`. Antes de habilitarla se debe decidir:
+Juan puede revocar el intento vigente escribiendo `ANULAR REPARTO`. El intento pasa a `revoked`, conserva snapshots, asignaciones y logs, y sus tokens dejan de resolver. La edición vuelve a preparación y el siguiente intento recibe un número y tokens nuevos. La interfaz advierte que no puede deshacer una asignación ya conocida.
 
-- Quién puede regenerar.
-- Si requiere confirmación reforzada.
-- Qué ocurre con los logs anteriores.
-- Cómo se invalidan inmediatamente los tokens previos.
-- Si se conserva el sorteo anterior como audit trail.
-- Cuándo un sorteo pasa a `locked`.
-
-La opción más segura para el MVP es conservar versiones, marcar una como vigente e invalidar las anteriores.
+El borrado de una persona es distinto: elimina completos todos los intentos en los que aparece para no conservar repartos incompletos.
 
 ## Pruebas mínimas
 

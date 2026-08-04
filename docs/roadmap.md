@@ -45,11 +45,15 @@ Resultado: recargar la página conserva la familia preparada.
 - [x] Ejecutar persistencia transaccional.
 - [x] Prevenir doble generación y confirmar la acción.
 - [x] Cifrar tokens para entrega posterior.
-- [x] Bloquear otro sorteo activo; regeneración permanece fuera de alcance.
+- [x] Mantener un único intento vigente por edición.
+- [x] Revocar intentos, invalidar tokens y permitir relanzamientos numerados.
+- [x] Separar familia maestra, ediciones y snapshots por intento.
+- [x] Configurar participación y roles dentro de cada edición.
+- [x] Añadir borrado destructivo coherente de personas, unidades e intentos afectados.
 - [x] Actualizar estados de grupo y sorteo.
 - [x] Añadir pruebas repetidas de invariantes del dominio.
 
-Resultado: existe un sorteo real válido, recuperable operacionalmente y sin pérdida de enlaces.
+Resultado: cada edición conserva un reparto vigente, intentos revocados auditables y snapshots estables.
 
 ## Hito 4 — Entrega por email y manual
 
@@ -91,7 +95,7 @@ WhatsApp no bloquea el MVP si email y entrega manual funcionan.
 No forman parte del compromiso actual:
 
 - Personalización visual por grupo.
-- Historial de años.
+- Archivo y restauración de ediciones antiguas desde la UI.
 - Múltiples organizadores con roles.
 - Listas de deseos y presupuestos.
 - Recordatorios programados.

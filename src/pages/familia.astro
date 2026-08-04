@@ -8,34 +8,17 @@ const islands = state.islands.map((island) => ({
   id: island.id,
   name: island.name,
   color: island.color ?? "#d6a84f",
-  participants: state.participants
-    .filter((participant) => participant.familyIslandId === island.id)
-    .map((participant) => ({
-      id: participant.id,
-      name: participant.name,
-      email: participant.email ?? "",
-      phone: participant.phone ?? "",
-      preferredChannel: participant.preferredChannel,
-      active: participant.active,
-      canGive: participant.canGive,
-      canReceive: participant.canReceive
-    }))
+  participants: state.participants.filter((participant) => participant.familyIslandId === island.id).map((participant) => ({
+    id: participant.id,
+    name: participant.name,
+    email: participant.email ?? "",
+    phone: participant.phone ?? "",
+    preferredChannel: participant.preferredChannel
+  }))
 }));
 ---
 
 <AdminLayout title="Familia">
-  <div class="section-header">
-    <h1>Familia</h1>
-    <p>
-      Núcleos familiares claros, tarjetas grandes y contactos visibles. La regla principal del sorteo usará estos
-      núcleos para evitar regalos dentro de casa.
-    </p>
-  </div>
-  {
-    state.group ? (
-      <FamilyEditor client:load groupId={state.group.id} initialIslands={islands} />
-    ) : (
-      <p>No hay un grupo activo. Créalo primero desde <a href="/inicio">Inicio</a>.</p>
-    )
-  }
+  <div class="section-header"><h1>Familia</h1><p>Este es el censo permanente. La participación y los roles se deciden dentro de cada edición.</p></div>
+  {state.family ? <FamilyEditor client:load familyId={state.family.id} initialIslands={islands} /> : <p>Crea primero la familia desde <a href="/inicio">Inicio</a>.</p>}
 </AdminLayout>

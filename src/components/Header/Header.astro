@@ -4,8 +4,7 @@ import "./Header.css";
 const links = [
   { href: "/inicio", label: "Inicio" },
   { href: "/familia", label: "Familia" },
-  { href: "/sorteo", label: "Sorteo" },
-  { href: "/envios", label: "Envíos" }
+  { href: "/ediciones", label: "Ediciones" }
 ];
 const current = Astro.url.pathname;
 ---
@@ -24,7 +23,7 @@ const current = Astro.url.pathname;
     <nav class="header__nav" aria-label="Navegación principal">
       {
         links.map((link) => (
-          <a class:list={["header__link", current === link.href && "header__link--active"]} href={link.href}>
+          <a class:list={["header__link", (current === link.href || current.startsWith(`${link.href}/`)) && "header__link--active"]} href={link.href}>
             {link.label}
           </a>
         ))

@@ -1,0 +1,2 @@
+-- Schema snapshot checkpoint. The data-preserving transformation is implemented
+-- in 0003_editions.sql; this migration intentionally performs no SQL changes.

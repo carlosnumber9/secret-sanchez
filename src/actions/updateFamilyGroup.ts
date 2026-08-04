@@ -1,12 +1,12 @@
 import { eq } from "drizzle-orm";
 import { db } from "@/db/client";
-import { familyGroups } from "@/db/schema";
+import { families } from "@/db/schema";
 
-export async function updateFamilyGroup(id: string, input: Partial<typeof familyGroups.$inferInsert>) {
+export async function updateFamilyGroup(id: string, input: Partial<typeof families.$inferInsert>) {
   const [group] = await db
-    .update(familyGroups)
+    .update(families)
     .set({ ...input, updatedAt: new Date() })
-    .where(eq(familyGroups.id, id))
+    .where(eq(families.id, id))
     .returning();
   return group;
 }

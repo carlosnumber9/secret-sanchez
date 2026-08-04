@@ -4,7 +4,6 @@ import { useState } from "react";
 
 export default function GroupSetup() {
   const [name, setName] = useState("");
-  const [year, setYear] = useState(new Date().getFullYear() + 1);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
@@ -16,7 +15,7 @@ export default function GroupSetup() {
       const response = await fetch("/api/admin/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ name, year })
+        body: JSON.stringify({ name })
       });
       const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
       if (!response.ok || !payload?.ok) throw new Error(payload?.message);
@@ -33,18 +32,7 @@ export default function GroupSetup() {
         Nombre del sorteo
         <Input value={name} onChange={(event) => setName(event.target.value)} required />
       </label>
-      <label className="form-field">
-        Año
-        <Input
-          type="number"
-          min={2020}
-          max={2100}
-          value={year}
-          onChange={(event) => setYear(Number(event.target.value))}
-          required
-        />
-      </label>
-      <Button type="submit" disabled={busy}>{busy ? "Creando..." : "Crear grupo real"}</Button>
+      <Button type="submit" disabled={busy}>{busy ? "Creando..." : "Crear familia"}</Button>
       {message && <p role="status">{message}</p>}
     </form>
   );
