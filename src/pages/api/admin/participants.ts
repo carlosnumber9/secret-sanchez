@@ -9,8 +9,9 @@ const schema = z.object({
   familyIslandId: z.uuid(),
   name: z.string().trim().min(1).max(180),
   email: z.union([z.email(), z.literal("")]).optional(),
-  phone: z.string().trim().max(48).optional(),
-  preferredChannel: z.enum(["email", "manual"])
+  phone: z.union([z.string().trim().regex(/^\+[1-9]\d{7,14}$/), z.literal("")]).optional(),
+  preferredChannel: z.enum(["email", "whatsapp", "both"]).nullable().optional(),
+  isBaby: z.boolean().default(false)
 });
 
 export const POST: APIRoute = async ({ locals, request }) => {

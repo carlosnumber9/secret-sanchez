@@ -13,7 +13,10 @@
 | Revelación | Pública mediante token, sin cuenta de participante. |
 | Tokens | Aleatorios; solo se persiste SHA-256. |
 | Email | Resend. |
-| WhatsApp | Kapso está previsto, pero no forma parte del MVP operativo actual. |
+| WhatsApp | Kapso con plantilla aprobada, reenvío explícito y webhook firmado. |
+| Bebés | Se definen en la familia, reciben pero no regalan y carecen de contacto propio. |
+| Regalo a bebés | Una unidad distinta regala a cada bebé; no se repiten unidades y el enlace llega a su representante. |
+| Copia de enlaces | Es respaldo administrativo auditado, no un canal ni un estado de entrega. |
 | Idioma | Textos de interfaz y documentación en español. |
 | Commits | Prefijo tipado y descripción inglesa en pasado simple. |
 | Entornos | Local y Vercel comparten el mismo Supabase/Postgres. |
@@ -32,8 +35,6 @@
 | Framework de pruebas | Habilita la estrategia de calidad. |
 | Lint y formato | Reduce divergencia de estilo. |
 | Alcance final del catálogo UI | Determina qué componentes adicionales de shadcn deben incorporarse al MVP. |
-| Semántica de `delivered` y `opened` | Define webhooks y panel de envíos. |
-| Flujo definitivo de Kapso | Define plantillas, webhooks, coste y privacidad. |
 
 ## Registro de decisiones arquitectónicas
 

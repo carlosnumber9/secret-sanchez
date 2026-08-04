@@ -38,7 +38,7 @@ Cada familiar necesita:
 1. **La sorpresa es prioritaria.** La administración no debe mostrar el reparto completo por defecto.
 2. **El siguiente paso debe ser evidente.** El organizador no debería buscar qué queda pendiente.
 3. **La familia se modela como vive.** Los núcleos permiten evitar regalos dentro del mismo hogar.
-4. **La entrega admite excepciones.** Email, WhatsApp y copia manual forman parte del mismo flujo.
+4. **La entrega admite excepciones.** Email y WhatsApp son automáticos; la copia por Juan es solo un respaldo.
 5. **Un error no debe destruir un sorteo válido.** Regenerar, reenviar o corregir contactos requiere políticas
    explícitas.
 6. **La privacidad vence a la comodidad.** Los tokens se guardan como hash y los secretos permanecen en servidor.
@@ -50,10 +50,10 @@ El MVP queda completo cuando existe un recorrido real y verificable:
 1. Un administrador autorizado entra con email y contraseña.
 2. Mantiene una familia maestra con núcleos, participantes y contactos.
 3. Crea una edición de prueba o definitiva.
-4. Activa personas y núcleos y configura quién regala o recibe.
+4. Activa personas y unidades, configura roles y canales y elige representantes.
 5. La aplicación valida que el reparto es viable.
 6. Genera un intento persistente que puede revocar y relanzar.
-7. Cada participante recibe o copia su enlace vigente.
+7. Cada regalador adulto o representante recibe automáticamente su enlace vigente.
 8. El participante abre la revelación sin login.
 9. El organizador consulta envíos, fallos, aperturas e intentos anulados.
 
@@ -75,7 +75,9 @@ Estas ideas pueden evaluarse más adelante, pero no deben retrasar el recorrido 
 - **Edición:** preparación de prueba o definitiva asociada a una familia y un año.
 - **Núcleo:** hogar o unidad familiar usada como restricción.
 - **Participante:** persona que puede regalar, recibir o ambas cosas.
+- **Bebé:** participante que recibe, no regala y no tiene contacto propio.
+- **Representante:** adulto que recibe el enlace cuando su unidad regala a un bebé.
 - **Intento de sorteo:** ejecución concreta, vigente o revocada, que contiene snapshots y asignaciones.
 - **Asignación:** relación privada entre quien regala y quien recibe.
 - **Enlace de revelación:** URL con un token secreto de una asignación.
-- **Entrega manual:** el organizador copia y comparte el enlace fuera de la aplicación.
+- **Copia de respaldo:** el organizador obtiene y comparte un enlace fuera de la aplicación sin alterar su estado de entrega.

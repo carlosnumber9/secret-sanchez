@@ -3,7 +3,12 @@ import { z } from "zod";
 import { updateEditionParticipant } from "@/actions/editionData";
 import { handleApiError } from "@/lib/api";
 
-const schema = z.object({ enabled: z.boolean(), canGive: z.boolean(), canReceive: z.boolean() });
+const schema = z.object({
+  enabled: z.boolean(),
+  canGive: z.boolean(),
+  canReceive: z.boolean(),
+  preferredChannel: z.enum(["email", "whatsapp", "both"]).nullable()
+});
 export const PATCH: APIRoute = async ({ locals, params, request }) => {
   try {
     const editionId = z.uuid().parse(params.id);

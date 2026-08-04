@@ -13,7 +13,8 @@ const islands = state.islands.map((island) => ({
     name: participant.name,
     email: participant.email ?? "",
     phone: participant.phone ?? "",
-    preferredChannel: participant.preferredChannel
+    preferredChannel: participant.preferredChannel === "manual" ? null : participant.preferredChannel,
+    isBaby: participant.isBaby
   }))
 }));
 ---

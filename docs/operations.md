@@ -5,7 +5,7 @@
 - **Vercel:** ejecuta Astro SSR y sirve assets estáticos.
 - **Supabase Cloud:** autenticación y Postgres.
 - **Resend:** email transaccional.
-- **Kapso:** WhatsApp cuando se complete.
+- **Kapso:** plantillas de WhatsApp y webhooks de entrega.
 
 El repositorio está vinculado al proyecto Vercel `carlos-projects-fa17cb11/secret-sanchez`, conectado a GitHub con
 `main` como rama de Production. El dominio reservado es `https://secret-sanchez.vercel.app`. Las migraciones que
@@ -85,8 +85,7 @@ comando es el procedimiento de recuperación mientras no exista autoservicio.
 
 ### Kapso
 
-No está operativo. No debe anunciarse WhatsApp como disponible hasta completar integración, plantillas, webhooks y
-pruebas.
+El código está integrado, pero la operación requiere una plantilla aprobada con nombre y URL como parámetros del cuerpo, las variables `KAPSO_*` y un webhook de teléfono registrado contra `/api/webhooks/kapso` para `whatsapp.message.sent`, `delivered`, `read` y `failed`. Verificar siempre la edición de prueba antes de contactar teléfonos reales.
 
 ## Migración de ediciones
 
@@ -100,11 +99,17 @@ Antes de aplicar `0003_editions.sql`:
 
 No probar esta migración contra la conexión compartida sin backup y autorización explícita.
 
+## Migración de bebés y unidades
+
+`0005_past_winter_soldier.sql` debe aplicarse después de `0004`. Añade snapshots de unidades, generaliza el regalador de una asignación, incorpora bebés y representantes y habilita `read`. Antes de aplicarla comprobar duplicados no nulos de `notification_logs.provider_message_id`; después validar conteos y marcar los bebés desde `/familia` o mediante una actualización transaccional equivalente.
+
 ## Observabilidad
 
 El servidor emite JSON estructurado para Runtime Logs de Vercel: autenticación, autorización, mutaciones, sorteo,
 notificaciones, revelación y health check. Los errores técnicos incluyen `errorId`, etapa, tipo, código y una
 cadena limitada de causas cuando existe.
+
+`assignment_link_copied` audita la obtención autorizada de un enlace sin incluir el enlace ni su receptor.
 
 Nunca registrar tokens, URLs de revelación completas, contraseñas, claves, cookies ni payloads de autenticación. Reducir datos
 personales en logs y aplicar retención limitada. Los mensajes técnicos se sanean antes de registrarse para ocultar

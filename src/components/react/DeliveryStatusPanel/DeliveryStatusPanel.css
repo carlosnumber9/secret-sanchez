@@ -6,7 +6,7 @@
 .delivery-panel__row {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(180px, 1fr) auto auto auto;
+  grid-template-columns: auto minmax(180px, 1fr) auto auto auto;
   gap: var(--space-md);
   align-items: center;
   min-height: 76px;

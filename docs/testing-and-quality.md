@@ -8,7 +8,7 @@
 - No hay scripts separados de lint o formato.
 - No hay CI en el repositorio.
 
-El build es el único control automático actual y debe ejecutarse antes de cerrar cambios de código.
+`npm test` y `npm run build` son los controles automáticos locales y deben ejecutarse antes de cerrar cambios de código.
 
 ## Objetivos
 
@@ -32,6 +32,8 @@ Prioridad máxima para código de dominio:
 - `generateDraw`.
 - Hash y construcción de URLs.
 - Selección de canales de notificación.
+- Asignación de bebés a unidades distintas y no repetidas.
+- Progresión monotónica de estados de WhatsApp.
 
 Las pruebas del sorteo deben repetir generaciones y validar invariantes, no afirmar una asignación aleatoria exacta.
 
@@ -70,9 +72,9 @@ También debe cubrir sesión ausente, grupo ajeno, token inválido y sorteo impo
 | UI administrativa | Estado inconsistente | Media |
 | Estilos | Regresión visual | Media |
 
-## Validación manual mientras no haya suite
+## Validación manual complementaria
 
-- Ejecutar `npm run build`.
+- Ejecutar `npm test` y `npm run build`.
 - Probar viewport móvil y escritorio.
 - Navegar solo con teclado en formularios y acciones.
 - Comprobar mensajes de carga, error y éxito.

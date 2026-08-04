@@ -23,7 +23,7 @@ Variables obligatorias:
 - `APP_URL`, con el origen canónico de Production
 - `REVEAL_TOKEN_ENCRYPTION_KEY`, Base64 de 32 bytes
 
-Opcionales: `RESEND_API_KEY` y `KAPSO_API_KEY`. La misma clave de cifrado debe usarse en local y Vercel.
+Opcionales para email: `RESEND_API_KEY`. Para WhatsApp deben configurarse conjuntamente `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_TEMPLATE_NAME`, `KAPSO_TEMPLATE_LANGUAGE`, `KAPSO_WEBHOOK_SECRET` y `KAPSO_TEST_RECIPIENT_PHONE`. La misma clave de cifrado debe usarse en local y Vercel.
 
 ## Comandos
 

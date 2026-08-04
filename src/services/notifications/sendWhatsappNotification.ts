@@ -9,6 +9,7 @@ type Input = {
 export async function sendWhatsappNotification({ phone, name, revealUrl }: Input) {
   return sendKapsoMessage({
     phone,
-    message: `Hola ${name}, ya está listo el Amigo Invisible de Reyes. Abre tu enlace secreto: ${revealUrl}`
+    name,
+    revealUrl
   });
 }

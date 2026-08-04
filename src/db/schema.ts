@@ -1,6 +1,7 @@
 import { relations, sql } from "drizzle-orm";
 import {
   boolean,
+  check,
   integer,
   jsonb,
   pgEnum,
@@ -23,6 +24,7 @@ export const notificationStatus = pgEnum("notification_status", [
   "delivered",
   "failed",
   "opened",
+  "read",
   "manual"
 ]);
 
@@ -80,9 +82,12 @@ export const participants = pgTable("participants", {
   email: varchar("email", { length: 320 }),
   phone: varchar("phone", { length: 48 }),
   avatarUrl: text("avatar_url"),
-  preferredChannel: preferredChannel("preferred_channel").default("email").notNull(),
+  preferredChannel: preferredChannel("preferred_channel").default("email"),
+  isBaby: boolean("is_baby").default(false).notNull(),
   ...timestamps
-});
+}, (table) => [
+  check("participants_baby_without_contact_check", sql`not ${table.isBaby} or (${table.email} is null and ${table.phone} is null and ${table.preferredChannel} is null)`)
+]);
 
 export const drawEditions = pgTable(
   "draw_editions",
@@ -118,9 +123,14 @@ export const editionParticipants = pgTable(
     enabled: boolean("enabled").default(true).notNull(),
     canGive: boolean("can_give").default(true).notNull(),
     canReceive: boolean("can_receive").default(true).notNull(),
+    isBaby: boolean("is_baby").default(false).notNull(),
+    preferredChannel: preferredChannel("preferred_channel"),
     ...timestamps
   },
-  (table) => [uniqueIndex("edition_participants_edition_participant_idx").on(table.editionId, table.participantId)]
+  (table) => [
+    uniqueIndex("edition_participants_edition_participant_idx").on(table.editionId, table.participantId),
+    check("edition_participants_baby_roles_check", sql`not ${table.isBaby} or (not ${table.canGive} and ${table.canReceive} and ${table.preferredChannel} is null)`)
+  ]
 );
 
 export const editionIslandConfigs = pgTable(
@@ -134,6 +144,7 @@ export const editionIslandConfigs = pgTable(
       .notNull()
       .references(() => familyIslands.id, { onDelete: "cascade" }),
     enabled: boolean("enabled").default(true).notNull(),
+    representativeParticipantId: uuid("representative_participant_id").references(() => participants.id, { onDelete: "set null" }),
     ...timestamps
   },
   (table) => [uniqueIndex("edition_island_configs_edition_island_idx").on(table.editionId, table.familyIslandId)]
@@ -201,13 +212,33 @@ export const drawParticipants = pgTable(
     name: varchar("name", { length: 180 }).notNull(),
     email: varchar("email", { length: 320 }),
     phone: varchar("phone", { length: 48 }),
-    preferredChannel: preferredChannel("preferred_channel").notNull(),
+    preferredChannel: preferredChannel("preferred_channel"),
+    isBaby: boolean("is_baby").default(false).notNull(),
     familyIslandName: varchar("family_island_name", { length: 180 }).notNull(),
     canGive: boolean("can_give").notNull(),
     canReceive: boolean("can_receive").notNull(),
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => [uniqueIndex("draw_participants_draw_source_idx").on(table.drawId, table.sourceParticipantId)]
+);
+
+export const drawIslands = pgTable(
+  "draw_islands",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    drawId: uuid("draw_id")
+      .notNull()
+      .references(() => draws.id, { onDelete: "cascade" }),
+    sourceFamilyIslandId: uuid("source_family_island_id").references(() => familyIslands.id, { onDelete: "set null" }),
+    name: varchar("name", { length: 180 }).notNull(),
+    representativeSourceParticipantId: uuid("representative_source_participant_id").references(() => participants.id, { onDelete: "set null" }),
+    representativeName: varchar("representative_name", { length: 180 }).notNull(),
+    representativeEmail: varchar("representative_email", { length: 320 }),
+    representativePhone: varchar("representative_phone", { length: 48 }),
+    preferredChannel: preferredChannel("preferred_channel").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+  },
+  (table) => [uniqueIndex("draw_islands_draw_source_idx").on(table.drawId, table.sourceFamilyIslandId)]
 );
 
 export const assignments = pgTable(
@@ -217,9 +248,8 @@ export const assignments = pgTable(
     drawId: uuid("draw_id")
       .notNull()
       .references(() => draws.id, { onDelete: "cascade" }),
-    giverId: uuid("giver_id")
-      .notNull()
-      .references(() => drawParticipants.id, { onDelete: "cascade" }),
+    giverId: uuid("giver_id").references(() => drawParticipants.id, { onDelete: "cascade" }),
+    giverIslandId: uuid("giver_island_id").references(() => drawIslands.id, { onDelete: "cascade" }),
     receiverId: uuid("receiver_id")
       .notNull()
       .references(() => drawParticipants.id, { onDelete: "cascade" }),
@@ -230,8 +260,10 @@ export const assignments = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => [
-    uniqueIndex("assignments_draw_giver_idx").on(table.drawId, table.giverId),
-    uniqueIndex("assignments_draw_receiver_idx").on(table.drawId, table.receiverId)
+    uniqueIndex("assignments_draw_giver_idx").on(table.drawId, table.giverId).where(sql`${table.giverId} is not null`),
+    uniqueIndex("assignments_draw_giver_island_idx").on(table.drawId, table.giverIslandId).where(sql`${table.giverIslandId} is not null`),
+    uniqueIndex("assignments_draw_receiver_idx").on(table.drawId, table.receiverId),
+    check("assignments_exactly_one_giver_check", sql`num_nonnulls(${table.giverId}, ${table.giverIslandId}) = 1`)
   ]
 );
 
@@ -248,7 +280,7 @@ export const notificationLogs = pgTable("notification_logs", {
   idempotencyKey: varchar("idempotency_key", { length: 128 }).unique(),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
-});
+}, (table) => [uniqueIndex("notification_logs_provider_message_idx").on(table.providerMessageId).where(sql`${table.providerMessageId} is not null`)]);
 
 export const familiesRelations = relations(families, ({ one, many }) => ({
   owner: one(adminUsers, { fields: [families.ownerAdminId], references: [adminUsers.id] }),
@@ -267,12 +299,14 @@ export const drawEditionsRelations = relations(drawEditions, ({ one, many }) => 
 export const drawsRelations = relations(draws, ({ one, many }) => ({
   edition: one(drawEditions, { fields: [draws.editionId], references: [drawEditions.id] }),
   participants: many(drawParticipants),
+  islands: many(drawIslands),
   assignments: many(assignments)
 }));
 
 export const assignmentsRelations = relations(assignments, ({ one, many }) => ({
   draw: one(draws, { fields: [assignments.drawId], references: [draws.id] }),
   giver: one(drawParticipants, { fields: [assignments.giverId], references: [drawParticipants.id], relationName: "giver" }),
+  giverIsland: one(drawIslands, { fields: [assignments.giverIslandId], references: [drawIslands.id], relationName: "giverIsland" }),
   receiver: one(drawParticipants, { fields: [assignments.receiverId], references: [drawParticipants.id], relationName: "receiver" }),
   notifications: many(notificationLogs)
 }));

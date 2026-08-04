@@ -14,7 +14,7 @@ flowchart LR
   astro --> auth["Supabase Auth"]
   astro --> db["Supabase Postgres<br>Drizzle ORM"]
   astro --> email["Resend"]
-  astro -. "previsto" .-> whatsapp["Kapso / WhatsApp"]
+  astro --> whatsapp["Kapso / WhatsApp"]
   astro --> vercel["Runtime Vercel"]
 ```
 
@@ -30,7 +30,7 @@ flowchart LR
 - **Supabase Postgres:** persistencia relacional.
 - **Drizzle ORM:** schema y acceso tipado a la base.
 - **Resend:** email transaccional.
-- **Kapso:** integración prevista de WhatsApp.
+- **Kapso:** plantillas de WhatsApp y webhooks firmados de estado.
 - **Vercel:** adapter y despliegue serverless objetivo.
 - **Zod:** validación de payloads de API.
 
@@ -92,8 +92,8 @@ atravesar el límite del servidor.
 ### Sorteo objetivo
 
 1. La aplicación resuelve la configuración de núcleos y participantes de la edición.
-2. El dominio valida roles, reglas y exclusiones.
-3. Dentro de una transacción crea un intento numerado, snapshots, asignaciones y tokens.
+2. El dominio valida roles adultos, bebés, representantes, reglas y exclusiones.
+3. Dentro de una transacción crea un intento numerado, snapshots de personas y unidades, asignaciones personales y de bebés y tokens.
 4. El intento vigente alimenta las entregas y revelaciones.
 5. Una revocación conserva la auditoría, invalida tokens y devuelve la edición a preparación.
 

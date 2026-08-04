@@ -12,7 +12,7 @@ export const POST: APIRoute = async ({ request }) => {
   try {
     const { token } = schema.parse(await request.json().catch(() => null));
     const row = await getAssignmentByTokenHash(hashRevealToken(token));
-    if (!row?.giver) {
+    if (!row || (!row.giver && !row.giverIsland)) {
       logger.warn("reveal.resolve_rejected", { reason: "invalid_token" });
       throw new AppError(404, "REVEAL_NOT_FOUND", "Este enlace no parece válido.");
     }
@@ -22,7 +22,12 @@ export const POST: APIRoute = async ({ request }) => {
     });
     return Response.json({
       ok: true,
-      data: { giverName: row.giver.name, alreadyOpened: Boolean(row.assignment.openedAt) }
+      data: {
+        giverName: row.giver?.name ?? row.giverIsland!.representativeName,
+        giverKind: row.giver ? "participant" : "familyIsland",
+        giverIslandName: row.giverIsland?.name ?? null,
+        alreadyOpened: Boolean(row.assignment.openedAt)
+      }
     });
   } catch (error) {
     return handleApiError("reveal.resolve_failed", error);

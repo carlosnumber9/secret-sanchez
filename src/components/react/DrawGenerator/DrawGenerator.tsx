@@ -61,7 +61,7 @@ export default function DrawGenerator({ editionId, participantCount, editionKind
         {state === "done" && (
           <a
             className={cn(buttonVariants({ variant: "secondary", size: "lg" }), "min-h-11")}
-            href="/envios"
+            href={`/ediciones/${editionId}/envios`}
           >
             <Send size={20} />
             Ver estado de envíos

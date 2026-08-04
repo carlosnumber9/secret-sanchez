@@ -3,9 +3,9 @@ import test from "node:test";
 import { nextAttemptNumber, resolveEditionParticipants, validateEditionRoles } from "../src/services/editions/configuration";
 
 const people = [
-  { id: "a", familyIslandId: "one", enabled: true, islandEnabled: true, canGive: true, canReceive: true },
-  { id: "b", familyIslandId: "two", enabled: true, islandEnabled: true, canGive: true, canReceive: true },
-  { id: "c", familyIslandId: "three", enabled: true, islandEnabled: false, canGive: true, canReceive: true }
+  { id: "a", familyIslandId: "one", enabled: true, islandEnabled: true, canGive: true, canReceive: true, isBaby: false },
+  { id: "b", familyIslandId: "two", enabled: true, islandEnabled: true, canGive: true, canReceive: true, isBaby: false },
+  { id: "c", familyIslandId: "three", enabled: true, islandEnabled: false, canGive: true, canReceive: true, isBaby: false }
 ];
 
 test("a disabled island takes precedence over participant configuration", () => {
@@ -24,4 +24,10 @@ test("giver and receiver totals must be balanced", () => {
 test("attempt numbers are monotonic and gaps are not reused", () => {
   assert.equal(nextAttemptNumber([]), 1);
   assert.equal(nextAttemptNumber([1, 3, 4]), 5);
+});
+
+test("babies receive but never give", () => {
+  const withBaby = [...people, { id: "baby", familyIslandId: "one", enabled: true, islandEnabled: true, canGive: false, canReceive: true, isBaby: true }];
+  assert.equal(validateEditionRoles(withBaby), null);
+  assert.equal(validateEditionRoles(withBaby.map((person) => person.id === "baby" ? { ...person, canGive: true } : person)), "Los bebés activos reciben regalo, pero no pueden regalar.");
 });

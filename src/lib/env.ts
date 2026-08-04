@@ -6,6 +6,11 @@ export type AppEnv = {
   revealTokenEncryptionKey: string;
   resendApiKey?: string;
   kapsoApiKey?: string;
+  kapsoPhoneNumberId?: string;
+  kapsoTemplateName?: string;
+  kapsoTemplateLanguage?: string;
+  kapsoWebhookSecret?: string;
+  kapsoTestRecipientPhone?: string;
 };
 
 type EnvSource = Record<string, string | undefined>;
@@ -20,7 +25,12 @@ function defaultSource(): EnvSource {
     REVEAL_TOKEN_ENCRYPTION_KEY:
       import.meta.env?.REVEAL_TOKEN_ENCRYPTION_KEY ?? process.env.REVEAL_TOKEN_ENCRYPTION_KEY,
     RESEND_API_KEY: import.meta.env?.RESEND_API_KEY ?? process.env.RESEND_API_KEY,
-    KAPSO_API_KEY: import.meta.env?.KAPSO_API_KEY ?? process.env.KAPSO_API_KEY
+    KAPSO_API_KEY: import.meta.env?.KAPSO_API_KEY ?? process.env.KAPSO_API_KEY,
+    KAPSO_PHONE_NUMBER_ID: import.meta.env?.KAPSO_PHONE_NUMBER_ID ?? process.env.KAPSO_PHONE_NUMBER_ID,
+    KAPSO_TEMPLATE_NAME: import.meta.env?.KAPSO_TEMPLATE_NAME ?? process.env.KAPSO_TEMPLATE_NAME,
+    KAPSO_TEMPLATE_LANGUAGE: import.meta.env?.KAPSO_TEMPLATE_LANGUAGE ?? process.env.KAPSO_TEMPLATE_LANGUAGE,
+    KAPSO_WEBHOOK_SECRET: import.meta.env?.KAPSO_WEBHOOK_SECRET ?? process.env.KAPSO_WEBHOOK_SECRET,
+    KAPSO_TEST_RECIPIENT_PHONE: import.meta.env?.KAPSO_TEST_RECIPIENT_PHONE ?? process.env.KAPSO_TEST_RECIPIENT_PHONE
   };
 }
 
@@ -56,7 +66,12 @@ export function readEnv(source: EnvSource): AppEnv {
     appUrl,
     revealTokenEncryptionKey,
     resendApiKey: source.RESEND_API_KEY?.trim() || undefined,
-    kapsoApiKey: source.KAPSO_API_KEY?.trim() || undefined
+    kapsoApiKey: source.KAPSO_API_KEY?.trim() || undefined,
+    kapsoPhoneNumberId: source.KAPSO_PHONE_NUMBER_ID?.trim() || undefined,
+    kapsoTemplateName: source.KAPSO_TEMPLATE_NAME?.trim() || undefined,
+    kapsoTemplateLanguage: source.KAPSO_TEMPLATE_LANGUAGE?.trim() || undefined,
+    kapsoWebhookSecret: source.KAPSO_WEBHOOK_SECRET?.trim() || undefined,
+    kapsoTestRecipientPhone: source.KAPSO_TEST_RECIPIENT_PHONE?.trim() || undefined
   };
 }
 

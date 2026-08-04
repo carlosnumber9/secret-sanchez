@@ -3,7 +3,7 @@ import { z } from "zod";
 import { prepareManualDelivery } from "@/actions/notifications";
 import { handleApiError } from "@/lib/api";
 
-const schema = z.object({ assignmentId: z.uuid(), idempotencyKey: z.uuid() });
+const schema = z.object({ assignmentId: z.uuid() });
 
 export const POST: APIRoute = async ({ locals, request }) => {
   try {

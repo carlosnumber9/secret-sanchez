@@ -5,7 +5,7 @@ type NotificationParticipant = {
   name: string;
   email?: string | null;
   phone?: string | null;
-  preferredChannel: "email" | "whatsapp" | "both" | "manual";
+  preferredChannel: "email" | "whatsapp" | "both" | null;
   revealUrl: string;
 };
 

@@ -12,7 +12,7 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - Local, Preview y Production comparten la misma base y los mismos datos.
 - Drizzle define el schema relacional en `src/db/schema.ts`.
 - Resend esta preparado para email.
-- Kapso esta preparado para WhatsApp en una fase posterior.
+- Kapso esta integrado para WhatsApp; su activacion requiere credenciales, plantilla aprobada y webhook.
 
 ## Documentacion
 
@@ -65,6 +65,11 @@ Variables solo servidor:
 - `REVEAL_TOKEN_ENCRYPTION_KEY`
 - `RESEND_API_KEY`
 - `KAPSO_API_KEY`
+- `KAPSO_PHONE_NUMBER_ID`
+- `KAPSO_TEMPLATE_NAME`
+- `KAPSO_TEMPLATE_LANGUAGE`
+- `KAPSO_WEBHOOK_SECRET`
+- `KAPSO_TEST_RECIPIENT_PHONE`
 
 Variable de app:
 
@@ -118,22 +123,26 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 El schema actual incluye:
 
 - `admin_users`
-- `family_groups`
+- `families`
 - `family_islands`
 - `participants`
+- `draw_editions`
+- `edition_participants`
+- `edition_island_configs`
 - `draw_rules`
-- `exclusion_rules`
 - `draws`
+- `draw_participants`
+- `draw_islands`
 - `assignments`
 - `notification_logs`
 
 Estados y enums principales:
 
 - Grupos: `draft`, `ready`, `drawn`, `sent`, `archived`
-- Sorteos: `draft`, `generated`, `locked`, `sent`
+- Sorteos: `draft`, `generated`, `locked`, `sent`, `revoked`
 - Canal preferido: `email`, `whatsapp`, `both`, `manual`
 - Canal de notificacion: `email`, `whatsapp`, `manual`
-- Estado de notificacion: `pending`, `sent`, `delivered`, `failed`, `opened`, `manual`
+- Estado de notificacion: `pending`, `sent`, `delivered`, `failed`, `opened`, `read`, `manual`
 
 ## Sorteo
 
@@ -149,8 +158,9 @@ Estados y enums principales:
 
 - El panel exige confirmacion antes de enviar emails reales.
 - Los intentos se guardan con clave de idempotencia.
-- La entrega manual descifra y copia el enlace bajo autorizacion.
-- WhatsApp permanece deshabilitado hasta completar Kapso.
+- La copia de respaldo descifra el enlace bajo autorizacion y se audita en Vercel.
+- WhatsApp usa Kapso y actualiza estados mediante webhook firmado.
+- La copia de enlaces es un respaldo auditado en Vercel, no un canal de entrega.
 
 ## Estilo Y Convenciones Existentes
 
@@ -183,5 +193,4 @@ Estas decisiones no estan fijadas en el repo. No asumirlas sin confirmacion o si
 - Framework de testing preferido.
 - Politica de lint/format mas alla de `astro check` dentro de `npm run build`.
 - Criterios finales de UI/design system.
-- Flujo definitivo de WhatsApp con Kapso.
 - Politica de permisos para multiples administradores.

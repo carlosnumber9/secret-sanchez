@@ -36,6 +36,13 @@
       "when": 1785828176771,
       "tag": "0004_schema-snapshot",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1785874474411,
+      "tag": "0005_past_winter_soldier",
+      "breakpoints": true
     }
   ]
 }

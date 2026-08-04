@@ -71,7 +71,8 @@ export async function createOwnedParticipant(adminId: string, input: {
   name: string;
   email?: string;
   phone?: string;
-  preferredChannel: "email" | "manual";
+  preferredChannel?: "email" | "whatsapp" | "both" | null;
+  isBaby: boolean;
 }) {
   const [owned] = await db.select({ island: familyIslands }).from(familyIslands)
     .innerJoin(families, eq(familyIslands.familyId, families.id))
@@ -81,8 +82,9 @@ export async function createOwnedParticipant(adminId: string, input: {
   return db.transaction(async (tx) => {
     const [participant] = await tx.insert(participants).values({
       ...input,
-      email: input.email || null,
-      phone: input.phone || null
+      email: input.isBaby ? null : input.email || null,
+      phone: input.isBaby ? null : input.phone || null,
+      preferredChannel: input.isBaby ? null : input.preferredChannel ?? "email"
     }).returning();
     const editions = await tx.select({ id: drawEditions.id }).from(drawEditions).where(eq(drawEditions.familyId, input.familyId));
     if (editions.length) {
@@ -90,8 +92,10 @@ export async function createOwnedParticipant(adminId: string, input: {
         editionId: id,
         participantId: participant.id,
         enabled: false,
-        canGive: true,
-        canReceive: true
+        canGive: !participant.isBaby,
+        canReceive: true,
+        isBaby: participant.isBaby,
+        preferredChannel: participant.isBaby ? null : participant.preferredChannel
       })));
     }
     return participant;
@@ -103,7 +107,8 @@ export async function updateOwnedParticipant(adminId: string, participantId: str
   email: string | null;
   phone: string | null;
   familyIslandId: string;
-  preferredChannel: "email" | "manual";
+  preferredChannel: "email" | "whatsapp" | "both" | null;
+  isBaby: boolean;
 }>) {
   const [owned] = await db.select({ participant: participants }).from(participants)
     .innerJoin(families, eq(participants.familyId, families.id))
@@ -114,9 +119,33 @@ export async function updateOwnedParticipant(adminId: string, participantId: str
       .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, owned.participant.familyId))).limit(1);
     if (!target) throw new AppError(422, "ISLAND_MISMATCH", "El núcleo no pertenece a esta familia.");
   }
-  const [participant] = await db.update(participants).set({ ...input, updatedAt: new Date() })
-    .where(eq(participants.id, participantId)).returning();
-  return participant;
+  return db.transaction(async (tx) => {
+    const effectiveBaby = input.isBaby ?? owned.participant.isBaby;
+    const values = effectiveBaby
+      ? { ...input, email: null, phone: null, preferredChannel: null, updatedAt: new Date() }
+      : { ...input, updatedAt: new Date() };
+    const [participant] = await tx.update(participants).set(values)
+      .where(eq(participants.id, participantId)).returning();
+
+    if (input.isBaby !== undefined) {
+      const editionRows = await tx.select({ id: drawEditions.id }).from(drawEditions)
+        .where(eq(drawEditions.familyId, participant.familyId));
+      const currentDrawRows = await tx.select({ editionId: draws.editionId }).from(draws)
+        .where(ne(draws.status, "revoked"));
+      const lockedEditionIds = new Set(currentDrawRows.map(({ editionId }) => editionId));
+      for (const edition of editionRows) {
+        if (lockedEditionIds.has(edition.id)) continue;
+        await tx.update(editionParticipants).set({
+          isBaby: participant.isBaby,
+          canGive: participant.isBaby ? false : true,
+          canReceive: true,
+          preferredChannel: participant.isBaby ? null : participant.preferredChannel,
+          updatedAt: new Date()
+        }).where(and(eq(editionParticipants.editionId, edition.id), eq(editionParticipants.participantId, participant.id)));
+      }
+    }
+    return participant;
+  });
 }
 
 export async function getParticipantDeletionImpact(adminId: string, participantId: string) {

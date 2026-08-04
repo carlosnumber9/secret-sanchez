@@ -1,6 +1,6 @@
 # Modelo de datos
 
-Drizzle define el esquema operativo en `src/db/schema.ts`. La migración `0003_editions.sql` transforma el modelo anterior, pero debe revisarse y respaldarse Supabase antes de ejecutarla.
+Drizzle define el esquema operativo en `src/db/schema.ts`. `0003` introdujo ediciones y `0005` añade bebés, representantes, unidades sorteadas y WhatsApp.
 
 ## Familia maestra
 
@@ -14,7 +14,7 @@ Núcleos u hogares de una familia. Se utilizan para impedir asignaciones dentro 
 
 ### `participants`
 
-Personas maestras con núcleo, nombre, contacto y canal preferido. La participación y los roles no viven aquí.
+Personas maestras con núcleo, nombre, contacto, canal por defecto e `is_baby`. La condición de bebé se decide solo en `/familia`; obliga a dejar email, teléfono y canal en `null`.
 
 Crear una persona inserta una configuración desactivada en todas las ediciones existentes. Borrar una persona es destructivo y elimina completos todos los intentos donde aparece.
 
@@ -26,11 +26,11 @@ Edición de prueba o definitiva asociada a una familia y año. Puede estar `draf
 
 ### `edition_participants`
 
-Configuración materializada de cada familiar dentro de la edición: `enabled`, `can_give` y `can_receive`. Las altas posteriores se incorporan desactivadas.
+Configuración materializada de cada familiar: `enabled`, `can_give`, `can_receive`, snapshot de `is_baby` y canal automático de la edición. Un bebé activo recibe, no regala y no tiene canal.
 
 ### `edition_island_configs`
 
-Activa o desactiva un núcleo completo. La desactivación del núcleo prevalece sobre la configuración individual sin borrarla.
+Activa o desactiva una unidad y selecciona su representante adulto. La desactivación prevalece sobre la configuración individual.
 
 ### `draw_rules` y `exclusion_rules`
 
@@ -44,15 +44,19 @@ Intento numerado dentro de una edición. Solo uno puede estar vigente; los anter
 
 ### `draw_participants`
 
-Snapshot inmutable por intento con identidad, contacto, canal, núcleo y roles efectivos. Permite conservar la historia aunque cambie el censo.
+Snapshot inmutable por intento con identidad, contacto, canal, núcleo, roles y condición de bebé.
+
+### `draw_islands`
+
+Snapshot de las unidades habilitadas que pueden regalar a bebés, incluido su representante y los contactos y canales congelados para el intento.
 
 ### `assignments`
 
-Relación secreta entre snapshots de quien regala y recibe. Tiene unicidad por sorteo para ambos lados, hash único del token, ciphertext AES-256-GCM y primera apertura.
+Relación secreta cuyo regalador es exactamente un `draw_participant` o un `draw_island`. El receptor siempre es un participante. Existe unicidad para regalador personal, unidad regaladora y receptor, además del token cifrado y la primera apertura.
 
 ### `notification_logs`
 
-Intentos de email o entrega manual ligados a asignaciones. Revocar conserva estos logs; el borrado destructivo desde `/familia` los elimina al borrar el intento completo.
+Intentos automáticos de email o WhatsApp. La copia de respaldo no crea un log de notificación: emite un evento seguro en Vercel.
 
 ## Conservación e invalidación
 

@@ -8,6 +8,6 @@ const id = Astro.params.id!;
 const state = await getEditionAppState(Astro.locals.admin.id, id);
 ---
 <AdminLayout title={`Envíos · ${state.edition.name}`}>
-  <div class="section-header"><p>{state.edition.kind === "test" ? "Modo prueba" : "Edición definitiva"}</p><h1>Envíos de {state.edition.name}</h1><p>Estado de mensajes, copias manuales y aperturas del intento vigente.</p></div>
+  <div class="section-header"><p>{state.edition.kind === "test" ? "Modo prueba" : "Edición definitiva"}</p><h1>Envíos de {state.edition.name}</h1><p>Estado de email y WhatsApp, reenvíos, enlaces de respaldo y aperturas del intento vigente.</p></div>
   {state.currentDraw ? <Card><DeliveryStatusPanel client:load deliveries={state.deliveries} editionId={id} testMode={state.edition.kind === "test"} /></Card> : <p>No hay un reparto vigente.</p>}
 </AdminLayout>

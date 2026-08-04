@@ -18,6 +18,33 @@
   border-radius: var(--radius-xl);
 }
 
+.edition-configurator__summary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-sm) var(--space-lg);
+  align-items: center;
+}
+
+.edition-configurator__representative {
+  display: grid;
+  gap: var(--space-xs);
+  max-width: 24rem;
+}
+
+.edition-configurator__representative select {
+  min-height: 2.5rem;
+  padding: 0 var(--space-sm);
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius-lg);
+  background: var(--glass-card);
+}
+
+.edition-configurator__person > div:first-child {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: center;
+}
+
 @media (max-width: 720px) {
   .delivery-panel__row { grid-template-columns: 1fr 1fr; }
 }

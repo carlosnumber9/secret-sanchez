@@ -65,7 +65,7 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 
 - Una fila por participante que regala.
 - Estado independiente por canal.
-- Copia manual sin revelar el receptor.
+- Copia de respaldo sin revelar el receptor.
 - Reintento individual y masivo con feedback.
 - Diferenciar falta de contacto, pendiente, enviado, entregado y fallido.
 
@@ -157,4 +157,6 @@ La navegación nunca elige implícitamente “el último sorteo”. `/sorteo` y 
 
 ## Configuración de participantes
 
-Cada edición agrupa a la familia por núcleos. El switch del núcleo prevalece sobre los controles individuales. Una persona activa debe regalar, recibir o ambas cosas, y la pantalla muestra los totales antes de generar.
+Cada edición agrupa a la familia por unidades. El switch de la unidad prevalece sobre los controles individuales. Los bebés se marcan únicamente en `/familia` y aparecen como etiqueta no editable: reciben, no regalan y no muestran canales. Cada unidad selecciona un representante adulto. La pantalla separa adultos, bebés, regaladores, receptores y unidades preparadas.
+
+En envíos, Email y WhatsApp muestran estados independientes. Juan puede seleccionar asignaciones para reenviar y copiar cualquier enlace mediante un icono; la copia es un respaldo y no altera los estados.

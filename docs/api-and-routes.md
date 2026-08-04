@@ -28,3 +28,7 @@ Todas requieren sesión y autorización mediante la familia propietaria. Las res
 ## APIs públicas
 
 `POST /api/reveal/resolve` y `POST /api/reveal/open` responden como token inválido cuando el intento fue revocado o eliminado, sin revelar la causa.
+
+`POST /api/webhooks/kapso` recibe estados de WhatsApp. No usa sesión administrativa: exige la firma HMAC de Kapso y nunca devuelve datos del reparto.
+
+El envío administrativo admite alcance `all` o `selected` y modos `pending`, `failed` o `force`. La API de respaldo recibe solo `assignmentId`; la copia queda auditada en Runtime Logs, no como entrega.

@@ -3,7 +3,13 @@ import { z } from "zod";
 import { sendAdminNotifications } from "@/actions/notifications";
 import { handleApiError } from "@/lib/api";
 
-const schema = z.object({ mode: z.enum(["pending", "failed"]), idempotencyKey: z.uuid(), confirmed: z.literal(true) });
+const schema = z.object({
+  mode: z.enum(["pending", "failed", "force"]),
+  scope: z.enum(["all", "selected"]),
+  assignmentIds: z.array(z.uuid()).optional(),
+  idempotencyKey: z.uuid(),
+  confirmed: z.literal(true)
+});
 export const POST: APIRoute = async ({ locals, params, request }) => {
   try {
     const editionId = z.uuid().parse(params.id);

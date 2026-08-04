@@ -7,16 +7,17 @@ import { logger } from "@/lib/logger";
 const schema = z.object({
   name: z.string().trim().min(1).max(180).optional(),
   email: z.union([z.email(), z.literal(""), z.null()]).optional(),
-  phone: z.union([z.string().trim().max(48), z.null()]).optional(),
+  phone: z.union([z.string().trim().regex(/^\+[1-9]\d{7,14}$/), z.literal(""), z.null()]).optional(),
   familyIslandId: z.uuid().optional(),
-  preferredChannel: z.enum(["email", "manual"]).optional()
+  preferredChannel: z.enum(["email", "whatsapp", "both"]).nullable().optional(),
+  isBaby: z.boolean().optional()
 });
 
 export const PATCH: APIRoute = async ({ locals, params, request }) => {
   try {
     const id = z.uuid().parse(params.id);
     const parsed = schema.parse(await request.json().catch(() => null));
-    const input = { ...parsed, email: parsed.email === "" ? null : parsed.email };
+    const input = { ...parsed, email: parsed.email === "" ? null : parsed.email, phone: parsed.phone === "" ? null : parsed.phone };
     const participant = await updateOwnedParticipant(locals.admin.id, id, input);
     logger.info("participant.updated", {
       familyId: participant.familyId,

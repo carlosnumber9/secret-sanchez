@@ -9,8 +9,19 @@ import { getEditionAppState } from "@/actions/editionData";
 
 const id = Astro.params.id!;
 const state = await getEditionAppState(Astro.locals.admin.id, id);
-const islandProps = state.islands.map(({ island, config }) => ({ id: island.id, name: island.name, color: island.color, enabled: config.enabled }));
-const peopleProps = state.participants.map(({ participant, config }) => ({ id: participant.id, islandId: participant.familyIslandId, name: participant.name, enabled: config.enabled, canGive: config.canGive, canReceive: config.canReceive }));
+const islandProps = state.islands.map(({ island, config }) => ({ id: island.id, name: island.name, color: island.color, enabled: config.enabled, representativeParticipantId: config.representativeParticipantId }));
+const peopleProps = state.participants.map(({ participant, config }) => ({
+  id: participant.id,
+  islandId: participant.familyIslandId,
+  name: participant.name,
+  enabled: config.enabled,
+  canGive: config.canGive,
+  canReceive: config.canReceive,
+  isBaby: config.isBaby,
+  preferredChannel: config.preferredChannel === "manual" ? null : config.preferredChannel,
+  hasEmail: Boolean(participant.email),
+  hasPhone: Boolean(participant.phone)
+}));
 ---
 <AdminLayout title={state.edition.name}>
   <div class="section-header"><p>{state.edition.year}</p><h1>{state.edition.name}</h1><div class="cluster"><StatusBadge tone={state.edition.kind === "final" ? "ok" : "neutral"}>{state.edition.kind === "final" ? "Definitiva" : "Prueba"}</StatusBadge><StatusBadge tone="neutral">{state.edition.status}</StatusBadge></div></div>

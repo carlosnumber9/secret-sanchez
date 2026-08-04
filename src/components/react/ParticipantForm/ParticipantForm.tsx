@@ -7,7 +7,8 @@ export type ParticipantDraft = {
   name: string;
   email: string;
   phone: string;
-  preferredChannel: "email" | "manual";
+  preferredChannel: "email" | "whatsapp" | "both";
+  isBaby: boolean;
 };
 
 type Props = {
@@ -35,6 +36,18 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
         />
       </label>
       <label className="form-field">
+        <span><input
+          type="checkbox"
+          checked={value.isBaby}
+          onChange={(event) => onChange({
+            ...value,
+            isBaby: event.target.checked,
+            email: event.target.checked ? "" : value.email,
+            phone: event.target.checked ? "" : value.phone
+          })}
+        /> Bebé</span>
+      </label>
+      <label className="form-field">
         Email
         <Input
           className="h-10"
@@ -42,6 +55,7 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
           onChange={(event) => onChange({ ...value, email: event.target.value })}
           placeholder="nombre@email.com"
           type="email"
+          disabled={value.isBaby}
         />
       </label>
       <label className="form-field">
@@ -50,7 +64,8 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
           className="h-10"
           value={value.phone}
           onChange={(event) => onChange({ ...value, phone: event.target.value })}
-          placeholder="+34 600 000 000"
+          placeholder="+34600000000"
+          disabled={value.isBaby}
         />
       </label>
       <label className="form-field">
@@ -58,12 +73,14 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
         <NativeSelect
           className="w-full"
           value={value.preferredChannel}
+          disabled={value.isBaby}
           onChange={(event) =>
             onChange({ ...value, preferredChannel: event.target.value as ParticipantDraft["preferredChannel"] })
           }
         >
           <NativeSelectOption value="email">Email</NativeSelectOption>
-          <NativeSelectOption value="manual">Manual</NativeSelectOption>
+          <NativeSelectOption value="whatsapp">WhatsApp</NativeSelectOption>
+          <NativeSelectOption value="both">Email y WhatsApp</NativeSelectOption>
         </NativeSelect>
       </label>
       <Button className="min-h-10 w-full" size="lg" type="submit">

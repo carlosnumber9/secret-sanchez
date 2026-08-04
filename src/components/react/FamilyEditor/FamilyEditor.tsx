@@ -7,13 +7,13 @@ import "./FamilyEditor.css";
 
 type Participant = Omit<ParticipantDraft, "preferredChannel"> & {
   id: string;
-  preferredChannel: "email" | "whatsapp" | "both" | "manual";
+  preferredChannel: "email" | "whatsapp" | "both" | null;
 };
 type Island = { id: string; name: string; color: string; participants: Participant[] };
 type Props = { familyId: string; initialIslands: Island[] };
 type ApiResponse<T> = { ok: boolean; data?: T; message?: string };
 
-const emptyParticipant: ParticipantDraft = { name: "", email: "", phone: "", preferredChannel: "email" };
+const emptyParticipant: ParticipantDraft = { name: "", email: "", phone: "", preferredChannel: "email", isBaby: false };
 const colors = ["#d6a84f", "#b83232", "#2f7d59", "#3d6f9f", "#8b5a2b"];
 
 export default function FamilyEditor({ familyId, initialIslands }: Props) {
@@ -74,12 +74,23 @@ export default function FamilyEditor({ familyId, initialIslands }: Props) {
     finally { setBusy(false); }
   }
 
-  async function changeChannel(person: Participant, preferredChannel: "email" | "manual") {
+  async function changeChannel(person: Participant, preferredChannel: "email" | "whatsapp" | "both") {
     setBusy(true);
     try {
       const updated = await api<Participant>(`/api/admin/participants/${person.id}`, "PATCH", { preferredChannel });
       setIslands((current) => current.map((island) => ({ ...island, participants: island.participants.map((item) => item.id === person.id ? updated : item) })));
       setMessage("Canal actualizado.");
+    } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo actualizar."); }
+    finally { setBusy(false); }
+  }
+
+  async function changeBaby(person: Participant, isBaby: boolean) {
+    if (isBaby && !window.confirm(`Al marcar a ${person.name} como bebé se eliminarán sus datos de contacto. ¿Continuar?`)) return;
+    setBusy(true);
+    try {
+      const updated = await api<Participant>(`/api/admin/participants/${person.id}`, "PATCH", { isBaby });
+      setIslands((current) => current.map((island) => ({ ...island, participants: island.participants.map((item) => item.id === person.id ? updated : item) })));
+      setMessage(isBaby ? "Marcado como bebé; sus contactos se han eliminado." : "Marcado como adulto. Añade sus datos de contacto.");
     } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudo actualizar."); }
     finally { setBusy(false); }
   }
@@ -162,9 +173,10 @@ export default function FamilyEditor({ familyId, initialIslands }: Props) {
         </div>
         <div className="family-editor__people">
           {island.participants.map((person) => <div className="family-editor__person" key={person.id}>
-            <UserRound size={20} /><div><strong>{person.name}</strong><small>{person.email || person.phone || "Falta contacto"}</small><small>Canal: {person.preferredChannel}</small></div>
+            <UserRound size={20} /><div><strong>{person.name}{person.isBaby ? " · Bebé" : ""}</strong><small>{person.isBaby ? "Sin contacto propio" : person.email || person.phone || "Falta contacto"}</small><small>{person.isBaby ? "Recibe, no regala" : `Canal por defecto: ${person.preferredChannel ?? "sin definir"}`}</small></div>
             <select aria-label={`Mover a ${person.name}`} value={island.id} disabled={busy || islands.length < 2} onChange={(event) => movePerson(person, event.target.value)}>{islands.map((target) => <option value={target.id} key={target.id}>{target.name}</option>)}</select>
-            <select aria-label={`Canal de ${person.name}`} value={person.preferredChannel === "manual" ? "manual" : "email"} disabled={busy} onChange={(event) => changeChannel(person, event.target.value as "email" | "manual")}><option value="email">Email</option><option value="manual">Manual</option></select>
+            <label><input type="checkbox" checked={person.isBaby} disabled={busy} onChange={(event) => changeBaby(person, event.target.checked)} /> Bebé</label>
+            <select aria-label={`Canal de ${person.name}`} value={person.preferredChannel ?? "email"} disabled={busy || person.isBaby} onChange={(event) => changeChannel(person, event.target.value as "email" | "whatsapp" | "both")}><option value="email">Email</option><option value="whatsapp">WhatsApp</option><option value="both">Email y WhatsApp</option></select>
             <Button variant="secondary" size="icon" disabled={busy} onClick={() => editPerson(person)} aria-label={`Editar ${person.name}`}><Pencil size={17} /></Button>
             <Button variant="destructive" size="icon" disabled={busy} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 size={17} /></Button>
           </div>)}

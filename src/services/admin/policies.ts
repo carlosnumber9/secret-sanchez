@@ -11,7 +11,7 @@ export function isActiveDrawStatus(status: string) {
 export function buildNotificationAttemptKey(
   requestId: string,
   assignmentId: string,
-  channel: "email"
+  channel: "email" | "whatsapp"
 ) {
   return `${requestId}:${assignmentId}:${channel}`;
 }

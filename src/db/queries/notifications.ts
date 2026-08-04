@@ -37,3 +37,9 @@ export async function findNotificationByIdempotencyKey(idempotencyKey: string) {
     .limit(1);
   return log ?? null;
 }
+
+export async function findNotificationByProviderMessageId(providerMessageId: string) {
+  const [log] = await db.select().from(notificationLogs)
+    .where(eq(notificationLogs.providerMessageId, providerMessageId)).limit(1);
+  return log ?? null;
+}

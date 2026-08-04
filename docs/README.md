@@ -13,7 +13,7 @@ cómo está construido, cómo operarlo y qué decisiones siguen abiertas.
 | [Modelo de datos](./data-model.md) | Entidades, relaciones, estados y política de migraciones. |
 | [Autenticación y seguridad](./auth-security.md) | Contraseña, autorización, sesiones, secretos y riesgos. |
 | [Motor de sorteo](./draw-engine.md) | Reglas, algoritmo, persistencia e invariantes. |
-| [Notificaciones](./notifications.md) | Email, WhatsApp, entrega manual y seguimiento. |
+| [Notificaciones](./notifications.md) | Email, WhatsApp, copia de respaldo y seguimiento. |
 | [API y rutas](./api-and-routes.md) | Páginas, endpoints y contratos actuales. |
 | [UI y experiencia](./ui-ux.md) | Estructura de pantallas y principios de interacción. |
 | [Desarrollo](./development.md) | Entorno local, comandos, estructura y criterios para cerrar cambios. |

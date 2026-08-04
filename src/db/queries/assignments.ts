@@ -1,6 +1,6 @@
 import { and, eq, isNull, ne } from "drizzle-orm";
 import { db } from "@/db/client";
-import { assignments, drawEditions, drawParticipants, draws, families } from "@/db/schema";
+import { assignments, drawEditions, drawIslands, drawParticipants, draws, families } from "@/db/schema";
 
 export async function createAssignments(values: (typeof assignments.$inferInsert)[]) {
   return db.insert(assignments).values(values).returning();
@@ -8,9 +8,10 @@ export async function createAssignments(values: (typeof assignments.$inferInsert
 
 export async function getAssignmentByTokenHash(tokenHash: string) {
   const [row] = await db
-    .select({ assignment: assignments, giver: drawParticipants, draw: draws })
+    .select({ assignment: assignments, giver: drawParticipants, giverIsland: drawIslands, draw: draws })
     .from(assignments)
-    .innerJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
+    .leftJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
+    .leftJoin(drawIslands, eq(assignments.giverIslandId, drawIslands.id))
     .innerJoin(draws, eq(assignments.drawId, draws.id))
     .where(and(eq(assignments.revealTokenHash, tokenHash), ne(draws.status, "revoked")))
     .limit(1);
@@ -31,20 +32,22 @@ export async function markAssignmentOpened(assignmentId: string) {
 
 export async function listAssignmentsForDraw(drawId: string) {
   return db
-    .select({ assignment: assignments, giver: drawParticipants })
+    .select({ assignment: assignments, giver: drawParticipants, giverIsland: drawIslands })
     .from(assignments)
-    .innerJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
+    .leftJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
+    .leftJoin(drawIslands, eq(assignments.giverIslandId, drawIslands.id))
     .where(eq(assignments.drawId, drawId));
 }
 
 export async function getOwnedAssignment(assignmentId: string, adminId: string) {
   const [row] = await db
-    .select({ assignment: assignments, giver: drawParticipants, draw: draws, edition: drawEditions, family: families })
+    .select({ assignment: assignments, giver: drawParticipants, giverIsland: drawIslands, draw: draws, edition: drawEditions, family: families })
     .from(assignments)
     .innerJoin(draws, eq(assignments.drawId, draws.id))
     .innerJoin(drawEditions, eq(draws.editionId, drawEditions.id))
     .innerJoin(families, eq(drawEditions.familyId, families.id))
-    .innerJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
+    .leftJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
+    .leftJoin(drawIslands, eq(assignments.giverIslandId, drawIslands.id))
     .where(and(eq(assignments.id, assignmentId), eq(families.ownerAdminId, adminId)))
     .limit(1);
   return row ?? null;

@@ -52,15 +52,17 @@ Resultado: recargar la página conserva la familia preparada.
 - [x] Añadir borrado destructivo coherente de personas, unidades e intentos afectados.
 - [x] Actualizar estados de grupo y sorteo.
 - [x] Añadir pruebas repetidas de invariantes del dominio.
+- [x] Modelar bebés como receptores sin capacidad de regalar.
+- [x] Asignar bebés a unidades distintas con representante por edición.
 
 Resultado: cada edición conserva un reparto vigente, intentos revocados auditables y snapshots estables.
 
-## Hito 4 — Entrega por email y manual
+## Hito 4 — Entrega automática y respaldo
 
 - [x] Integrar Resend como acción posterior confirmada.
 - [x] Crear y actualizar `notification_logs`.
 - [x] Conectar `/envios` con datos reales.
-- [x] Implementar copia y marcado manual persistentes.
+- [x] Implementar copia de respaldo auditada sin convertirla en entrega.
 - [x] Reintento masivo idempotente.
 - [ ] Verificar dominio y plantillas.
 - [x] Mostrar aperturas.
@@ -80,15 +82,15 @@ Resultado: todos reciben su enlace por email o mediante Juan y el estado queda r
 
 Resultado: el MVP puede usarse con datos familiares reales.
 
-## Hito posterior — WhatsApp
+## Hito 5 — WhatsApp
 
-- [ ] Cerrar flujo definitivo con Kapso.
+- [x] Cerrar flujo técnico con Kapso.
 - [ ] Configurar plantillas y consentimiento.
-- [ ] Normalizar teléfonos.
-- [ ] Integrar webhooks y estados.
-- [ ] Añadir reintentos y pruebas.
+- [x] Validar teléfonos internacionales antes de sortear.
+- [x] Integrar webhooks y estados.
+- [x] Añadir selección, reintentos y pruebas de dominio.
 
-WhatsApp no bloquea el MVP si email y entrega manual funcionan.
+La activación operativa depende de credenciales, plantilla aprobada y webhook registrado.
 
 ## Ideas futuras
 

@@ -74,6 +74,11 @@ El token funciona como credencial: quien posee la URL puede ver la asignación. 
 - `REVEAL_TOKEN_ENCRYPTION_KEY`
 - `RESEND_API_KEY`
 - `KAPSO_API_KEY`
+- `KAPSO_PHONE_NUMBER_ID`
+- `KAPSO_TEMPLATE_NAME`
+- `KAPSO_TEMPLATE_LANGUAGE`
+- `KAPSO_WEBHOOK_SECRET`
+- `KAPSO_TEST_RECIPIENT_PHONE`
 
 ### Aplicación
 
