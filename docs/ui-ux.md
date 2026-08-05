@@ -18,11 +18,10 @@ solicita movimiento reducido.
 
 ## Navegación
 
-La administración dispone de tres destinos principales:
+La administración dispone de dos destinos principales:
 
-- Inicio.
+- Ediciones, en `/`.
 - Familia.
-- Ediciones.
 
 Sorteo y Envíos viven dentro de la edición elegida explícitamente.
 
@@ -37,15 +36,15 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 - Informar de validación, error o exceso de intentos.
 - Evitar revelar si el email pertenece a la allowlist.
 
-### Inicio
+### Ediciones
 
-- Mostrar la familia maestra.
-- Resumir núcleos, participantes y ediciones.
-- Destacar una única siguiente acción.
-- Advertir que local y Vercel comparten los mismos datos reales.
+- Mostrar el historial de ediciones en la página principal.
+- Permitir crear y abrir una edición.
+- Dirigir a Familia cuando todavía no existe el censo permanente.
 
 ### Familia
 
+- Permitir crear la familia cuando todavía no existe el censo permanente.
 - Visualizar cada unidad y sus personas en tablas compactas.
 - Abrir las altas de unidad y participante desde dos botones de icono y formularios en diálogos HTML nativos.
 - Exigir una unidad existente y seleccionada para dar de alta una persona; el formulario permite omitir el contacto y solo se habilita cuando el nombre y cualquier dato introducido son válidos.
@@ -148,12 +147,11 @@ Las mutaciones principales implementan carga, feedback y prevención de doble en
 
 ## Navegación administrativa
 
-- `Inicio`: resumen de la familia y accesos principales.
+- `Ediciones`: historial, creación y selección explícita; ocupa la página principal `/`.
 - `Familia`: censo permanente, contactos, movimientos y borrado destructivo.
-- `Ediciones`: historial, creación y selección explícita.
 - Dentro de una edición: configuración, reparto, reversión y envíos.
 
-La navegación nunca elige implícitamente “el último sorteo”. `/sorteo` y `/envios` redirigen al listado de ediciones.
+La navegación nunca elige implícitamente “el último sorteo”. `/inicio`, `/ediciones`, `/sorteo` y `/envios` redirigen al listado de ediciones en `/`.
 
 ## Estados peligrosos
 

@@ -1,6 +1,6 @@
 const redirectBase = new URL("https://secret-sanchez.local");
 
-export function getSafeRedirectPath(value: string | null | undefined, fallback = "/inicio") {
+export function getSafeRedirectPath(value: string | null | undefined, fallback = "/") {
   if (!value?.startsWith("/")) return fallback;
 
   try {

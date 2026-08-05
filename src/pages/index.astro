@@ -1,3 +1,28 @@
 ---
-return Astro.redirect("/inicio");
+import Button from "@/components/Button/Button.astro";
+import Card from "@/components/Card/Card.astro";
+import StatusBadge from "@/components/StatusBadge/StatusBadge.astro";
+import AdminLayout from "@/layouts/AdminLayout.astro";
+import { getAdminAppState } from "@/actions/adminData";
+
+const state = await getAdminAppState(Astro.locals.admin.id);
 ---
+
+<AdminLayout title="Ediciones">
+  <div class="section-header"><p>Historial y preparación</p><h1>Ediciones</h1><p>Cada edición usa la familia completa y mantiene sus propios participantes, roles e intentos.</p></div>
+  <div class="cluster cluster--actions">
+    <Button href={state.family ? "/ediciones/nueva" : "/familia"} size="large">
+      {state.family ? "Crear edición" : "Crear familia"}
+    </Button>
+  </div>
+  <section class="two-column">
+    {state.editions.map((edition) => <Card tone={edition.kind === "final" ? "accent" : "warm"}>
+      <div class="stack">
+        <div class="cluster"><StatusBadge tone={edition.kind === "final" ? "ok" : "neutral"}>{edition.kind === "final" ? "Definitiva" : "Prueba"}</StatusBadge><StatusBadge tone="neutral">{edition.status}</StatusBadge></div>
+        <h2>{edition.name}</h2><p>{edition.year}</p>
+        <Button href={`/ediciones/${edition.id}`} variant="secondary">Abrir edición</Button>
+      </div>
+    </Card>)}
+    {!state.editions.length && <Card><div class="stack"><h2>Todavía no hay ediciones</h2><p>{state.family ? "Crea una prueba para validar el flujo sin contactar a la familia." : "Crea primero la familia que participará en las ediciones."}</p></div></Card>}
+  </section>
+</AdminLayout>

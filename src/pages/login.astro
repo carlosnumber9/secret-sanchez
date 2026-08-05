@@ -133,7 +133,7 @@ const next = getSafeRedirectPath(Astro.url.searchParams.get("next"));
         if (response.ok && payload?.ok) {
           message.textContent = "Acceso correcto. Entrando...";
           message.dataset.state = "success";
-          window.location.replace(form.dataset.next || "/inicio");
+          window.location.replace(form.dataset.next || "/");
           return;
         }
 

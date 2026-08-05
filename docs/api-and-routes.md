@@ -4,15 +4,14 @@
 
 | Ruta | Acceso | Comportamiento |
 | --- | --- | --- |
-| `/inicio` | Administrador | Resumen de familia y ediciones. |
+| `/` | Administrador | Historial y alta de ediciones; es la página principal. |
 | `/familia` | Administrador | Censo permanente, movimientos y borrado destructivo. |
-| `/ediciones` | Administrador | Historial y alta de ediciones. |
 | `/ediciones/[id]` | Administrador | Configuración, intentos y revocación. |
 | `/ediciones/[id]/sorteo` | Administrador | Generación del intento vigente. |
 | `/ediciones/[id]/envios` | Administrador | Entregas del intento vigente. |
 | `/r#token` | Público con token | Revelación de un token vigente. |
 
-`/sorteo` y `/envios` redirigen a `/ediciones` para evitar elegir implícitamente un sorteo.
+`/inicio`, `/ediciones`, `/sorteo` y `/envios` redirigen a `/`. Los dos últimos evitan elegir implícitamente un sorteo.
 
 ## APIs administrativas
 

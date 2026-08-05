@@ -2,7 +2,7 @@ import { defineMiddleware } from "astro:middleware";
 import { logger } from "@/lib/logger";
 import { AuthCheckError, requireAdmin } from "@/lib/supabase/auth";
 
-const protectedPagePaths = new Set(["/inicio", "/familia", "/sorteo", "/envios"]);
+const protectedPagePaths = new Set(["/", "/inicio", "/familia", "/sorteo", "/envios"]);
 const protectedPagePrefixes = ["/ediciones"];
 const protectedApiPrefixes = ["/api/admin"];
 

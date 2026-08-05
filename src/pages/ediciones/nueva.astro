@@ -7,5 +7,5 @@ const state = await getAdminAppState(Astro.locals.admin.id);
 ---
 <AdminLayout title="Nueva edición">
   <div class="section-header"><h1>Nueva edición</h1><p>Toda la familia actual se añadirá activada. Las altas posteriores aparecerán desactivadas.</p></div>
-  {state.family ? <Card tone="accent"><EditionCreateForm client:load familyId={state.family.id} /></Card> : <p>Crea primero la familia desde <a href="/inicio">Inicio</a>.</p>}
+  {state.family ? <Card tone="accent"><EditionCreateForm client:load familyId={state.family.id} /></Card> : <p>Crea primero la familia desde <a href="/familia">Familia</a>.</p>}
 </AdminLayout>

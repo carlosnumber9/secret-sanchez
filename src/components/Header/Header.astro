@@ -2,16 +2,15 @@
 import "./Header.css";
 
 const links = [
-  { href: "/inicio", label: "Inicio" },
-  { href: "/familia", label: "Familia" },
-  { href: "/ediciones", label: "Ediciones" }
+  { href: "/", label: "Ediciones", active: (pathname: string) => pathname === "/" || pathname.startsWith("/ediciones/") },
+  { href: "/familia", label: "Familia", active: (pathname: string) => pathname === "/familia" }
 ];
 const current = Astro.url.pathname;
 ---
 
 <header class="header">
   <div class="header__inner page-shell">
-    <a class="header__brand" href="/inicio" aria-label="Secret Sánchez">
+    <a class="header__brand" href="/" aria-label="Secret Sánchez">
       <span class="header__mark" aria-hidden="true">
         <img src="/favicon.svg" alt="" width="42" height="42" />
       </span>
@@ -23,7 +22,7 @@ const current = Astro.url.pathname;
     <nav class="header__nav" aria-label="Navegación principal">
       {
         links.map((link) => (
-          <a class:list={["header__link", (current === link.href || current.startsWith(`${link.href}/`)) && "header__link--active"]} href={link.href}>
+          <a class:list={["header__link", link.active(current) && "header__link--active"]} href={link.href}>
             {link.label}
           </a>
         ))

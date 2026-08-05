@@ -23,10 +23,12 @@ restablecen su contraseña mediante `npm run admin:set-password -- --user-id <uu
 
 ## Rutas protegidas
 
+- `/`
 - `/inicio`
 - `/familia`
 - `/sorteo`
 - `/envios`
+- Prefijo `/ediciones`
 - Prefijo `/api/admin`
 
 Todo nuevo endpoint administrativo debe vivir bajo `/api/admin` o aplicar una protección equivalente.
@@ -97,7 +99,7 @@ de `AppEnv` y no deben configurarse en Vercel.
 
 - El login conserva el formato de cookies administrado por Supabase SSR, incluidas sus opciones `Secure` en
   producción.
-- La redirección `next` se limita al mismo origen; destinos externos o mal formados vuelven a `/inicio`.
+- La redirección `next` se limita al mismo origen; destinos externos o mal formados vuelven a `/`, la página de ediciones.
 - Los errores de credenciales son genéricos para no revelar si existe un email.
 - Cambiar el método de login no invalida por sí mismo las cookies existentes. Asignar o cambiar la contraseña desde
   la API administrativa puede revocar las sesiones de ese UUID y exigir una nueva autenticación.
