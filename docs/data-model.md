@@ -14,7 +14,7 @@ Núcleos u hogares de una familia. Se utilizan para impedir asignaciones dentro 
 
 ### `participants`
 
-Personas maestras con núcleo, nombre, contacto, canal por defecto, `is_baby` y `sort_order`. La condición de bebé se decide solo en `/familia`; obliga a dejar email, teléfono y canal en `null`. `sort_order` conserva la posición manual dentro de su unidad, mientras que el orden de las unidades es solo visual y no se persiste.
+Personas maestras con núcleo, nombre, contacto opcional, canal por defecto, `is_baby` y `sort_order`. Un adulto puede existir sin email, teléfono ni canal; una edición solo permite elegir canales respaldados por el contacto correspondiente. La condición de bebé se decide solo en `/familia`; obliga a dejar email, teléfono y canal en `null`. `sort_order` conserva la posición manual dentro de su unidad, mientras que el orden de las unidades es solo visual y no se persiste.
 
 Crear una persona inserta una configuración desactivada en todas las ediciones existentes. Borrar una persona es destructivo y elimina completos todos los intentos donde aparece.
 

@@ -25,6 +25,13 @@ function channelFromChecks(email: boolean, whatsapp: boolean): DeliveryChannel {
   return null;
 }
 
+function availableChannel(person: Pick<Person, "preferredChannel" | "hasEmail" | "hasPhone">): DeliveryChannel {
+  if (person.preferredChannel === "both") return person.hasEmail ? (person.hasPhone ? "both" : "email") : (person.hasPhone ? "whatsapp" : null);
+  if (person.preferredChannel === "email") return person.hasEmail ? "email" : null;
+  if (person.preferredChannel === "whatsapp") return person.hasPhone ? "whatsapp" : null;
+  return null;
+}
+
 export default function EditionConfigurator({ editionId, initialIslands, initialPeople, locked }: {
   editionId: string;
   initialIslands: Island[];
@@ -32,7 +39,10 @@ export default function EditionConfigurator({ editionId, initialIslands, initial
   locked: boolean;
 }) {
   const [islands, setIslands] = useState(initialIslands);
-  const [people, setPeople] = useState(initialPeople);
+  const [people, setPeople] = useState(() => initialPeople.map((person) => ({
+    ...person,
+    preferredChannel: person.isBaby ? null : availableChannel(person)
+  })));
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const enabledPeople = useMemo(() => people.filter((person) => person.enabled && islands.find((island) => island.id === person.islandId)?.enabled), [people, islands]);
@@ -116,7 +126,11 @@ export default function EditionConfigurator({ editionId, initialIslands, initial
             const usesEmail = person.preferredChannel === "email" || person.preferredChannel === "both";
             const usesWhatsapp = person.preferredChannel === "whatsapp" || person.preferredChannel === "both";
             return <div className="delivery-panel__row edition-configurator__person" key={person.id}>
-              <div><strong>{person.name}</strong>{person.isBaby && <Badge variant="secondary">Bebé</Badge>}</div>
+              <div>
+                <strong>{person.name}</strong>
+                {person.isBaby && <Badge variant="secondary">Bebé</Badge>}
+                {!person.isBaby && !person.hasEmail && !person.hasPhone && <Badge variant="outline">Sin contacto</Badge>}
+              </div>
               <label><input type="checkbox" checked={person.enabled} disabled={locked || busy || islandDisabled} onChange={(event) => changePerson(person, { enabled: event.target.checked })} /> Participa</label>
               <label><input type="checkbox" checked={person.canGive} disabled={locked || busy || islandDisabled || !person.enabled || person.isBaby} onChange={(event) => changePerson(person, { canGive: event.target.checked })} /> Regala</label>
               <label><input type="checkbox" checked={person.canReceive} disabled={locked || busy || islandDisabled || !person.enabled || person.isBaby} onChange={(event) => changePerson(person, { canReceive: event.target.checked })} /> Recibe</label>

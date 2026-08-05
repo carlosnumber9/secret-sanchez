@@ -47,7 +47,11 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 ### Familia
 
 - Visualizar cada unidad y sus personas en tablas compactas.
-- Arrastrar personas entre unidades o dentro de una unidad y guardar toda la disposición en una sola acción.
+- Abrir las altas de unidad y participante desde dos botones de icono y formularios en diálogos HTML nativos.
+- Exigir una unidad existente y seleccionada para dar de alta una persona; el formulario permite omitir el contacto y solo se habilita cuando el nombre y cualquier dato introducido son válidos.
+- Editar email y teléfono directamente en las filas de `/familia`, como parte del borrador pendiente de `Guardar familia`.
+- Mantener altas, ediciones, borrados y movimientos como borrador local y persistirlos juntos en una sola transacción al pulsar `Guardar familia`.
+- Advertir con el diálogo nativo del navegador antes de abandonar la ruta cuando el borrador tiene cambios sin guardar.
 - Reordenar unidades únicamente para organizar la vista actual, sin persistir ese orden.
 - Marcar bebés mediante su icono y reforzar ese estado con una fila rosa y texto accesible.
 - Crear, editar y eliminar con previsualización de impacto.
@@ -160,6 +164,6 @@ La navegación nunca elige implícitamente “el último sorteo”. `/sorteo` y 
 
 ## Configuración de participantes
 
-Cada edición agrupa a la familia por unidades. El switch de la unidad prevalece sobre los controles individuales. Los bebés se marcan únicamente en `/familia` y aparecen como etiqueta no editable: reciben, no regalan y no muestran canales. Cada unidad selecciona un representante adulto. La pantalla separa adultos, bebés, regaladores, receptores y unidades preparadas.
+Cada edición agrupa a la familia por unidades. El switch de la unidad prevalece sobre los controles individuales. Los bebés se marcan únicamente en `/familia` y aparecen como etiqueta no editable: reciben, no regalan y no muestran canales. Cada unidad selecciona un representante adulto. La pantalla separa adultos, bebés, regaladores, receptores y unidades preparadas. Email y WhatsApp solo pueden seleccionarse cuando la persona tiene el dato correspondiente en la familia; una persona puede permanecer en el censo sin ningún contacto.
 
 En envíos, Email y WhatsApp muestran estados independientes. Juan puede seleccionar asignaciones para reenviar y copiar cualquier enlace mediante un icono; la copia es un respaldo y no altera los estados.

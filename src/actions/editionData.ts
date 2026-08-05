@@ -25,6 +25,16 @@ import { generateBabyAssignments } from "@/services/draw/generateBabyAssignments
 import { resolveEditionParticipants, validateEditionRoles } from "@/services/editions/configuration";
 
 export type EditionKind = "test" | "final";
+type DeliveryChannel = "email" | "whatsapp" | "both" | null;
+
+function availableDeliveryChannel(channel: DeliveryChannel | "manual", email: string | null, phone: string | null): DeliveryChannel {
+  const hasEmail = Boolean(email);
+  const hasPhone = Boolean(phone && /^\+[1-9]\d{7,14}$/.test(phone));
+  if (channel === "both") return hasEmail ? (hasPhone ? "both" : "email") : (hasPhone ? "whatsapp" : null);
+  if (channel === "email") return hasEmail ? "email" : null;
+  if (channel === "whatsapp") return hasPhone ? "whatsapp" : null;
+  return null;
+}
 
 async function getOwnedEdition(editionId: string, adminId: string) {
   const [row] = await db.select({ edition: drawEditions, family: families }).from(drawEditions)
@@ -54,7 +64,13 @@ export async function createOwnedEdition(adminId: string, input: { familyId: str
     const [edition] = await tx.insert(drawEditions).values({ ...input, status: "ready", createdByAdminId: adminId }).returning();
     const [islands, people] = await Promise.all([
       tx.select({ id: familyIslands.id }).from(familyIslands).where(eq(familyIslands.familyId, input.familyId)),
-      tx.select({ id: participants.id, isBaby: participants.isBaby, preferredChannel: participants.preferredChannel }).from(participants).where(eq(participants.familyId, input.familyId))
+      tx.select({
+        id: participants.id,
+        isBaby: participants.isBaby,
+        preferredChannel: participants.preferredChannel,
+        email: participants.email,
+        phone: participants.phone
+      }).from(participants).where(eq(participants.familyId, input.familyId))
     ]);
     if (islands.length) await tx.insert(editionIslandConfigs).values(islands.map(({ id }) => ({ editionId: edition.id, familyIslandId: id, enabled: true })));
     if (people.length) await tx.insert(editionParticipants).values(people.map((person) => ({
@@ -64,7 +80,7 @@ export async function createOwnedEdition(adminId: string, input: { familyId: str
       canGive: !person.isBaby,
       canReceive: true,
       isBaby: person.isBaby,
-      preferredChannel: person.isBaby || person.preferredChannel === "manual" ? null : person.preferredChannel
+      preferredChannel: person.isBaby ? null : availableDeliveryChannel(person.preferredChannel, person.email, person.phone)
     })));
     await tx.insert(drawRules).values({ editionId: edition.id, type: "NO_SAME_ISLAND", enabled: true, config: {} });
     return edition;
@@ -112,11 +128,18 @@ export async function updateEditionIsland(adminId: string, editionId: string, is
 
 export async function updateEditionParticipant(adminId: string, editionId: string, participantId: string, input: { enabled: boolean; canGive: boolean; canReceive: boolean; preferredChannel: "email" | "whatsapp" | "both" | null }) {
   await assertEditionEditable(adminId, editionId);
-  const [person] = await db.select({ isBaby: participants.isBaby }).from(participants)
+  const [person] = await db.select({
+    isBaby: participants.isBaby,
+    email: participants.email,
+    phone: participants.phone
+  }).from(participants)
     .where(eq(participants.id, participantId)).limit(1);
   if (!person) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
   if (person.isBaby && (input.canGive || !input.canReceive || input.preferredChannel !== null)) {
     throw new AppError(422, "INVALID_BABY_CONFIGURATION", "Un bebé activo recibe, no regala y no tiene canal de contacto.");
+  }
+  if (input.preferredChannel !== availableDeliveryChannel(input.preferredChannel, person.email, person.phone)) {
+    throw new AppError(422, "MISSING_DELIVERY_CONTACT", "Ese canal no está disponible hasta que añadas el contacto en Familia.");
   }
   if (input.enabled && !input.canGive && !input.canReceive) throw new AppError(422, "PARTICIPANT_WITHOUT_ROLE", "Una persona activa debe regalar, recibir o ambas cosas.");
   const [config] = await db.update(editionParticipants).set({ ...input, updatedAt: new Date() })

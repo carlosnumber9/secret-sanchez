@@ -25,7 +25,7 @@
 
 Todas requieren sesión y autorización mediante la familia propietaria. Las respuestas mantienen `{ ok, data?, message?, code?, errorId? }`.
 
-`PATCH /api/admin/families/[id]/layout` recibe la lista completa de personas con unidad, posición y condición de bebé. Valida que el censo no haya cambiado y aplica toda la disposición en una sola transacción. El orden de las unidades no forma parte del contrato.
+`PATCH /api/admin/families/[id]/layout` recibe el borrador completo de unidades y personas, incluidas altas, campos editados, unidad, posición, condición de bebé e identificadores de borrados ya confirmados. Valida que el censo no haya cambiado y aplica la familia completa en una sola transacción. El orden de las unidades no forma parte del contrato.
 
 ## APIs públicas
 

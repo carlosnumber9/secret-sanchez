@@ -5,7 +5,8 @@
 ## Implementado en código
 
 - Familia maestra separada de las ediciones y snapshots inmutables por intento.
-- Organización drag-and-drop de la familia, con unidad y orden de participantes guardados de forma transaccional y orden visual de unidades no persistente.
+- Edición de la familia mediante un borrador local: altas desde diálogos, cambios, borrados, unidad y orden de participantes se guardan juntos de forma transaccional; el navegador avisa antes de abandonar cambios pendientes y el orden visual de unidades no se persiste.
+- Contactos opcionales editables directamente en las filas de `/familia`; las ediciones deshabilitan y rechazan canales sin email o teléfono compatible.
 - Bebés definidos en `/familia`, sin contacto propio, receptores y nunca regaladores.
 - Configuración por edición de participación, roles, email, WhatsApp y representante por unidad.
 - Igualdad entre adultos que regalan y adultos que reciben.

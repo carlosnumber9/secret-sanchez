@@ -174,6 +174,194 @@ export async function updateOwnedFamilyLayout(adminId: string, familyId: string,
   });
 }
 
+type FamilyDraftInput = {
+  islands: Array<{
+    clientId: string;
+    id: string | null;
+    name: string;
+    color: string;
+  }>;
+  participants: Array<{
+    clientId: string;
+    id: string | null;
+    familyIslandClientId: string;
+    name: string;
+    email: string;
+    phone: string;
+    preferredChannel: "email" | "whatsapp" | "both" | null;
+    sortOrder: number;
+    isBaby: boolean;
+  }>;
+  confirmedParticipantDeletionIds: string[];
+  confirmedIslandDeletionIds: string[];
+};
+
+function sameIds(actual: string[], expected: string[]) {
+  return actual.length === expected.length && actual.every((id) => expected.includes(id));
+}
+
+export async function saveOwnedFamilyDraft(adminId: string, familyId: string, draft: FamilyDraftInput) {
+  return db.transaction(async (tx) => {
+    const [family] = await tx.select({ id: families.id }).from(families)
+      .where(and(eq(families.id, familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+    if (!family) throw new AppError(404, "FAMILY_NOT_FOUND", "No se ha encontrado la familia.");
+
+    const currentIslands = await tx.select().from(familyIslands)
+      .where(eq(familyIslands.familyId, familyId)).for("update");
+    const currentParticipants = await tx.select().from(participants)
+      .where(eq(participants.familyId, familyId)).for("update");
+    const currentIslandIds = new Set(currentIslands.map(({ id }) => id));
+    const currentParticipantIds = new Set(currentParticipants.map(({ id }) => id));
+    const keptIslandIds = draft.islands.flatMap(({ id }) => id ? [id] : []);
+    const keptParticipantIds = draft.participants.flatMap(({ id }) => id ? [id] : []);
+
+    if (keptIslandIds.some((id) => !currentIslandIds.has(id)) || keptParticipantIds.some((id) => !currentParticipantIds.has(id))) {
+      throw new AppError(409, "FAMILY_DRAFT_STALE", "La familia ha cambiado. Recarga la página antes de guardar.");
+    }
+
+    const removedIslandIds = currentIslands.map(({ id }) => id).filter((id) => !keptIslandIds.includes(id));
+    const removedParticipantIds = currentParticipants.map(({ id }) => id).filter((id) => !keptParticipantIds.includes(id));
+    if (!sameIds(removedIslandIds, draft.confirmedIslandDeletionIds)
+      || !sameIds(removedParticipantIds, draft.confirmedParticipantDeletionIds)) {
+      throw new AppError(409, "FAMILY_DELETION_NOT_CONFIRMED", "Confirma de nuevo los elementos que quieres eliminar.");
+    }
+
+    const editions = await tx.select({ id: drawEditions.id }).from(drawEditions)
+      .where(eq(drawEditions.familyId, familyId));
+    const islandIdByClientId = new Map<string, string>();
+    const savedIslands: Array<typeof familyIslands.$inferSelect & { clientId: string }> = [];
+    for (const item of draft.islands) {
+      if (item.id) {
+        const [island] = await tx.update(familyIslands).set({
+          name: item.name,
+          color: item.color,
+          updatedAt: new Date()
+        }).where(and(eq(familyIslands.id, item.id), eq(familyIslands.familyId, familyId))).returning();
+        islandIdByClientId.set(item.clientId, island.id);
+        savedIslands.push({ clientId: item.clientId, ...island });
+      } else {
+        const [island] = await tx.insert(familyIslands).values({
+          familyId,
+          name: item.name,
+          color: item.color
+        }).returning();
+        if (editions.length) {
+          await tx.insert(editionIslandConfigs).values(editions.map(({ id }) => ({
+            editionId: id,
+            familyIslandId: island.id,
+            enabled: true
+          })));
+        }
+        islandIdByClientId.set(item.clientId, island.id);
+        savedIslands.push({ clientId: item.clientId, ...island });
+      }
+    }
+
+    if (removedParticipantIds.length) {
+      await lockFamilyEditions(tx, familyId);
+      await deleteDrawsForParticipants(tx, removedParticipantIds);
+      await tx.delete(participants).where(inArray(participants.id, removedParticipantIds));
+    }
+
+    const currentById = new Map(currentParticipants.map((participant) => [participant.id, participant]));
+    const changedBabyIds: string[] = [];
+    const savedParticipants: Array<typeof participants.$inferSelect & {
+      clientId: string;
+      familyIslandClientId: string;
+    }> = [];
+    for (const item of draft.participants) {
+      const familyIslandId = islandIdByClientId.get(item.familyIslandClientId);
+      if (!familyIslandId) throw new AppError(422, "ISLAND_MISMATCH", "Una persona apunta a una unidad inexistente.");
+      const contact = item.isBaby
+        ? { email: null, phone: null, preferredChannel: null }
+        : { email: item.email || null, phone: item.phone || null, preferredChannel: item.preferredChannel };
+      if (item.id) {
+        const current = currentById.get(item.id)!;
+        if (current.isBaby !== item.isBaby) changedBabyIds.push(item.id);
+        const [participant] = await tx.update(participants).set({
+          familyIslandId,
+          name: item.name,
+          ...contact,
+          isBaby: item.isBaby,
+          sortOrder: item.sortOrder,
+          updatedAt: new Date()
+        }).where(and(eq(participants.id, item.id), eq(participants.familyId, familyId))).returning();
+        savedParticipants.push({ clientId: item.clientId, familyIslandClientId: item.familyIslandClientId, ...participant });
+      } else {
+        const [participant] = await tx.insert(participants).values({
+          familyId,
+          familyIslandId,
+          name: item.name,
+          ...contact,
+          isBaby: item.isBaby,
+          sortOrder: item.sortOrder
+        }).returning();
+        if (editions.length) {
+          await tx.insert(editionParticipants).values(editions.map(({ id }) => ({
+            editionId: id,
+            participantId: participant.id,
+            enabled: false,
+            canGive: !participant.isBaby,
+            canReceive: true,
+            isBaby: participant.isBaby,
+            preferredChannel: participant.isBaby ? null : participant.preferredChannel
+          })));
+        }
+        savedParticipants.push({ clientId: item.clientId, familyIslandClientId: item.familyIslandClientId, ...participant });
+      }
+    }
+
+    if (changedBabyIds.length) {
+      const activeDrawEditions = await tx.select({ editionId: draws.editionId }).from(draws)
+        .innerJoin(drawEditions, eq(draws.editionId, drawEditions.id))
+        .where(and(eq(drawEditions.familyId, familyId), ne(draws.status, "revoked")));
+      const lockedEditionIds = new Set(activeDrawEditions.map(({ editionId }) => editionId));
+      for (const participantId of changedBabyIds) {
+        const participant = savedParticipants.find(({ id }) => id === participantId)!;
+        for (const edition of editions) {
+          if (lockedEditionIds.has(edition.id)) continue;
+          await tx.update(editionParticipants).set({
+            isBaby: participant.isBaby,
+            canGive: !participant.isBaby,
+            canReceive: true,
+            preferredChannel: participant.isBaby ? null : participant.preferredChannel,
+            updatedAt: new Date()
+          }).where(and(
+            eq(editionParticipants.editionId, edition.id),
+            eq(editionParticipants.participantId, participantId)
+          ));
+        }
+      }
+    }
+
+    if (removedIslandIds.length) {
+      await tx.delete(familyIslands).where(inArray(familyIslands.id, removedIslandIds));
+    }
+
+    return {
+      islands: savedIslands.map((island) => ({
+        id: island.id,
+        clientId: island.clientId,
+        name: island.name,
+        color: island.color ?? "#d6a84f",
+        participants: savedParticipants
+          .filter(({ familyIslandId }) => familyIslandId === island.id)
+          .sort((a, b) => a.sortOrder - b.sortOrder)
+          .map((participant) => ({
+            id: participant.id,
+            clientId: participant.clientId,
+            name: participant.name,
+            email: participant.email ?? "",
+            phone: participant.phone ?? "",
+            preferredChannel: participant.preferredChannel === "manual" ? null : participant.preferredChannel,
+            isBaby: participant.isBaby,
+            sortOrder: participant.sortOrder
+          }))
+      }))
+    };
+  });
+}
+
 export async function updateOwnedParticipant(adminId: string, participantId: string, input: Partial<{
   name: string;
   email: string | null;
