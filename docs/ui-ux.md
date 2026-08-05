@@ -115,6 +115,7 @@ shadcn. `Button`, `Card` y `StatusBadge` conservan wrappers Astro para las pági
 - Estado comunicado mediante texto, no solo color.
 - `role="status"` para acciones asíncronas importantes.
 - Foco visible.
+- Cursor de puntero en enlaces, botones y demás controles accionables; los controles deshabilitados quedan excluidos.
 - Contraste suficiente sobre superficies translúcidas.
 - Texto alternativo o `aria-label` en botones de icono.
 - Respeto por `prefers-reduced-motion` para animaciones.

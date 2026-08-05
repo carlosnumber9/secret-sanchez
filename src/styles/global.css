@@ -30,6 +30,26 @@ a {
   text-decoration: none;
 }
 
+:where(
+  a[href],
+  button:not(:disabled),
+  input:is([type="button"], [type="submit"], [type="reset"], [type="checkbox"], [type="radio"], [type="file"]):not(:disabled),
+  select:not(:disabled),
+  summary,
+  label[for],
+  label:has(input:is([type="checkbox"], [type="radio"]):not(:disabled)),
+  [role="button"]:not(:disabled, [aria-disabled="true"]),
+  [role="link"]:not([aria-disabled="true"]),
+  [role="checkbox"]:not(:disabled, [aria-disabled="true"]),
+  [role="radio"]:not(:disabled, [aria-disabled="true"]),
+  [role="switch"]:not(:disabled, [aria-disabled="true"]),
+  [role="tab"]:not([aria-disabled="true"]),
+  [role="menuitem"]:not([aria-disabled="true"]),
+  [role="option"]:not([aria-disabled="true"])
+) {
+  cursor: pointer;
+}
+
 button,
 input,
 select,
