@@ -95,7 +95,11 @@ El cuerpo también debe explicar en pasado qué cambió, por qué y cómo migrar
 
 ## Ramas
 
-El historial actual utiliza `main`. Cuando se trabaje con ramas, se usarán ramas cortas y descriptivas:
+El historial actual utiliza `main` y el trabajo se confirma y publica directamente en esa rama por defecto. No se
+debe crear ni cambiar de rama salvo que el usuario lo pida expresamente o que la sesión de trabajo ya haya comenzado
+en otra rama.
+
+Cuando se haya solicitado trabajar con una rama, se usarán nombres cortos y descriptivos:
 
 ```text
 feature/participant-persistence
