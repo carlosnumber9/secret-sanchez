@@ -18,6 +18,14 @@ feat: Added Whatsapp integration over participants
 
 Esta convención se aplica a todo el trabajo nuevo del repositorio.
 
+## Flujo de publicación del repositorio
+
+- No usar nunca el skill, plugin o flujo automatizado `yeet` para confirmar o publicar cambios de este repositorio.
+- Cuando el usuario pida confirmar, publicar o seguir «nuestras convenciones», leer primero este documento completo antes de ejecutar cualquier comando de Git que modifique el repositorio o el remoto.
+- Por defecto, confirmar y publicar directamente en `main`, tal como se define en la sección de ramas.
+- No crear ramas ni pull requests salvo que el usuario lo pida expresamente.
+- Preparar únicamente los archivos del cambio solicitado, revisar `git diff --staged`, crear el commit con el formato de este documento y publicar con `git push origin main`.
+
 ## Tipos
 
 | Tipo | Uso |
