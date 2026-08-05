@@ -103,6 +103,10 @@ No probar esta migración contra la conexión compartida sin backup y autorizaci
 
 `0005_past_winter_soldier.sql` debe aplicarse después de `0004`. Añade snapshots de unidades, generaliza el regalador de una asignación, incorpora bebés y representantes y habilita `read`. Antes de aplicarla comprobar duplicados no nulos de `notification_logs.provider_message_id`; después validar conteos y marcar los bebés desde `/familia` o mediante una actualización transaccional equivalente.
 
+## Migración de estados de edición
+
+`0007_flat_dragon_man.sql` convierte cualquier edición legacy en `draft` a `ready`, cambia el valor por defecto a `ready` y elimina `draft` del enum. Aplicarla antes de desplegar el código que solo reconoce los cuatro estados vigentes. Después, comprobar que ninguna edición quedó fuera de `ready`, `drawn`, `sent` o `archived`.
+
 ## Observabilidad
 
 El servidor emite JSON estructurado para Runtime Logs de Vercel: autenticación, autorización, mutaciones, sorteo,

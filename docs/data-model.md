@@ -22,7 +22,7 @@ Crear una persona inserta una configuración desactivada en todas las ediciones 
 
 ### `draw_editions`
 
-Edición de prueba o definitiva asociada a una familia y año. Puede estar `draft`, `ready`, `drawn`, `sent` o `archived`. Solo puede existir una definitiva no archivada por familia y año.
+Edición de prueba o definitiva asociada a una familia y año. Se crea en `ready` y puede pasar a `drawn`, `sent` o `archived`. La interfaz muestra estos estados como `En preparación`, `Reparto generado`, `Enviada` y `Archivada`. Solo puede existir una definitiva no archivada por familia y año. El antiguo estado `draft`, heredado del modelo previo a las ediciones, se normaliza a `ready` mediante migración.
 
 ### `edition_participants`
 

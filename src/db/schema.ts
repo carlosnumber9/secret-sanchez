@@ -14,7 +14,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 export const editionKind = pgEnum("edition_kind", ["test", "final"]);
-export const editionStatus = pgEnum("edition_status", ["draft", "ready", "drawn", "sent", "archived"]);
+export const editionStatus = pgEnum("edition_status", ["ready", "drawn", "sent", "archived"]);
 export const drawStatus = pgEnum("draw_status", ["draft", "generated", "locked", "sent", "revoked"]);
 export const preferredChannel = pgEnum("preferred_channel", ["email", "whatsapp", "both", "manual"]);
 export const notificationChannel = pgEnum("notification_channel", ["email", "whatsapp", "manual"]);
@@ -100,7 +100,7 @@ export const drawEditions = pgTable(
     name: varchar("name", { length: 180 }).notNull(),
     year: integer("year").notNull(),
     kind: editionKind("kind").notNull(),
-    status: editionStatus("status").default("draft").notNull(),
+    status: editionStatus("status").default("ready").notNull(),
     createdByAdminId: uuid("created_by_admin_id").references(() => adminUsers.id),
     ...timestamps
   },

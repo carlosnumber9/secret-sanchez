@@ -6,6 +6,7 @@ import EditionConfigurator from "@/components/react/EditionConfigurator/EditionC
 import RevokeDraw from "@/components/react/RevokeDraw/RevokeDraw";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { getEditionAppState } from "@/actions/editionData";
+import { getEditionStatusLabel } from "@/services/editions/status";
 
 const id = Astro.params.id!;
 const state = await getEditionAppState(Astro.locals.admin.id, id);
@@ -24,7 +25,7 @@ const peopleProps = state.participants.map(({ participant, config }) => ({
 }));
 ---
 <AdminLayout title={state.edition.name}>
-  <div class="section-header"><p>{state.edition.year}</p><h1>{state.edition.name}</h1><div class="cluster"><StatusBadge tone={state.edition.kind === "final" ? "ok" : "neutral"}>{state.edition.kind === "final" ? "Definitiva" : "Prueba"}</StatusBadge><StatusBadge tone="neutral">{state.edition.status}</StatusBadge></div></div>
+  <div class="section-header"><p>{state.edition.year}</p><h1>{state.edition.name}</h1><div class="cluster"><StatusBadge tone={state.edition.kind === "final" ? "ok" : "neutral"}>{state.edition.kind === "final" ? "Definitiva" : "Prueba"}</StatusBadge><StatusBadge tone="neutral">{getEditionStatusLabel(state.edition.status)}</StatusBadge></div></div>
   <div class="cluster cluster--actions"><Button href={`/ediciones/${id}/sorteo`} size="large">{state.currentDraw ? "Ver reparto" : "Ir al reparto"}</Button>{state.currentDraw && <Button href={`/ediciones/${id}/envios`} variant="secondary">Ver envíos</Button>}</div>
   <Card><div class="stack"><h2>Participantes y roles</h2><p>Los núcleos desactivados prevalecen sobre la configuración individual.</p><EditionConfigurator client:load editionId={id} initialIslands={islandProps} initialPeople={peopleProps} locked={Boolean(state.currentDraw)} /></div></Card>
   {state.currentDraw && <Card tone="warm"><div class="stack"><h2>Revertir intento {state.currentDraw.attemptNumber}</h2><RevokeDraw client:load editionId={id} drawId={state.currentDraw.id} exposure={state.exposure} /></div></Card>}

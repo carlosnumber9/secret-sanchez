@@ -10,6 +10,7 @@
 - Contactos opcionales editables directamente en las filas de `/familia`; las ediciones deshabilitan y rechazan canales sin email o teléfono compatible.
 - Bebés definidos en `/familia`, sin contacto propio, receptores y nunca regaladores.
 - Configuración por edición de participación, roles, email, WhatsApp y representante por unidad.
+- Estados de edición limitados a preparación, reparto generado, enviada y archivada, con etiquetas en español; el estado legacy `draft` se normaliza a `ready` mediante migración.
 - Igualdad entre adultos que regalan y adultos que reciben.
 - Reparto personal entre adultos y reparto adicional de bebés a unidades distintas de la propia, sin repetir unidad.
 - Intentos numerados, revocación e invalidación de tokens.
@@ -23,6 +24,7 @@
 
 - `drizzle/0005_past_winter_soldier.sql` está aplicada en el Supabase compartido desde el 4 de agosto de 2026.
 - `drizzle/0006_soft_kylun.sql` está aplicada en el Supabase compartido desde el 5 de agosto de 2026; añadió y rellenó `participants.sort_order`.
+- Aplicar `drizzle/0007_flat_dragon_man.sql`, que normaliza las ediciones legacy en `draft` a `ready` y elimina ese estado obsoleto del enum, antes de desplegar el código dependiente.
 - Configurar y aprobar la plantilla de Kapso y registrar el webhook de Production.
 - Configurar todas las variables `KAPSO_*` en Vercel; sin ellas WhatsApp falla de forma controlada.
 - Verificar dominio y remitente de Resend.

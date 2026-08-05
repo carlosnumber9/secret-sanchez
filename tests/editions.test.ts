@@ -1,6 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
 import { nextAttemptNumber, resolveEditionParticipants, validateEditionRoles } from "../src/services/editions/configuration";
+import { editionStatuses, getEditionStatusLabel } from "../src/services/editions/status";
 
 const people = [
   { id: "a", familyIslandId: "one", enabled: true, islandEnabled: true, canGive: true, canReceive: true, isBaby: false },
@@ -24,6 +25,14 @@ test("giver and receiver totals must be balanced", () => {
 test("attempt numbers are monotonic and gaps are not reused", () => {
   assert.equal(nextAttemptNumber([]), 1);
   assert.equal(nextAttemptNumber([1, 3, 4]), 5);
+});
+
+test("edition lifecycle states have clear Spanish labels", () => {
+  assert.deepEqual(editionStatuses, ["ready", "drawn", "sent", "archived"]);
+  assert.deepEqual(
+    editionStatuses.map(getEditionStatusLabel),
+    ["En preparación", "Reparto generado", "Enviada", "Archivada"]
+  );
 });
 
 test("babies receive but never give", () => {
