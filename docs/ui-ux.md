@@ -51,7 +51,9 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 - Editar email y teléfono directamente en las filas de `/familia`, como parte del borrador pendiente de `Guardar familia`.
 - Mantener altas, ediciones, borrados y movimientos como borrador local y persistirlos juntos en una sola transacción al pulsar `Guardar familia`.
 - Advertir con el diálogo nativo del navegador antes de abandonar la ruta cuando el borrador tiene cambios sin guardar.
-- Reordenar unidades únicamente para organizar la vista actual, sin persistir ese orden.
+- Reordenar mediante tiradores tanto unidades completas como personas, con soporte de ratón, touch y teclado; las personas pueden cambiar de unidad y soltarse también en unidades vacías.
+- Mostrar durante el arrastre un preview específico para la unidad o persona, indicar el destino válido y restaurar el borrador anterior si la operación se cancela o termina fuera de un destino.
+- Reordenar unidades únicamente para organizar la vista actual, sin persistir ese orden; el orden y la unidad de las personas sí forman parte del borrador guardable.
 - Marcar bebés mediante su icono y reforzar ese estado con una fila rosa y texto accesible.
 - Crear, editar y eliminar con previsualización de impacto.
 - Mostrar email, teléfono y preferencia.

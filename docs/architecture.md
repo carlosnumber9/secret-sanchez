@@ -24,6 +24,7 @@ flowchart LR
 - **React:** islas interactivas en el navegador.
 - **TypeScript:** contratos y tipos de aplicación.
 - **UI:** shadcn/ui con preset `base-rhea`, Base UI y Tailwind CSS 4 mediante el plugin de Vite.
+- **Drag and drop:** dnd-kit en la isla React de `/familia`, con superficies ordenables anidadas para unidades y participantes.
 - **CSS:** tema y utilidades globales con CSS específico para layout y contenedores translúcidos.
 - **Three.js:** escena WebGL cliente del fondo 3D ambiental, cargada desde el layout base.
 - **Supabase Auth:** email, contraseña y sesión.

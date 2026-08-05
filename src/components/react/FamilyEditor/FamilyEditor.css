@@ -56,7 +56,10 @@
 
 .family-editor__island.is-drag-target {
   box-shadow: 0 0 0 3px color-mix(in oklch, var(--primary) 25%, transparent), var(--shadow-sm);
-  transform: translateY(-2px);
+}
+
+.family-editor__island.is-dragging {
+  opacity: 0.35;
 }
 
 .family-editor__island-header {
@@ -101,6 +104,8 @@
   border: 0;
   border-radius: var(--radius-lg);
   cursor: grab;
+  touch-action: none;
+  user-select: none;
 }
 
 .family-editor__drag-handle:hover {
@@ -110,6 +115,11 @@
 
 .family-editor__drag-handle:active {
   cursor: grabbing;
+}
+
+.family-editor__drag-handle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
 .family-editor__drag-handle:focus-visible,
@@ -150,6 +160,51 @@
 
 .family-editor [data-slot="table-row"].is-drag-target td {
   border-top: 2px solid var(--primary);
+}
+
+.family-editor [data-slot="table-row"].is-dragging {
+  opacity: 0.3;
+}
+
+.family-editor__drag-preview {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+  padding: 0.85rem 1rem;
+  color: var(--foreground);
+  background: color-mix(in oklch, var(--card) 94%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+  backdrop-filter: var(--glass-blur);
+  cursor: grabbing;
+}
+
+.family-editor__drag-preview > svg {
+  flex: 0 0 auto;
+  width: 1.1rem;
+  height: 1.1rem;
+  color: var(--muted-foreground);
+}
+
+.family-editor__drag-preview strong,
+.family-editor__drag-preview small {
+  display: block;
+}
+
+.family-editor__drag-preview small {
+  margin-top: 0.15rem;
+  color: var(--muted-foreground);
+  font-size: 0.75rem;
+}
+
+.family-editor__drag-preview--island {
+  min-width: min(24rem, calc(100vw - 2rem));
+  border-top: 5px solid var(--primary);
+}
+
+.family-editor__drag-preview--participant {
+  min-width: min(18rem, calc(100vw - 2rem));
 }
 
 .family-editor [data-slot="table-cell"] strong,
@@ -308,7 +363,8 @@
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .family-editor__island {
+  .family-editor__island,
+  .family-editor [data-slot="table-row"] {
     transition: none;
   }
 }

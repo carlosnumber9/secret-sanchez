@@ -6,7 +6,7 @@
 
 - Ediciones como página principal en `/`, con alta mediante un diálogo sobre el historial y una navegación administrativa reducida a Ediciones y Familia; las rutas generales anteriores redirigen al listado.
 - Familia maestra separada de las ediciones y snapshots inmutables por intento.
-- Edición de la familia mediante un borrador local: altas desde diálogos, cambios, borrados, unidad y orden de participantes se guardan juntos de forma transaccional; el navegador avisa antes de abandonar cambios pendientes y el orden visual de unidades no se persiste.
+- Edición de la familia mediante un borrador local: altas desde diálogos, cambios, borrados, unidad y orden de participantes se guardan juntos de forma transaccional; el navegador avisa antes de abandonar cambios pendientes y el orden visual de unidades no se persiste. Las unidades completas y las personas se pueden reordenar con dnd-kit mediante ratón, touch o teclado, y una persona puede moverse entre unidades, incluidas las vacías.
 - Contactos opcionales editables directamente en las filas de `/familia`; las ediciones deshabilitan y rechazan canales sin email o teléfono compatible.
 - Bebés definidos en `/familia`, sin contacto propio, receptores y nunca regaladores.
 - Configuración por edición de participación, roles, email, WhatsApp y representante por unidad.
