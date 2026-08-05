@@ -36,7 +36,7 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
         />
       </label>
       <label className="form-field">
-        <span><input
+        <span className="participant-form__baby"><input
           type="checkbox"
           checked={value.isBaby}
           onChange={(event) => onChange({
@@ -45,7 +45,7 @@ export default function ParticipantForm({ value, onChange, onSubmit }: Props) {
             email: event.target.checked ? "" : value.email,
             phone: event.target.checked ? "" : value.phone
           })}
-        /> Bebé</span>
+        /><span>Bebé</span></span>
       </label>
       <label className="form-field">
         Email

@@ -6,3 +6,9 @@
 .participant-form [data-slot="native-select"] {
   min-height: 2.5rem;
 }
+
+.participant-form__baby {
+  display: inline-flex;
+  gap: var(--space-sm);
+  align-items: center;
+}

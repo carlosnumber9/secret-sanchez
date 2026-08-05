@@ -84,6 +84,7 @@ export const participants = pgTable("participants", {
   avatarUrl: text("avatar_url"),
   preferredChannel: preferredChannel("preferred_channel").default("email"),
   isBaby: boolean("is_baby").default(false).notNull(),
+  sortOrder: integer("sort_order").default(0).notNull(),
   ...timestamps
 }, (table) => [
   check("participants_baby_without_contact_check", sql`not ${table.isBaby} or (${table.email} is null and ${table.phone} is null and ${table.preferredChannel} is null)`)

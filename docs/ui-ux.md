@@ -46,8 +46,11 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 
 ### Familia
 
-- Visualizar núcleos y sus personas.
-- Crear, editar, mover y eliminar con previsualización de impacto.
+- Visualizar cada unidad y sus personas en tablas compactas.
+- Arrastrar personas entre unidades o dentro de una unidad y guardar toda la disposición en una sola acción.
+- Reordenar unidades únicamente para organizar la vista actual, sin persistir ese orden.
+- Marcar bebés mediante su icono y reforzar ese estado con una fila rosa y texto accesible.
+- Crear, editar y eliminar con previsualización de impacto.
 - Mostrar email, teléfono y preferencia.
 - Señalar contactos incompatibles con el canal elegido.
 - No mezclar el censo con la participación de una edición.

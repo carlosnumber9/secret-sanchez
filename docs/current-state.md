@@ -1,10 +1,11 @@
 # Estado actual
 
-Última revisión documental: **4 de agosto de 2026**.
+Última revisión documental: **5 de agosto de 2026**.
 
 ## Implementado en código
 
 - Familia maestra separada de las ediciones y snapshots inmutables por intento.
+- Organización drag-and-drop de la familia, con unidad y orden de participantes guardados de forma transaccional y orden visual de unidades no persistente.
 - Bebés definidos en `/familia`, sin contacto propio, receptores y nunca regaladores.
 - Configuración por edición de participación, roles, email, WhatsApp y representante por unidad.
 - Igualdad entre adultos que regalan y adultos que reciben.
@@ -19,6 +20,7 @@
 ## Pendiente de operación
 
 - `drizzle/0005_past_winter_soldier.sql` está aplicada en el Supabase compartido desde el 4 de agosto de 2026.
+- `drizzle/0006_soft_kylun.sql` está aplicada en el Supabase compartido desde el 5 de agosto de 2026; añadió y rellenó `participants.sort_order`.
 - Configurar y aprobar la plantilla de Kapso y registrar el webhook de Production.
 - Configurar todas las variables `KAPSO_*` en Vercel; sin ellas WhatsApp falla de forma controlada.
 - Verificar dominio y remitente de Resend.

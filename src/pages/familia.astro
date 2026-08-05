@@ -14,12 +14,13 @@ const islands = state.islands.map((island) => ({
     email: participant.email ?? "",
     phone: participant.phone ?? "",
     preferredChannel: participant.preferredChannel === "manual" ? null : participant.preferredChannel,
-    isBaby: participant.isBaby
+    isBaby: participant.isBaby,
+    sortOrder: participant.sortOrder
   }))
 }));
 ---
 
 <AdminLayout title="Familia">
-  <div class="section-header"><h1>Familia</h1><p>Este es el censo permanente. La participación y los roles se deciden dentro de cada edición.</p></div>
+  <div class="section-header"><h1>Familia</h1><p>Organiza el censo permanente por unidades. La participación y los roles se deciden dentro de cada edición.</p></div>
   {state.family ? <FamilyEditor client:load familyId={state.family.id} initialIslands={islands} /> : <p>Crea primero la familia desde <a href="/inicio">Inicio</a>.</p>}
 </AdminLayout>

@@ -43,6 +43,13 @@
       "when": 1785874474411,
       "tag": "0005_past_winter_soldier",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1785912017593,
+      "tag": "0006_soft_kylun",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,6 @@
 # Modelo de datos
 
-Drizzle define el esquema operativo en `src/db/schema.ts`. `0003` introdujo ediciones y `0005` añade bebés, representantes, unidades sorteadas y WhatsApp.
+Drizzle define el esquema operativo en `src/db/schema.ts`. `0003` introdujo ediciones, `0005` añadió bebés, representantes, unidades sorteadas y WhatsApp, y `0006` añadió el orden persistente de las personas dentro de cada unidad.
 
 ## Familia maestra
 
@@ -14,7 +14,7 @@ Núcleos u hogares de una familia. Se utilizan para impedir asignaciones dentro 
 
 ### `participants`
 
-Personas maestras con núcleo, nombre, contacto, canal por defecto e `is_baby`. La condición de bebé se decide solo en `/familia`; obliga a dejar email, teléfono y canal en `null`.
+Personas maestras con núcleo, nombre, contacto, canal por defecto, `is_baby` y `sort_order`. La condición de bebé se decide solo en `/familia`; obliga a dejar email, teléfono y canal en `null`. `sort_order` conserva la posición manual dentro de su unidad, mientras que el orden de las unidades es solo visual y no se persiste.
 
 Crear una persona inserta una configuración desactivada en todas las ediciones existentes. Borrar una persona es destructivo y elimina completos todos los intentos donde aparece.
 

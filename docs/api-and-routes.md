@@ -16,7 +16,7 @@
 
 ## APIs administrativas
 
-- Familia: `POST /api/admin/groups`, `POST /api/admin/islands`, `PATCH|DELETE /api/admin/islands/[id]`, `POST /api/admin/participants`, `PATCH|DELETE /api/admin/participants/[id]`.
+- Familia: `POST /api/admin/groups`, `POST /api/admin/islands`, `PATCH|DELETE /api/admin/islands/[id]`, `POST /api/admin/participants`, `PATCH|DELETE /api/admin/participants/[id]` y `PATCH /api/admin/families/[id]/layout`.
 - Impacto destructivo: `GET /api/admin/participants/[id]/deletion-impact` y `GET /api/admin/islands/[id]/deletion-impact`.
 - Ediciones: `GET|POST /api/admin/editions`, `PATCH /api/admin/editions/[id]`.
 - Configuración: `PATCH /api/admin/editions/[id]/islands/[islandId]` y `PATCH /api/admin/editions/[id]/participants/[participantId]`.
@@ -24,6 +24,8 @@
 - Entrega: `POST /api/admin/editions/[id]/notifications/send` y `POST /api/admin/notifications/manual`.
 
 Todas requieren sesión y autorización mediante la familia propietaria. Las respuestas mantienen `{ ok, data?, message?, code?, errorId? }`.
+
+`PATCH /api/admin/families/[id]/layout` recibe la lista completa de personas con unidad, posición y condición de bebé. Valida que el censo no haya cambiado y aplica toda la disposición en una sola transacción. El orden de las unidades no forma parte del contrato.
 
 ## APIs públicas
 
