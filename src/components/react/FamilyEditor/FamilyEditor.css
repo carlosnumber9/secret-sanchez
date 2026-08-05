@@ -286,65 +286,6 @@
   text-align: right;
 }
 
-.family-editor__dialog {
-  position: fixed;
-  inset: 0;
-  width: min(32rem, calc(100vw - 2rem));
-  max-width: none;
-  max-height: calc(100dvh - 2rem);
-  margin: auto;
-  padding: 0;
-  color: var(--foreground);
-  background: transparent;
-  border: 0;
-  overflow: visible;
-}
-
-.family-editor__dialog::backdrop {
-  background: color-mix(in oklch, black 48%, transparent);
-  backdrop-filter: blur(4px);
-}
-
-.family-editor__dialog-card {
-  display: grid;
-  gap: var(--space-lg);
-  max-height: calc(100dvh - 2rem);
-  padding: var(--surface-padding);
-  overflow-y: auto;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-3xl);
-  box-shadow: var(--shadow-md);
-}
-
-.family-editor__dialog-header {
-  display: flex;
-  gap: var(--space-md);
-  align-items: flex-start;
-  justify-content: space-between;
-}
-
-.family-editor__dialog-header h2,
-.family-editor__dialog-header p {
-  margin: 0;
-}
-
-.family-editor__dialog-header h2 {
-  font-family: var(--font-heading);
-  font-size: 1.2rem;
-}
-
-.family-editor__dialog-header p {
-  margin-top: 0.25rem;
-  color: var(--muted-foreground);
-  font-size: 0.875rem;
-}
-
-.family-editor__dialog-form {
-  display: grid;
-  gap: var(--space-md);
-}
-
 @media (max-width: 760px) {
   .family-editor__island-header {
     grid-template-columns: auto auto minmax(0, 1fr);

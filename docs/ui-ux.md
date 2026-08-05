@@ -39,14 +39,14 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 ### Ediciones
 
 - Mostrar el historial de ediciones en la página principal.
-- Permitir crear y abrir una edición.
+- Permitir crear una edición desde un diálogo HTML nativo sobre el historial y abrir las ya existentes.
 - Dirigir a Familia cuando todavía no existe el censo permanente.
 
 ### Familia
 
 - Permitir crear la familia cuando todavía no existe el censo permanente.
 - Visualizar cada unidad y sus personas en tablas compactas.
-- Abrir las altas de unidad y participante desde dos botones de icono y formularios en diálogos HTML nativos.
+- Abrir las altas de unidad y participante desde dos botones de icono y formularios en el mismo componente de diálogo reutilizado por el alta de ediciones.
 - Exigir una unidad existente y seleccionada para dar de alta una persona; el formulario permite omitir el contacto y solo se habilita cuando el nombre y cualquier dato introducido son válidos.
 - Editar email y teléfono directamente en las filas de `/familia`, como parte del borrador pendiente de `Guardar familia`.
 - Mantener altas, ediciones, borrados y movimientos como borrador local y persistirlos juntos en una sola transacción al pulsar `Guardar familia`.
@@ -158,7 +158,7 @@ La navegación nunca elige implícitamente “el último sorteo”. `/inicio`, `
 - Revocar exige escribir `ANULAR REPARTO` y explica que lo ya visto no puede olvidarse.
 - Borrar una persona muestra intentos, asignaciones, logs y aperturas afectados y exige `ELIMINAR PERSONA`.
 - Borrar una unidad permite mover integrantes o confirmar `ELIMINAR UNIDAD`.
-- Las ediciones de prueba muestran de forma persistente que los emails se redirigen al administrador.
+- Las ediciones de prueba muestran de forma persistente que los emails se redirigen al correo de acceso del administrador que ejecuta el envío.
 
 ## Configuración de participantes
 

@@ -7,7 +7,7 @@ Cada entrega usa `email`, `whatsapp` o `both`, configurado en la edición. `manu
 - Una asignación personal usa el contacto congelado del adulto regalador.
 - Una asignación de bebé usa el contacto congelado del representante de la unidad.
 - Un bebé no tiene contacto ni canal propio.
-- Una edición de prueba redirige email al administrador y WhatsApp a `KAPSO_TEST_RECIPIENT_PHONE`.
+- Una edición de prueba redirige el email al correo de acceso del administrador que ejecuta el envío y WhatsApp a `KAPSO_TEST_RECIPIENT_PHONE`.
 
 ## Email y WhatsApp
 

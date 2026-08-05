@@ -4,7 +4,7 @@
 
 ## Implementado en código
 
-- Ediciones como página principal en `/`, con una navegación administrativa reducida a Ediciones y Familia; las rutas generales anteriores redirigen al listado.
+- Ediciones como página principal en `/`, con alta mediante un diálogo sobre el historial y una navegación administrativa reducida a Ediciones y Familia; las rutas generales anteriores redirigen al listado.
 - Familia maestra separada de las ediciones y snapshots inmutables por intento.
 - Edición de la familia mediante un borrador local: altas desde diálogos, cambios, borrados, unidad y orden de participantes se guardan juntos de forma transaccional; el navegador avisa antes de abandonar cambios pendientes y el orden visual de unidades no se persiste.
 - Contactos opcionales editables directamente en las filas de `/familia`; las ediciones deshabilitan y rechazan canales sin email o teléfono compatible.
@@ -15,7 +15,7 @@
 - Intentos numerados, revocación e invalidación de tokens.
 - Envíos por Resend y Kapso, uno o ambos canales, con selección y reenvío explícito.
 - Webhook firmado de Kapso para `sent`, `delivered`, `read` y `failed`.
-- Ediciones de prueba redirigidas a contactos seguros de administrador.
+- Ediciones de prueba con emails redirigidos al correo de acceso del administrador que ejecuta el envío y WhatsApp al teléfono seguro configurado.
 - Copia de respaldo sin estado de entrega y auditoría estructurada en Vercel.
 - Borrado transaccional y conservación de snapshots históricos mientras no se elimine el intento.
 

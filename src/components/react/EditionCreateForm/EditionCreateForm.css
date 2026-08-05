@@ -1,0 +1,58 @@
+.edition-create-form__launcher {
+  display: contents;
+}
+
+.edition-create-form__kind {
+  display: grid;
+  gap: var(--space-sm);
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.edition-create-form__kind legend {
+  margin-bottom: 0.5rem;
+  color: var(--foreground);
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.edition-create-form__kind label {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  padding: 0.75rem;
+  background: color-mix(in oklch, var(--muted) 55%, transparent);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-xl);
+  cursor: pointer;
+}
+
+.edition-create-form__kind input {
+  margin-top: 0.2rem;
+}
+
+.edition-create-form__kind strong,
+.edition-create-form__kind small {
+  display: block;
+}
+
+.edition-create-form__kind small,
+.edition-create-form__status {
+  color: var(--muted-foreground);
+}
+
+.edition-create-form__status {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+@media (max-width: 560px) {
+  astro-island:has(.edition-create-form__launcher) {
+    display: contents;
+  }
+
+  .edition-create-form__launcher > button {
+    width: 100%;
+  }
+}

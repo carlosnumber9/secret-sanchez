@@ -10,10 +10,10 @@ import {
   Pencil,
   Save,
   Trash2,
-  UserPlus,
-  X
+  UserPlus
 } from "lucide-react";
-import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent, type MouseEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent, type KeyboardEvent } from "react";
+import CreateDialog from "../CreateDialog/CreateDialog";
 import ParticipantForm, {
   participantDraftIsValid,
   participantEmailIsValid,
@@ -81,10 +81,6 @@ function familySnapshot(islands: Island[]) {
         isBaby: person.isBaby
       }))
     })));
-}
-
-function closeOnBackdrop(event: MouseEvent<HTMLDialogElement>) {
-  if (event.target === event.currentTarget) event.currentTarget.close();
 }
 
 export default function FamilyEditor({ familyId, initialIslands }: Props) {
@@ -615,38 +611,26 @@ export default function FamilyEditor({ familyId, initialIslands }: Props) {
     </footer>
     <p className="family-editor__status" role="status" aria-live="polite">{message}</p>
 
-    <dialog ref={islandDialogRef} className="family-editor__dialog" onClick={closeOnBackdrop} aria-labelledby="new-island-title">
-      <div className="family-editor__dialog-card">
-        <header className="family-editor__dialog-header">
-          <div><h2 id="new-island-title">Añadir unidad</h2><p>Crea un hogar o núcleo familiar.</p></div>
-          <Button type="button" variant="ghost" size="icon" onClick={() => islandDialogRef.current?.close()} aria-label="Cerrar"><X /></Button>
-        </header>
-        <form className="family-editor__dialog-form" onSubmit={(event) => { event.preventDefault(); addIsland(); }}>
-          <label className="form-field">
-            Nombre de la unidad
-            <Input autoFocus value={newIslandName} onChange={(event) => setNewIslandName(event.target.value)} placeholder="Ej. Casa de Juan" required maxLength={180} />
-          </label>
-          <Button className="min-h-10 w-full" size="lg" type="submit" disabled={!newIslandName.trim()}>Añadir unidad</Button>
-        </form>
-      </div>
-    </dialog>
+    <CreateDialog ref={islandDialogRef} title="Añadir unidad" description="Crea un hogar o núcleo familiar.">
+      <form className="create-dialog__form" onSubmit={(event) => { event.preventDefault(); addIsland(); }}>
+        <label className="form-field">
+          Nombre de la unidad
+          <Input autoFocus value={newIslandName} onChange={(event) => setNewIslandName(event.target.value)} placeholder="Ej. Casa de Juan" required maxLength={180} />
+        </label>
+        <Button className="min-h-10 w-full" size="lg" type="submit" disabled={!newIslandName.trim()}>Añadir unidad</Button>
+      </form>
+    </CreateDialog>
 
-    <dialog ref={participantDialogRef} className="family-editor__dialog" onClick={closeOnBackdrop} aria-labelledby="new-participant-title">
-      <div className="family-editor__dialog-card">
-        <header className="family-editor__dialog-header">
-          <div><h2 id="new-participant-title">Añadir persona</h2><p>Completa sus datos y elige una unidad.</p></div>
-          <Button type="button" variant="ghost" size="icon" onClick={() => participantDialogRef.current?.close()} aria-label="Cerrar"><X /></Button>
-        </header>
-        <ParticipantForm
-          value={participant}
-          islandId={selectedIsland?.clientId ?? ""}
-          islands={formIslands}
-          disabled={busy}
-          onChange={setParticipant}
-          onIslandChange={setSelectedIslandId}
-          onSubmit={addParticipant}
-        />
-      </div>
-    </dialog>
+    <CreateDialog ref={participantDialogRef} title="Añadir persona" description="Completa sus datos y elige una unidad.">
+      <ParticipantForm
+        value={participant}
+        islandId={selectedIsland?.clientId ?? ""}
+        islands={formIslands}
+        disabled={busy}
+        onChange={setParticipant}
+        onIslandChange={setSelectedIslandId}
+        onSubmit={addParticipant}
+      />
+    </CreateDialog>
   </div>;
 }

@@ -1,6 +1,6 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db/client";
-import { adminUsers, drawEditions, draws, families } from "@/db/schema";
+import { drawEditions, draws, families } from "@/db/schema";
 import { createNotificationLog, findNotificationByIdempotencyKey, listNotificationLogsForDraw, updateNotificationLog } from "@/db/queries/notifications";
 import { getOwnedAssignment, listAssignmentsForDraw } from "@/db/queries/assignments";
 import { AppError } from "@/lib/errors";
@@ -13,7 +13,10 @@ import { sendEmailNotification } from "@/services/notifications/sendEmailNotific
 import { sendWhatsappNotification } from "@/services/notifications/sendWhatsappNotification";
 
 type SendInput = {
-  adminId: string;
+  admin: {
+    id: string;
+    email: string;
+  };
   editionId: string;
   mode: "pending" | "failed" | "force";
   scope: "all" | "selected";
@@ -24,12 +27,11 @@ type SendInput = {
 const successfulStatuses = new Set(["sent", "delivered", "read", "opened"]);
 
 export async function sendAdminNotifications(input: SendInput) {
-  const [owned] = await db.select({ edition: drawEditions, draw: draws, adminEmail: adminUsers.email })
+  const [owned] = await db.select({ edition: drawEditions, draw: draws })
     .from(drawEditions)
     .innerJoin(families, eq(drawEditions.familyId, families.id))
     .innerJoin(draws, and(eq(draws.editionId, drawEditions.id), ne(draws.status, "revoked")))
-    .innerJoin(adminUsers, eq(families.ownerAdminId, adminUsers.id))
-    .where(and(eq(drawEditions.id, input.editionId), eq(families.ownerAdminId, input.adminId))).limit(1);
+    .where(and(eq(drawEditions.id, input.editionId), eq(families.ownerAdminId, input.admin.id))).limit(1);
   if (!owned) throw new AppError(404, "DRAW_NOT_FOUND", "No hay un reparto vigente para esta edición.");
 
   const [allRows, logRows] = await Promise.all([listAssignmentsForDraw(owned.draw.id), listNotificationLogsForDraw(owned.draw.id)]);
@@ -58,7 +60,7 @@ export async function sendAdminNotifications(input: SendInput) {
       const attemptKey = buildNotificationAttemptKey(input.idempotencyKey, assignment.id, deliveryChannel);
       if (await findNotificationByIdempotencyKey(attemptKey)) { skipped += 1; continue; }
       const recipient = deliveryChannel === "email"
-        ? (owned.edition.kind === "test" ? owned.adminEmail : email)
+        ? (owned.edition.kind === "test" ? input.admin.email : email)
         : (owned.edition.kind === "test" ? kapsoTestRecipientPhone : phone);
       if (!recipient) { failed += 1; continue; }
       const log = await createNotificationLog({ assignmentId: assignment.id, channel: deliveryChannel, recipient, status: "pending", idempotencyKey: attemptKey });

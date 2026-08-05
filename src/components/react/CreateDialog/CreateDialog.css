@@ -1,0 +1,58 @@
+.create-dialog {
+  position: fixed;
+  inset: 0;
+  width: min(32rem, calc(100vw - 2rem));
+  max-width: none;
+  max-height: calc(100dvh - 2rem);
+  margin: auto;
+  padding: 0;
+  color: var(--foreground);
+  background: transparent;
+  border: 0;
+  overflow: visible;
+}
+
+.create-dialog::backdrop {
+  background: color-mix(in oklch, black 48%, transparent);
+  backdrop-filter: blur(4px);
+}
+
+.create-dialog__card {
+  display: grid;
+  gap: var(--space-lg);
+  max-height: calc(100dvh - 2rem);
+  padding: var(--surface-padding);
+  overflow-y: auto;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-3xl);
+  box-shadow: var(--shadow-md);
+}
+
+.create-dialog__header {
+  display: flex;
+  gap: var(--space-md);
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.create-dialog__header h2,
+.create-dialog__header p {
+  margin: 0;
+}
+
+.create-dialog__header h2 {
+  font-family: var(--font-heading);
+  font-size: 1.2rem;
+}
+
+.create-dialog__header p {
+  margin-top: 0.25rem;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.create-dialog__form {
+  display: grid;
+  gap: var(--space-md);
+}

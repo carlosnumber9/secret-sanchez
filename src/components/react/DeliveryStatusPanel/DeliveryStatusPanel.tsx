@@ -30,7 +30,7 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
   async function send(mode: "pending" | "failed" | "force", scope: "all" | "selected" = "all") {
     if (scope === "selected" && !selected.length) { setMessage("Selecciona al menos una entrega."); return; }
     const warning = testMode
-      ? "Los mensajes de prueba se redirigirán al administrador y al teléfono de prueba. ¿Continuar?"
+      ? "Los emails de prueba se redirigirán a tu correo de acceso y los WhatsApp al teléfono de prueba. ¿Continuar?"
       : "Esto enviará mensajes reales a la familia. ¿Quieres continuar?";
     if (!window.confirm(warning)) return;
     setBusy(true);
@@ -69,7 +69,7 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
   }
 
   return <section className="stack">
-    {testMode && <p><strong>Modo prueba:</strong> email y WhatsApp se redirigen a los contactos seguros configurados.</p>}
+    {testMode && <p><strong>Modo prueba:</strong> los emails se redirigen a tu correo de acceso y los WhatsApp al teléfono de prueba configurado.</p>}
     <div className="cluster cluster--actions">
       <Button disabled={busy} type="button" onClick={() => send("pending")}><Send size={18} />Enviar pendientes</Button>
       <Button disabled={busy} variant="secondary" type="button" onClick={() => send("failed")}><RefreshCw size={18} />Reintentar fallidos</Button>

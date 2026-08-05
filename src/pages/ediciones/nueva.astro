@@ -1,11 +1,3 @@
 ---
-import Card from "@/components/Card/Card.astro";
-import EditionCreateForm from "@/components/react/EditionCreateForm/EditionCreateForm";
-import AdminLayout from "@/layouts/AdminLayout.astro";
-import { getAdminAppState } from "@/actions/adminData";
-const state = await getAdminAppState(Astro.locals.admin.id);
+return Astro.redirect("/?crear-edicion=1");
 ---
-<AdminLayout title="Nueva edición">
-  <div class="section-header"><h1>Nueva edición</h1><p>Toda la familia actual se añadirá activada. Las altas posteriores aparecerán desactivadas.</p></div>
-  {state.family ? <Card tone="accent"><EditionCreateForm client:load familyId={state.family.id} /></Card> : <p>Crea primero la familia desde <a href="/familia">Familia</a>.</p>}
-</AdminLayout>

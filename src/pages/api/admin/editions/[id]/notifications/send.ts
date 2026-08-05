@@ -14,7 +14,14 @@ export const POST: APIRoute = async ({ locals, params, request }) => {
   try {
     const editionId = z.uuid().parse(params.id);
     const input = schema.parse(await request.json().catch(() => null));
-    return Response.json({ ok: true, data: await sendAdminNotifications({ ...input, editionId, adminId: locals.admin.id }) });
+    return Response.json({
+      ok: true,
+      data: await sendAdminNotifications({
+        ...input,
+        editionId,
+        admin: { id: locals.admin.id, email: locals.admin.email }
+      })
+    });
   } catch (error) {
     return handleApiError("notification.batch_failed", error, { adminId: locals.admin.id });
   }

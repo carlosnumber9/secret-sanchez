@@ -1,13 +1,31 @@
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useState } from "react";
+import { CalendarPlus } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
+import CreateDialog from "../CreateDialog/CreateDialog";
+import "./EditionCreateForm.css";
 
-export default function EditionCreateForm({ familyId }: { familyId: string }) {
+type Props = {
+  familyId: string;
+  initiallyOpen?: boolean;
+};
+
+export default function EditionCreateForm({ familyId, initiallyOpen = false }: Props) {
   const [name, setName] = useState("");
   const [year, setYear] = useState(new Date().getFullYear() + 1);
   const [kind, setKind] = useState<"test" | "final">("test");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const dialogRef = useRef<HTMLDialogElement>(null);
+
+  useEffect(() => {
+    if (initiallyOpen && !dialogRef.current?.open) dialogRef.current?.showModal();
+  }, [initiallyOpen]);
+
+  function openDialog() {
+    setMessage("");
+    dialogRef.current?.showModal();
+  }
 
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -28,15 +46,40 @@ export default function EditionCreateForm({ familyId }: { familyId: string }) {
     }
   }
 
-  return <form className="stack" onSubmit={submit}>
-    <label className="form-field">Nombre<Input value={name} onChange={(event) => setName(event.target.value)} placeholder="Ej. Prueba de agosto" required /></label>
-    <label className="form-field">Año<Input type="number" min={2020} max={2100} value={year} onChange={(event) => setYear(Number(event.target.value))} required /></label>
-    <fieldset className="stack">
-      <legend>Tipo de edición</legend>
-      <label><input type="radio" name="kind" checked={kind === "test"} onChange={() => setKind("test")} /> Prueba — los emails se redirigen a Juan</label>
-      <label><input type="radio" name="kind" checked={kind === "final"} onChange={() => setKind("final")} /> Definitiva — usa los contactos reales</label>
-    </fieldset>
-    <Button type="submit" disabled={busy}>{busy ? "Creando..." : "Crear edición"}</Button>
-    {message && <p role="status">{message}</p>}
-  </form>;
+  return <div className="edition-create-form__launcher">
+    <Button size="lg" type="button" onClick={openDialog}><CalendarPlus />Crear edición</Button>
+    <CreateDialog
+      ref={dialogRef}
+      title="Crear edición"
+      description="Toda la familia actual se añadirá activada."
+    >
+      <form className="create-dialog__form edition-create-form" onSubmit={submit}>
+        <label className="form-field">
+          Nombre
+          <Input
+            autoFocus
+            className="h-10"
+            value={name}
+            onChange={(event) => setName(event.target.value)}
+            placeholder="Ej. Prueba de agosto"
+            required
+            minLength={2}
+            maxLength={180}
+            disabled={busy}
+          />
+        </label>
+        <label className="form-field">
+          Año
+          <Input className="h-10" type="number" min={2020} max={2100} value={year} onChange={(event) => setYear(Number(event.target.value))} required disabled={busy} />
+        </label>
+        <fieldset className="edition-create-form__kind" disabled={busy}>
+          <legend>Tipo de edición</legend>
+          <label><input type="radio" name="kind" checked={kind === "test"} onChange={() => setKind("test")} /> <span><strong>Prueba</strong><small>Los emails se redirigen a tu correo de acceso.</small></span></label>
+          <label><input type="radio" name="kind" checked={kind === "final"} onChange={() => setKind("final")} /> <span><strong>Definitiva</strong><small>Usa los contactos reales.</small></span></label>
+        </fieldset>
+        <Button className="min-h-10 w-full" size="lg" type="submit" disabled={busy || name.trim().length < 2}>{busy ? "Creando…" : "Crear edición"}</Button>
+        {message && <p className="edition-create-form__status" role="status">{message}</p>}
+      </form>
+    </CreateDialog>
+  </div>;
 }
