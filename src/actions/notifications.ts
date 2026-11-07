@@ -26,7 +26,7 @@ type SendInput = {
 
 const successfulStatuses = new Set(["sent", "delivered", "read", "opened"]);
 
-export async function sendAdminNotifications(input: SendInput) {
+export async function sendAdminNotifications(input: SendInput, transports = { email: sendEmailNotification, whatsapp: sendWhatsappNotification }) {
   const [owned] = await db.select({ edition: drawEditions, draw: draws })
     .from(drawEditions)
     .innerJoin(families, eq(drawEditions.familyId, families.id))
@@ -69,8 +69,8 @@ export async function sendAdminNotifications(input: SendInput) {
       if (!log) { skipped += 1; continue; }
       try {
         const result = deliveryChannel === "email"
-          ? await sendEmailNotification({ to: log.recipient, name, revealUrl, idempotencyKey: log.idempotencyKey ?? undefined, testMode: owned.edition.kind === "test" })
-          : await sendWhatsappNotification({ phone: log.recipient, name, revealUrl });
+          ? await transports.email({ to: log.recipient, name, revealUrl, idempotencyKey: log.idempotencyKey ?? undefined, testMode: owned.edition.kind === "test" })
+          : await transports.whatsapp({ phone: log.recipient, name, revealUrl });
         if (!result.ok) {
           failed += 1;
           await updateNotificationLog(log.id, { status: "failed", error: "provider_rejected" });

@@ -105,3 +105,7 @@ No debe requerir secretos reales para validar una pull request.
 - Estrategia de regresión visual.
 
 `npm run db:check` compara el schema con los snapshots en una copia temporal de las migraciones, sin conectar a ninguna base ni modificar el repositorio. La auditoría bloquea avisos altos o críticos; los bajos y moderados quedan visibles para revisión. Las acciones de CI se fijan por SHA y tienen permisos de solo lectura.
+
+## Integración aislada
+
+`TEST_DATABASE_URL=postgresql://...@127.0.0.1:5432/secret_sanchez_test npm run test:integration` aplica las migraciones y ejecuta casos reales de transacción, autorización, idempotencia, revocación y revelación. El comando rechaza hosts externos y bases cuyo nombre no termine en `_test`; no carga `.env`. Los proveedores se sustituyen por transportes controlados. CI prepara PostgreSQL 17 efímero y los roles anon/authenticated. Las pruebas crean y limpian únicamente sus familias sintéticas.
