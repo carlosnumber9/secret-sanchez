@@ -47,3 +47,7 @@ La reserva de intentos se serializa por asignación dentro de una transacción. 
 Las transiciones de estado son condicionales en SQL; eventos duplicados o concurrentes no degradan `delivered` o `read`. Si llega un evento antes de guardar el identificador del proveedor, el endpoint devuelve `503` y `Retry-After` para activar los reintentos de Kapso. Los fallos persistentes deben reconciliarse desde el panel del proveedor. Un JSON firmado inválido devuelve `400`.
 
 El panel y la cobertura consultan el último intento por asignación y canal mediante `DISTINCT ON`, con desempate estable por identificador. Un fallo reciente no se oculta detrás de un envío histórico exitoso. Los contadores de exposición se agregan en SQL y el panel no carga ciphertexts ni hashes para mostrar los estados.
+
+## Lotes reanudables
+
+Cada petición procesa como máximo cuatro mensajes con concurrencia dos y separación mínima de 550 ms entre inicios. El panel continúa mediante un cursor estable y conserva la clave del lote si falla la conexión; no hay trabajo crítico desligado de la respuesta. Los `429` conservan el intento pendiente y el mismo cursor, respetando `Retry-After` entre 1 y 60 segundos. El panel hace hasta tres esperas automáticas antes de ofrecer reintento. Los resultados inciertos se muestran separados de los rechazos confirmados. El adapter permite 60 segundos por función; cada transporte tiene timeout de 20 segundos.

@@ -26,7 +26,7 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
-  const attempt = useRef<{ signature: string; key: string } | null>(null);
+  const attempt = useRef<{ signature: string; key: string; cursor: number; drawId?: string } | null>(null);
 
   async function send(mode: "pending" | "failed" | "force", scope: "all" | "selected" = "all") {
     if (scope === "selected" && !selected.length) { setMessage("Selecciona al menos una entrega."); return; }
@@ -35,19 +35,32 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
       : "Esto enviará mensajes reales a la familia. ¿Quieres continuar?";
     if (!window.confirm(warning)) return;
     const signature = JSON.stringify({ mode, scope, selected: [...selected].sort() });
-    if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID() };
+    if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID(), cursor: 0 };
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(`/api/admin/editions/${editionId}/notifications/send`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, scope, assignmentIds: scope === "selected" ? selected : undefined, confirmed: true, idempotencyKey: attempt.current.key })
-      });
-      const payload = await response.json() as { ok: boolean; message?: string; data?: { sent: number; failed: number; skipped: number } };
-      if (!response.ok || !payload.data) throw new Error(payload.message);
+      let totals = { sent: 0, failed: 0, unknown: 0, skipped: 0 };
+      let throttles = 0;
+      for (;;) {
+        const response = await fetch(`/api/admin/editions/${editionId}/notifications/send`, {
+          method: "POST", headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ mode, scope, assignmentIds: scope === "selected" ? selected : undefined, confirmed: true, idempotencyKey: attempt.current!.key, cursor: attempt.current!.cursor, drawId: attempt.current!.drawId })
+        });
+        const payload = await response.json() as { message?: string; data?: { sent: number; failed: number; skipped: number; unknown: number; drawId: string; nextCursor: number | null; retryAfterSeconds: number; processed: number; total: number } };
+        if (!response.ok || !payload.data) throw new Error(payload.message);
+        const data = payload.data;
+        attempt.current!.drawId = data.drawId;
+        totals = { sent: totals.sent + data.sent, failed: totals.failed + data.failed, unknown: totals.unknown + data.unknown, skipped: totals.skipped + data.skipped };
+        setMessage(`Procesadas ${data.processed}/${data.total} entregas. ${totals.sent} enviadas.`);
+        if (data.nextCursor === null) break;
+        attempt.current!.cursor = data.nextCursor;
+        if (data.retryAfterSeconds) {
+          if (++throttles > 3) throw new Error("El proveedor sigue limitando envíos. Espera y vuelve a intentar la misma operación.");
+          await new Promise((resolve) => setTimeout(resolve, data.retryAfterSeconds * 1000));
+        }
+      }
       attempt.current = null;
-      setMessage(`${payload.data.sent} enviados, ${payload.data.failed} fallidos y ${payload.data.skipped} omitidos.`);
+      setMessage(`${totals.sent} enviados, ${totals.failed} fallidos, ${totals.unknown} con resultado incierto y ${totals.skipped} omitidos.`);
       window.setTimeout(() => window.location.reload(), 900);
     } catch (error) {
       setMessage(error instanceof Error && error.message ? error.message : "No se pudieron procesar los envíos.");

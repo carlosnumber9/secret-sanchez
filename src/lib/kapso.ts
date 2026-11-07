@@ -1,3 +1,4 @@
+import { NotificationRateLimitError } from "@/services/notifications/retry";
 import { getEnv } from "./env";
 
 type SendWhatsappInput = {
@@ -33,6 +34,7 @@ export async function sendKapsoMessage(input: SendWhatsappInput) {
       }
     })
   });
+  if (response.status === 429) throw new NotificationRateLimitError(response.headers.get("retry-after"));
   if (response.status >= 500) throw new Error("WhatsApp outcome unknown.");
   const payload = await response.json().catch(() => null) as { messages?: Array<{ id?: string }> } | null;
   const providerMessageId = payload?.messages?.[0]?.id;

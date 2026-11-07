@@ -187,3 +187,42 @@ test("deletion impact counts attempts once across editions and notification hist
   const { getDeletionImpact } = await import("../../src/db/queries/deletionImpact");
   assert.deepEqual(await getDeletionImpact(data.people.slice(0, 2).map((p) => p.id)), { editions: 2, draws: 3, assignments: 9, notifications: 18, opened: 1 });
 }));
+
+test("delivery cursors are bounded and cannot resume a replaced draw", async () => fixture(async (data) => {
+  const { draw } = await generation(data);
+  const snapshots = await db.select().from(s.drawParticipants).where(eq(s.drawParticipants.drawId, draw.id));
+  await db.update(s.drawParticipants).set({ preferredChannel: "both", phone: "+34000000000" }).where(eq(s.drawParticipants.drawId, draw.id));
+  process.env.KAPSO_TEST_RECIPIENT_PHONE = "+34000000000";
+  let calls = 0;
+  const transports = { email: async () => ({ ok: true, providerMessageId: `email-${++calls}` }), whatsapp: async () => ({ ok: true as const, providerMessageId: `whatsapp-${++calls}` }) };
+  const input = { admin: data.admin, editionId: data.edition.id, scope: "all" as const, mode: "pending" as const, idempotencyKey: crypto.randomUUID() };
+  const first = await sendAdminNotifications(input, transports);
+  assert.equal(calls, 4);
+  assert.equal(first.nextCursor, 4);
+  const second = await sendAdminNotifications({ ...input, cursor: first.nextCursor!, drawId: first.drawId }, transports);
+  assert.equal(calls, snapshots.length * 2);
+  assert.equal(second.nextCursor, null);
+  await revokeEditionDraw({ adminId: data.admin.id, editionId: data.edition.id, drawId: draw.id, confirmation: "ANULAR REPARTO" });
+  await generation(data);
+  await assert.rejects(sendAdminNotifications({ ...input, drawId: draw.id, cursor: 4 }, transports), { code: "DRAW_CHANGED" });
+  delete process.env.KAPSO_TEST_RECIPIENT_PHONE;
+}));
+
+test("provider rate limits preserve the cursor and resume the same attempts", async () => fixture(async (data) => {
+  const { draw } = await generation(data);
+  const { NotificationRateLimitError } = await import("../../src/services/notifications/retry");
+  let limited = true;
+  const transports = {
+    email: async () => { if (limited) throw new NotificationRateLimitError("1"); return { ok: true, providerMessageId: crypto.randomUUID() }; },
+    whatsapp: async () => { throw new Error("Unexpected send"); }
+  };
+  const input = { admin: data.admin, editionId: data.edition.id, scope: "all" as const, mode: "pending" as const, idempotencyKey: crypto.randomUUID() };
+  const first = await sendAdminNotifications(input, transports);
+  assert.equal(first.nextCursor, 0);
+  assert.equal(first.retryAfterSeconds, 1);
+  await db.update(s.notificationLogs).set({ error: `rate_limited:${Date.now() - 1}` }).where(eq(s.notificationLogs.status, "pending"));
+  limited = false;
+  const resumed = await sendAdminNotifications({ ...input, cursor: 0, drawId: draw.id }, transports);
+  assert.equal(resumed.sent, data.people.length);
+  assert.equal(resumed.nextCursor, null);
+}));

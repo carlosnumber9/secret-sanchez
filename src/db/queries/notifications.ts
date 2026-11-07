@@ -1,5 +1,5 @@
 import { previousStatusesFor, type WhatsappDeliveryStatus } from "@/services/notifications/whatsappStatus";
-import { canResumePending, notificationLeaseMs } from "@/services/notifications/retry";
+import { canResumePending, notificationLeaseMs, pendingRateLimit } from "@/services/notifications/retry";
 import { isEligibleNotification } from "@/services/notifications/eligibility";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -67,6 +67,12 @@ export async function claimNotificationAttempt(input: {
       .orderBy(desc(notificationLogs.createdAt), desc(notificationLogs.id)).limit(1);
     const pending = sameAttempt ?? latest;
     if (pending?.status === "pending") {
+      const cooldown = pendingRateLimit(pending.error);
+      if (cooldown !== null) {
+        if (cooldown > 0) return null;
+        const [resumed] = await tx.update(notificationLogs).set({ error: null }).where(eq(notificationLogs.id, pending.id)).returning();
+        return resumed;
+      }
       if (Date.now() - pending.createdAt.getTime() < notificationLeaseMs) return null;
       if (canResumePending(input.channel, pending.createdAt)) return pending;
       if (sameAttempt || input.mode !== "force") return null;

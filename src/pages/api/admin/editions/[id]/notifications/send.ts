@@ -6,7 +6,9 @@ import { handleApiError } from "@/lib/api";
 const schema = z.object({
   mode: z.enum(["pending", "failed", "force"]),
   scope: z.enum(["all", "selected"]),
-  assignmentIds: z.array(z.uuid()).optional(),
+  assignmentIds: z.array(z.uuid()).max(500).optional(),
+  cursor: z.number().int().min(0).max(1000).optional(),
+  drawId: z.uuid().optional(),
   idempotencyKey: z.uuid(),
   confirmed: z.literal(true)
 });

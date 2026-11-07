@@ -1,3 +1,4 @@
+import { NotificationRateLimitError } from "./retry";
 import { getResendClient } from "@/lib/resend";
 
 type Input = {
@@ -39,9 +40,11 @@ export async function sendEmailNotification({ to, name, revealUrl, testMode = fa
   }, { idempotencyKey, signal: AbortSignal.timeout(20_000) });
 
   if (result.error) {
+    if (result.error.statusCode === 429) throw new NotificationRateLimitError(result.headers?.["retry-after"]);
     if (!result.error.statusCode || result.error.statusCode >= 500) throw new Error("Email outcome unknown.");
     return { ok: false, error: result.error.message };
   }
 
-  return { ok: true, providerMessageId: result.data?.id };
+  if (!result.data?.id) throw new Error("Email outcome unknown.");
+  return { ok: true, providerMessageId: result.data.id };
 }
