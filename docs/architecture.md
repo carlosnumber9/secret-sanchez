@@ -116,3 +116,5 @@ atravesar el límite del servidor.
 - No incorporar dependencias si la plataforma o los patrones existentes resuelven el problema.
 
 Las decisiones aún abiertas están centralizadas en [decisions.md](./decisions.md).
+
+El fondo Three.js se importa dinámicamente cuando el navegador queda libre. Pantallas pequeñas, ahorro de datos y movimiento reducido usan un regalo SVG estático sin descargar Three.js. Los recursos WebGL se liberan al salir y se reinicializan al restaurar una página desde la caché de navegación.
