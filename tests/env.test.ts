@@ -3,6 +3,7 @@ import test from "node:test";
 import { readEnv } from "../src/lib/env";
 
 const valid = {
+  APP_ENV: "production",
   PUBLIC_SUPABASE_URL: "https://example.supabase.co",
   PUBLIC_SUPABASE_ANON_KEY: "anon",
   DATABASE_URL: "postgresql://example",

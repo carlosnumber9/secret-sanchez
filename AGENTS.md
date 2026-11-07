@@ -9,7 +9,7 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - La app usa Astro con SSR y adapter de Vercel.
 - Hay React Islands para las partes interactivas de administracion.
 - Supabase se usa siempre para Auth y Postgres, tambien desde local.
-- La configuración histórica comparte datos; no asumir aislamiento ni ejecutar migraciones compartidas sin autorización explícita.
+- La configuración histórica compartía datos. Desarrollo y Preview deben usar proyectos independientes; las guardas rechazan destinos compartidos. No ejecutar migraciones reales sin autorización explícita.
 - Drizzle define el schema relacional en `src/db/schema.ts`.
 - Resend esta preparado para email.
 - Kapso esta integrado para WhatsApp; su activacion requiere credenciales, plantilla aprobada y webhook.
@@ -74,7 +74,10 @@ Variables solo servidor:
 
 Variable de app:
 
-- `APP_URL`, obligatorio y apuntando al origen canonico de Production.
+- `APP_URL`, obligatorio y apuntando al origen canónico del entorno actual.
+- `APP_ENV`, contexto explícito local; `VERCEL_ENV` prevalece en Vercel.
+- `PRODUCTION_SUPABASE_URL` y `PRODUCTION_APP_URL`, referencias públicas obligatorias fuera de Production.
+- `NOTIFICATION_TEST_EMAIL`, destinatario seguro para envíos no productivos.
 
 No exponer variables privadas en codigo cliente, paginas publicas, logs o payloads JSON.
 
@@ -183,7 +186,7 @@ Estados y enums principales:
 
 - Leer el codigo cercano antes de editar.
 - La configuracion de Supabase y base es obligatoria.
-- Recordar que cualquier escritura local afecta a los datos reales.
+- No usar el Supabase productivo desde local/Preview; revisar siempre el destino antes de una escritura operativa.
 - No escribir secretos ni valores reales de `.env` en documentacion, tests, logs o commits.
 - No revertir cambios del usuario.
 - Si se modifica schema, actualizar o generar migraciones de forma explicita y explicar el impacto.

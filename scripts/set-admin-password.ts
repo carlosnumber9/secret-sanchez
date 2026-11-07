@@ -1,3 +1,4 @@
+import { environmentPolicy } from "../src/lib/environment-policy";
 import { pathToFileURL } from "node:url";
 import { emitKeypressEvents } from "node:readline";
 import { createClient } from "@supabase/supabase-js";
@@ -104,6 +105,7 @@ async function getAdminKey() {
 
 export async function main(argv = process.argv.slice(2)) {
   const userId = parseUserId(argv);
+  environmentPolicy(process.env);
   const supabaseUrl = getSupabaseUrl();
   const adminKey = await getAdminKey();
   const password = await readHidden("Nueva contraseña: ");

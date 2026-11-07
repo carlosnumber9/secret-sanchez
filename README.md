@@ -7,8 +7,7 @@ El proyecto está construido con Astro en modo SSR, React Islands y TypeScript. 
 Postgres, Drizzle como ORM, Resend para email y usa Kapso para WhatsApp, pendiente de activación operativa. El despliegue
 objetivo es Vercel.
 
-Local y Vercel utilizan el mismo Supabase y los mismos datos. La aplicación no usa fallbacks; las pruebas sí emplean fixtures aislados. Configuración,
-migraciones, sorteos y envíos locales tienen efectos reales.
+Desarrollo y Preview requieren proyectos Supabase independientes de Production. La configuración compartida histórica se rechaza hasta configurar aislamiento. La aplicación no usa fallbacks; las pruebas emplean fixtures aislados.
 
 ## Puesta en marcha
 
@@ -18,11 +17,11 @@ Kapso. Si utilizas nvm, el repositorio selecciona la versión compatible mediant
 ```bash
 nvm use
 npm ci
-cp .env.example .env.local
+cp .env.example .env.development.local
 npm run dev
 ```
 
-Configura en `.env.local` las URLs y claves de tus propios servicios. Las migraciones ya están versionadas. Revisar [operación](./docs/operations.md), destino y autorización antes de aplicarlas:
+Configura en `.env.development.local` las URLs y claves de tus propios servicios. Las migraciones ya están versionadas. Revisar [operación](./docs/operations.md), destino y autorización antes de aplicarlas:
 
 ```bash
 npm run db:check

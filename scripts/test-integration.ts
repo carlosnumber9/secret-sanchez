@@ -13,7 +13,7 @@ try {
 execFileSync(process.execPath, ["--import", import.meta.resolve("tsx"), "--test", "tests/integration/application.test.ts"], {
   stdio: "inherit",
   env: {
-    ...process.env, DATABASE_URL: databaseUrl, PUBLIC_SUPABASE_URL: "https://project.example.invalid",
+    ...process.env, APP_ENV: "test", VERCEL_ENV: "", NOTIFICATION_TEST_EMAIL: "safe@example.invalid", DATABASE_URL: databaseUrl, PUBLIC_SUPABASE_URL: "https://project.example.invalid",
     PUBLIC_SUPABASE_ANON_KEY: "isolated-test", APP_URL: "https://app.example.invalid",
     REVEAL_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
     RESEND_API_KEY: "", KAPSO_API_KEY: "", KAPSO_PHONE_NUMBER_ID: "", KAPSO_WEBHOOK_SECRET: ""

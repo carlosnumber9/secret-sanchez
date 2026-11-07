@@ -17,7 +17,7 @@
 | Respaldo | Copiar un enlace se audita y no acredita entrega. |
 | Seguridad | SQL preparado para RLS, límites compartidos y auditoría; compatibilidad explícita cuando faltan tablas opcionales. |
 | Pruebas | Runner nativo de Node con tsx; integración en PostgreSQL local/CI aislado, sin proveedores reales. |
-| Entornos actuales | La configuración histórica compartía Supabase. El aislamiento operativo no se deduce de que existan guardas en código. |
+| Entornos actuales | Desarrollo/Preview requieren proyectos distintos; el código valida el destino y limita envíos a pruebas. Provisionamiento y variables reales pendientes. |
 | Actualización de noviembre | Solo código y SQL versionado; sin exportar datos reales ni aplicar migraciones compartidas. |
 | Idioma y Git | UI y docs en español; commits tipados con descripción inglesa en pasado simple. |
 

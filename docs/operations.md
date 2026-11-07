@@ -12,17 +12,16 @@ La configuración histórica del repositorio está vinculada al proyecto Vercel 
 
 ## Entornos
 
-El proyecto usa deliberadamente un único Supabase/Postgres desde local y Vercel. No hay aislamiento de datos:
-cualquier escritura local o de Preview es real. Las acciones de sorteo y envío requieren confirmación.
+La configuración histórica compartía Supabase. El código exige ahora proyectos independientes para desarrollo y Preview y rechaza las conexiones compartidas. El aislamiento real queda pendiente de provisionamiento y configuración por el propietario. No se han exportado datos ni modificado secretos remotos.
 
 ## Configuración de Vercel
 
 1. Mantener Astro como preset, Node.js 22.23.4 o un parche posterior de la rama 22, `npm ci` y `npm run build`.
-2. Configurar las mismas variables en Production y Preview.
-3. Definir `APP_URL` como `https://secret-sanchez.vercel.app`.
+2. Configurar proyectos Supabase, credenciales y claves de cifrado independientes para Production y Preview. En Preview añadir referencias no secretas `PRODUCTION_SUPABASE_URL` y `PRODUCTION_APP_URL`.
+3. Definir `APP_URL` como origen canónico de cada entorno; Production conserva su dominio y Preview debe tener uno distinto.
 4. Mantener habilitado Email/Password y deshabilitar `Allow new users to sign up` en Supabase Auth.
 5. Verificar que las variables privadas no se exponen al cliente.
-6. Configurar la misma clave `REVEAL_TOKEN_ENCRYPTION_KEY` en todos los contextos.
+6. Mantener una clave `REVEAL_TOKEN_ENCRYPTION_KEY` independiente por entorno, compartida solo entre instancias de ese entorno.
 7. Ejecutar migraciones antes de habilitar código que dependa de ellas.
 
 Para funciones serverless, `DATABASE_URL` debe usar una conexión compatible con el pooler de transacciones de
@@ -166,3 +165,7 @@ repetir mediante el flujo transaccional.
 ## Alcance de esta actualización
 
 Por instrucción del propietario: solo código, sin copias de datos reales ni migraciones en Supabase compartido. Los SQL `0008`–`0011` se han verificado en PostgreSQL local con fixtures; no se ha certificado su aplicación remota. Sin las tablas opcionales, los límites son locales a la instancia y la auditoría persistente no está activa. No considerar completa una release operativa hasta resolver estas dependencias y verificar proveedores con destinatarios seguros.
+
+## Cambio de topología pendiente
+
+Provisionar proyectos vacíos para desarrollo y Preview, aplicar el schema revisado exclusivamente en esos proyectos autorizados y crear identidades/datos ficticios. No clonar el censo ni los usuarios de Production. Configurar las referencias públicas de Production permite que las guardas rechacen errores de destino; no facilita sus claves privadas a Preview. Los builds no ejecutan migraciones. Los envíos no productivos solo admiten ediciones de prueba con destinatarios explícitos de prueba. Mientras falte configuración, local/Preview fallan de forma cerrada antes de abrir la conexión de la app.

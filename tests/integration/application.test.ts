@@ -357,3 +357,19 @@ test("legacy census mutations serialize positions and reject foreign owners", as
   const [config] = await db.select().from(s.editionParticipants).where(eq(s.editionParticipants.participantId, updated.id));
   assert.equal(config.canGive, false);
 }));
+
+test("non-production deliveries require a test edition and explicit safe recipient", async () => fixture(async (data) => {
+  const { draw } = await generation(data);
+  const targets: string[] = [];
+  const transports = { email: async (input: { to: string }) => { targets.push(input.to); return { ok: true, providerMessageId: crypto.randomUUID() }; }, whatsapp: async () => { throw new Error("Unexpected send"); } };
+  const input = { admin: data.admin, editionId: data.edition.id, scope: "all" as const, mode: "pending" as const, idempotencyKey: crypto.randomUUID() };
+  const safe = process.env.NOTIFICATION_TEST_EMAIL;
+  delete process.env.NOTIFICATION_TEST_EMAIL;
+  try { await assert.rejects(sendAdminNotifications(input, transports), { code: "TEST_EMAIL_REQUIRED" }); }
+  finally { process.env.NOTIFICATION_TEST_EMAIL = safe; }
+  await sendAdminNotifications(input, transports);
+  assert.equal(targets.length, data.people.length);
+  assert.ok(targets.every((target) => target === safe));
+  await db.update(s.drawEditions).set({ kind: "final" }).where(eq(s.drawEditions.id, data.edition.id));
+  await assert.rejects(sendAdminNotifications({ ...input, drawId: draw.id, idempotencyKey: crypto.randomUUID() }, transports), { code: "NON_PRODUCTION_DELIVERY" });
+}));

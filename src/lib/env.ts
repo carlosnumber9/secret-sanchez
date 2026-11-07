@@ -1,4 +1,7 @@
+import { environmentPolicy, type AppEnvironment } from "./environment-policy";
 export type AppEnv = {
+  environment: AppEnvironment;
+  notificationTestEmail?: string;
   publicSupabaseUrl: string;
   publicSupabaseAnonKey: string;
   databaseUrl: string;
@@ -18,21 +21,26 @@ type EnvSource = Record<string, string | undefined>;
 
 function defaultSource(): EnvSource {
   return {
-    PUBLIC_SUPABASE_URL: import.meta.env?.PUBLIC_SUPABASE_URL ?? process.env.PUBLIC_SUPABASE_URL,
+    APP_ENV: process.env.APP_ENV ?? import.meta.env?.APP_ENV,
+    VERCEL_ENV: process.env.VERCEL_ENV ?? import.meta.env?.VERCEL_ENV,
+    PRODUCTION_SUPABASE_URL: process.env.PRODUCTION_SUPABASE_URL ?? import.meta.env?.PRODUCTION_SUPABASE_URL,
+    PRODUCTION_APP_URL: process.env.PRODUCTION_APP_URL ?? import.meta.env?.PRODUCTION_APP_URL,
+    NOTIFICATION_TEST_EMAIL: process.env.NOTIFICATION_TEST_EMAIL ?? import.meta.env?.NOTIFICATION_TEST_EMAIL,
+    PUBLIC_SUPABASE_URL: process.env.PUBLIC_SUPABASE_URL ?? import.meta.env?.PUBLIC_SUPABASE_URL,
     PUBLIC_SUPABASE_ANON_KEY:
-      import.meta.env?.PUBLIC_SUPABASE_ANON_KEY ?? process.env.PUBLIC_SUPABASE_ANON_KEY,
-    DATABASE_URL: import.meta.env?.DATABASE_URL ?? process.env.DATABASE_URL,
-    APP_URL: import.meta.env?.APP_URL ?? process.env.APP_URL,
+      process.env.PUBLIC_SUPABASE_ANON_KEY ?? import.meta.env?.PUBLIC_SUPABASE_ANON_KEY,
+    DATABASE_URL: process.env.DATABASE_URL ?? import.meta.env?.DATABASE_URL,
+    APP_URL: process.env.APP_URL ?? import.meta.env?.APP_URL,
     REVEAL_TOKEN_ENCRYPTION_KEY:
-      import.meta.env?.REVEAL_TOKEN_ENCRYPTION_KEY ?? process.env.REVEAL_TOKEN_ENCRYPTION_KEY,
-    RESEND_WEBHOOK_SECRET: import.meta.env?.RESEND_WEBHOOK_SECRET ?? process.env.RESEND_WEBHOOK_SECRET,
-    RESEND_API_KEY: import.meta.env?.RESEND_API_KEY ?? process.env.RESEND_API_KEY,
-    KAPSO_API_KEY: import.meta.env?.KAPSO_API_KEY ?? process.env.KAPSO_API_KEY,
-    KAPSO_PHONE_NUMBER_ID: import.meta.env?.KAPSO_PHONE_NUMBER_ID ?? process.env.KAPSO_PHONE_NUMBER_ID,
-    KAPSO_TEMPLATE_NAME: import.meta.env?.KAPSO_TEMPLATE_NAME ?? process.env.KAPSO_TEMPLATE_NAME,
-    KAPSO_TEMPLATE_LANGUAGE: import.meta.env?.KAPSO_TEMPLATE_LANGUAGE ?? process.env.KAPSO_TEMPLATE_LANGUAGE,
-    KAPSO_WEBHOOK_SECRET: import.meta.env?.KAPSO_WEBHOOK_SECRET ?? process.env.KAPSO_WEBHOOK_SECRET,
-    KAPSO_TEST_RECIPIENT_PHONE: import.meta.env?.KAPSO_TEST_RECIPIENT_PHONE ?? process.env.KAPSO_TEST_RECIPIENT_PHONE
+      process.env.REVEAL_TOKEN_ENCRYPTION_KEY ?? import.meta.env?.REVEAL_TOKEN_ENCRYPTION_KEY,
+    RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET ?? import.meta.env?.RESEND_WEBHOOK_SECRET,
+    RESEND_API_KEY: process.env.RESEND_API_KEY ?? import.meta.env?.RESEND_API_KEY,
+    KAPSO_API_KEY: process.env.KAPSO_API_KEY ?? import.meta.env?.KAPSO_API_KEY,
+    KAPSO_PHONE_NUMBER_ID: process.env.KAPSO_PHONE_NUMBER_ID ?? import.meta.env?.KAPSO_PHONE_NUMBER_ID,
+    KAPSO_TEMPLATE_NAME: process.env.KAPSO_TEMPLATE_NAME ?? import.meta.env?.KAPSO_TEMPLATE_NAME,
+    KAPSO_TEMPLATE_LANGUAGE: process.env.KAPSO_TEMPLATE_LANGUAGE ?? import.meta.env?.KAPSO_TEMPLATE_LANGUAGE,
+    KAPSO_WEBHOOK_SECRET: process.env.KAPSO_WEBHOOK_SECRET ?? import.meta.env?.KAPSO_WEBHOOK_SECRET,
+    KAPSO_TEST_RECIPIENT_PHONE: process.env.KAPSO_TEST_RECIPIENT_PHONE ?? import.meta.env?.KAPSO_TEST_RECIPIENT_PHONE
   };
 }
 
@@ -61,7 +69,11 @@ export function readEnv(source: EnvSource): AppEnv {
     throw new Error("REVEAL_TOKEN_ENCRYPTION_KEY must decode to exactly 32 bytes.");
   }
 
+  const testEmail = source.NOTIFICATION_TEST_EMAIL?.trim();
+  if (testEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(testEmail)) throw new Error("NOTIFICATION_TEST_EMAIL must be a valid email.");
   return {
+    environment: environmentPolicy(source),
+    notificationTestEmail: source.NOTIFICATION_TEST_EMAIL?.trim() || undefined,
     publicSupabaseUrl: required(source, "PUBLIC_SUPABASE_URL"),
     publicSupabaseAnonKey: required(source, "PUBLIC_SUPABASE_ANON_KEY"),
     databaseUrl: required(source, "DATABASE_URL"),

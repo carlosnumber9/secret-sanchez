@@ -16,6 +16,7 @@
 - Reservas idempotentes de notificación, lotes reanudables de cuatro mensajes, concurrencia dos y gestión de resultados inciertos.
 - Webhooks firmados de Kapso y Resend; transiciones atómicas y fallos terminales de email.
 - Cabeceras privadas, CSP de producción, comprobación de origen y límites HTTP.
+- Guardas de aislamiento por entorno y destinatarios seguros fuera de Production; provisionamiento externo pendiente.
 - Fondo WebGL diferido, alternativa SVG y consultas específicas por pantalla.
 - CI con Node 22, PostgreSQL 17 efímero, unitarias, integración, build, comprobación de schema y auditoría de dependencias.
 

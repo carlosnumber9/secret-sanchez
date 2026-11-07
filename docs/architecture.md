@@ -109,7 +109,7 @@ atravesar el límite del servidor.
 - SSR para mantener base de datos, claves y reglas sensibles en servidor.
 - React solo donde aporta interacción.
 - Tokens aleatorios con hash para búsqueda y ciphertext AES-256-GCM para entrega autorizada.
-- Supabase obligatorio; la topología histórica compartida debe separarse antes de permitir pruebas con escrituras reales.
+- Supabase obligatorio para la app; las guardas rechazan compartir Production desde desarrollo/Preview. El provisionamiento de proyectos independientes queda fuera del código.
 - shadcn/ui y Tailwind CSS 4 como base de componentes; CSS propio limitado a composición y superficies.
 - Textos de producto en español.
 - No incorporar dependencias si la plataforma o los patrones existentes resuelven el problema.

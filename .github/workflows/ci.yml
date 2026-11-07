@@ -24,6 +24,7 @@ jobs:
           --health-cmd pg_isready --health-interval 5s
           --health-timeout 5s --health-retries 10
     env:
+      APP_ENV: test
       PUBLIC_SUPABASE_URL: https://project.example.invalid
       PUBLIC_SUPABASE_ANON_KEY: isolated-ci-placeholder
       TEST_DATABASE_URL: postgresql://postgres:postgres@127.0.0.1:5432/secret_sanchez_test

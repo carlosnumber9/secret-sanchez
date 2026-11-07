@@ -40,11 +40,14 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
   if (input.drawId && input.drawId !== owned.draw.id) throw new AppError(409, "DRAW_CHANGED", "El reparto cambió. Recarga el panel antes de enviar.");
 
   if (!input.cursor) await recordAuditEvent({ event: "notifications.requested", actorAdminId: input.admin.id, editionId: input.editionId, drawId: owned.draw.id });
+  const env = getEnv();
+  if (env.environment !== "production" && owned.edition.kind !== "test") throw new AppError(403, "NON_PRODUCTION_DELIVERY", "Fuera de Production solo se permiten ediciones de prueba.");
+  if (env.environment !== "production" && !env.notificationTestEmail) throw new AppError(422, "TEST_EMAIL_REQUIRED", "Configura el destinatario seguro de pruebas.");
   const allRows = (await listAssignmentsForDraw(owned.draw.id)).sort((a, b) => a.assignment.id.localeCompare(b.assignment.id));
   const selectedIds = new Set(input.assignmentIds ?? []);
   const rows = input.scope === "selected" ? allRows.filter(({ assignment }) => selectedIds.has(assignment.id)) : allRows;
   if (input.scope === "selected" && !rows.length) throw new AppError(422, "EMPTY_NOTIFICATION_SELECTION", "Selecciona al menos una entrega.");
-  const { appUrl, kapsoTestRecipientPhone } = getEnv();
+  const { appUrl, kapsoTestRecipientPhone } = env;
   let sent = 0;
   let failed = 0;
   let skipped = 0;
@@ -63,7 +66,7 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
     if (!assignment.revealTokenCiphertext) { skipped++; return; }
     const name = giver?.name ?? giverIsland?.representativeName ?? "Familia";
     const recipient = deliveryChannel === "email"
-      ? (owned.edition.kind === "test" ? input.admin.email : giver?.email ?? giverIsland?.representativeEmail)
+      ? (owned.edition.kind === "test" ? (env.environment === "production" ? input.admin.email : env.notificationTestEmail!) : giver?.email ?? giverIsland?.representativeEmail)
       : (owned.edition.kind === "test" ? kapsoTestRecipientPhone : giver?.phone ?? giverIsland?.representativePhone);
     if (!recipient) { failed++; return; }
     const attemptKey = buildNotificationAttemptKey(input.idempotencyKey, assignment.id, deliveryChannel);
