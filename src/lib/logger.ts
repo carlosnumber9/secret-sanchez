@@ -3,26 +3,13 @@ import { randomUUID } from "node:crypto";
 type LogValue = string | number | boolean | null | undefined;
 type LogFields = Record<string, LogValue>;
 
-const forbiddenFieldPattern = /(email|phone|name|token|hash|url|cookie|secret|key|recipient|payload)/i;
-const errorTextLimit = 500;
-const connectionUrlPattern = /\b[a-z][a-z0-9+.-]*:\/\/\S+/gi;
-const emailPattern = /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi;
-const longCredentialPattern = /\b[A-Za-z0-9_-]{32,}\b/g;
+const forbiddenFieldPattern = /(email|phone|name|token|hash|url|cookie|secret|key|recipient|payload|password|credential|authorization)/i;
+const allowedErrorTypes = new Set(["Error", "TypeError", "RangeError", "SyntaxError", "AppError", "AuthCheckError", "PostgresError", "DrizzleQueryError", "AbortError", "TimeoutError"]);
 
 function sanitizeFields(fields: LogFields) {
   return Object.fromEntries(
     Object.entries(fields).filter(([key, value]) => value !== undefined && !forbiddenFieldPattern.test(key))
   );
-}
-
-function sanitizeErrorText(value: string) {
-  return value
-    .replace(connectionUrlPattern, "[redacted-url]")
-    .replace(emailPattern, "[redacted-email]")
-    .replace(longCredentialPattern, "[redacted-credential]")
-    .replace(/\s+/g, " ")
-    .trim()
-    .slice(0, errorTextLimit);
 }
 
 function getErrorCode(error: unknown) {
@@ -31,18 +18,12 @@ function getErrorCode(error: unknown) {
   if (typeof code !== "string" && typeof code !== "number") return undefined;
 
   const normalized = String(code);
-  return /^[A-Za-z0-9_.-]{1,80}$/.test(normalized) ? normalized : undefined;
-}
-
-function getErrorMessage(error: unknown) {
-  if (!error || typeof error !== "object" || !("message" in error)) return undefined;
-  return typeof error.message === "string" ? sanitizeErrorText(error.message) : undefined;
+  return /^(?:[0-9A-Z]{5}|E[A-Z_]{1,32}|[1-5][0-9]{2})$/.test(normalized) ? normalized : undefined;
 }
 
 function getErrorType(error: unknown) {
-  if (error instanceof Error) return error.name;
   if (!error || typeof error !== "object" || !("name" in error)) return "UnknownError";
-  return typeof error.name === "string" ? sanitizeErrorText(error.name).slice(0, 80) : "UnknownError";
+  return typeof error.name === "string" && allowedErrorTypes.has(error.name) ? error.name : "UnknownError";
 }
 
 function getErrorCause(error: unknown) {
@@ -57,13 +38,10 @@ function getErrorFields(error: unknown): LogFields {
   return {
     errorType: getErrorType(error),
     errorCode: getErrorCode(error),
-    errorMessage: getErrorMessage(error),
     causeType: cause ? getErrorType(cause) : undefined,
     causeCode: getErrorCode(cause),
-    causeMessage: getErrorMessage(cause),
     rootCauseType: rootCause ? getErrorType(rootCause) : undefined,
-    rootCauseCode: getErrorCode(rootCause),
-    rootCauseMessage: getErrorMessage(rootCause)
+    rootCauseCode: getErrorCode(rootCause)
   };
 }
 

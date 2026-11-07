@@ -126,3 +126,7 @@ Row Level Security. Antes de producción se debe:
 - Evitar enumeración de emails administrativos.
 - Revisar políticas RLS y grants.
 - Definir auditoría mínima de generación, regeneración y envío.
+
+## Diagnósticos de errores
+
+Los logs técnicos conservan evento, identificadores, tipos de error conocidos y códigos de sistema permitidos. No serializan `message`, SQL, parámetros ni mensajes de causas: una expresión de redacción no puede garantizar la eliminación de nombres, teléfonos o contraseñas arbitrarias.
