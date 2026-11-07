@@ -168,3 +168,5 @@ La navegación nunca elige implícitamente “el último sorteo”. `/inicio`, `
 Cada edición agrupa a la familia por unidades. El switch de la unidad prevalece sobre los controles individuales. Los bebés se marcan únicamente en `/familia` y aparecen como etiqueta no editable: reciben, no regalan y no muestran canales. Cada unidad selecciona un representante adulto. La pantalla separa adultos, bebés, regaladores, receptores y unidades preparadas. Email y WhatsApp solo pueden seleccionarse cuando la persona tiene el dato correspondiente en la familia; una persona puede permanecer en el censo sin ningún contacto.
 
 En envíos, Email y WhatsApp muestran estados independientes. Juan puede seleccionar asignaciones para reenviar y copiar cualquier enlace mediante un icono; la copia es un respaldo y no altera los estados.
+
+La revelación distingue tokens rechazados de fallos temporales. Conserva el token únicamente en memoria después de retirarlo del fragmento y ofrece reintento tanto al preparar como al abrir. Cada petición tiene un timeout de 12 segundos y se cancela al desmontar; no guarda el token en almacenamiento del navegador.
