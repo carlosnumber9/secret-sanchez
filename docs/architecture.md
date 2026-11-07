@@ -20,7 +20,7 @@ flowchart LR
 
 ## Stack
 
-- **Astro 5:** routing, SSR, layouts, endpoints y composición de páginas.
+- **Astro 7:** routing, SSR, layouts, endpoints y composición de páginas.
 - **React:** islas interactivas en el navegador.
 - **TypeScript:** contratos y tipos de aplicación.
 - **UI:** shadcn/ui con preset `base-rhea`, Base UI y Tailwind CSS 4 mediante el plugin de Vite.

@@ -12,7 +12,7 @@ migraciones, sorteos y envíos locales tienen efectos reales.
 
 ## Puesta en marcha
 
-Necesitas Node.js 22, un proyecto de Supabase y, para disponer de todas las integraciones, cuentas de Resend y
+Necesitas Node.js 22.23.4 o un parche posterior de la rama 22, un proyecto de Supabase y, para disponer de todas las integraciones, cuentas de Resend y
 Kapso. Si utilizas nvm, el repositorio selecciona la versión compatible mediante `.nvmrc`.
 
 ```bash

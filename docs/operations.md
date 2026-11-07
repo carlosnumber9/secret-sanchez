@@ -18,7 +18,7 @@ cualquier escritura local o de Preview es real. Las acciones de sorteo y envío 
 
 ## Configuración de Vercel
 
-1. Mantener Astro como preset, Node.js 22.x, `npm install` y `npm run build`.
+1. Mantener Astro como preset, Node.js 22.23.4 o un parche posterior de la rama 22, `npm install` y `npm run build`.
 2. Configurar las mismas variables en Production y Preview.
 3. Definir `APP_URL` como `https://secret-sanchez.vercel.app`.
 4. Mantener habilitado Email/Password y deshabilitar `Allow new users to sign up` en Supabase Auth.

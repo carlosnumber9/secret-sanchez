@@ -5,7 +5,7 @@
 Local usa el mismo Supabase/Postgres que Vercel. No existe base aislada ni fallback de datos. Cualquier mutación,
 sorteo, migración o envío realizado desde local tiene efectos reales.
 
-El runtime requerido es Node.js 22.x, alineado entre `.nvmrc`, `package.json` y Vercel. Node.js 20 no es compatible
+El runtime requerido es Node.js 22.23.4 o un parche posterior de la rama 22, alineado entre `.nvmrc`, `package.json` y Vercel. Node.js 20 no es compatible
 con el transporte WebSocket nativo que usa actualmente Supabase.
 
 ```bash
