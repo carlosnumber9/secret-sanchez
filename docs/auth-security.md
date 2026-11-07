@@ -134,3 +134,9 @@ Los logs técnicos conservan evento, identificadores, tipos de error conocidos y
 ## Acceso directo a tablas
 
 La migración `0008_restricted_public_access.sql` habilita RLS sin políticas públicas y revoca privilegios de `PUBLIC`, `anon` y `authenticated` en las tablas de aplicación. El servidor necesita una conexión propietaria o con `BYPASSRLS`; Supabase Auth no necesita acceso a estas tablas. La migración debe aplicarse después de verificar ese rol y disponer de backup. La existencia del SQL no acredita su aplicación en Supabase.
+
+## Límites HTTP y CSP
+
+Las mutaciones comprueban `Origin`, tamaño real del cuerpo y límites por minuto: login 10, logout 30, revelación 60 y administración 120 por dirección de cliente. La dirección solo se transforma en HMAC, nunca se persiste en claro. La migración opcional `0010_request_rate_limits.sql` activa contadores compartidos entre funciones; sin aplicarla existe un límite de memoria por instancia, que no garantiza un límite global en serverless. La app registra ese modo degradado sin bloquear el esquema anterior. Los registros caducados se limpian en lotes.
+
+Las respuestas sensibles usan `private, no-store` también para CDN, `no-referrer`, `nosniff`, bloqueo de frames y `noindex`. Astro genera hashes CSP para scripts y estilos de producción; los atributos de estilo necesarios para colores y drag and drop se permiten mediante `style-src-attr`, sin habilitar scripts inline arbitrarios. CSP se valida con build, no con el servidor de desarrollo.

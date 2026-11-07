@@ -290,6 +290,13 @@ export const notificationLogs = pgTable("notification_logs", {
 }, (table) => [
     index("notification_logs_assignment_history_idx").on(table.assignmentId, table.channel, table.createdAt.desc().nullsFirst(), table.id.desc().nullsFirst()),uniqueIndex("notification_logs_provider_message_idx").on(table.providerMessageId).where(sql`${table.providerMessageId} is not null`)]).enableRLS();
 
+export const requestRateLimits = pgTable("request_rate_limits", {
+  keyHash: varchar("key_hash", { length: 64 }).primaryKey(),
+  windowStartedAt: timestamp("window_started_at", { withTimezone: true }).notNull(),
+  attempts: integer("attempts").default(1).notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull()
+}, (table) => [index("request_rate_limits_expiry_idx").on(table.expiresAt), check("request_rate_limits_attempts_check", sql`${table.attempts} > 0`)]).enableRLS();
+
 export const familiesRelations = relations(families, ({ one, many }) => ({
   owner: one(adminUsers, { fields: [families.ownerAdminId], references: [adminUsers.id] }),
   islands: many(familyIslands),

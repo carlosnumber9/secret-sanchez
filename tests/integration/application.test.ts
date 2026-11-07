@@ -266,3 +266,15 @@ test("logout clears SSR session cookies and the next request requires authentica
   const authorization = await requireAdmin({ cookies: cookies as never, request: new Request("https://app.example.invalid/") });
   assert.equal(authorization.status, 401);
 });
+
+test("concurrent distributed rate limits share one atomic request budget", async () => {
+  const { checkRateLimit, rateLimitKey } = await import("../../src/services/security/rateLimit");
+  const subject = crypto.randomUUID();
+  try {
+    const results = await Promise.all(Array.from({ length: 15 }, () => checkRateLimit("login", subject)));
+    assert.equal(results.filter((r) => r.allowed).length, 10);
+    const [row] = await db.select().from(s.requestRateLimits).where(eq(s.requestRateLimits.keyHash, rateLimitKey("login", subject)));
+    assert.equal(row.attempts, 15);
+    assert.ok(results.every((r) => r.retryAfter > 0 && r.retryAfter <= 60));
+  } finally { await db.delete(s.requestRateLimits).where(eq(s.requestRateLimits.keyHash, rateLimitKey("login", subject))); }
+});
