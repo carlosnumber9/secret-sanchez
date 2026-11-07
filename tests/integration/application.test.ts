@@ -278,3 +278,19 @@ test("concurrent distributed rate limits share one atomic request budget", async
     assert.ok(results.every((r) => r.retryAfter > 0 && r.retryAfter <= 60));
   } finally { await db.delete(s.requestRateLimits).where(eq(s.requestRateLimits.keyHash, rateLimitKey("login", subject))); }
 });
+
+test("audit events survive history deletion and exclude copied link contents", async () => fixture(async (data) => {
+  const { draw } = await generation(data);
+  const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
+  const { prepareManualDelivery } = await import("../../src/actions/notifications");
+  const { getDrawExposure } = await import("../../src/db/queries/notifications");
+  await assert.rejects(prepareManualDelivery({ adminId: crypto.randomUUID(), assignmentId: assignment.id }), { code: "ASSIGNMENT_NOT_FOUND" });
+  const result = await prepareManualDelivery({ adminId: data.admin.id, assignmentId: assignment.id });
+  assert.equal((await getDrawExposure(draw.id)).manual, 1);
+  await revokeEditionDraw({ adminId: data.admin.id, editionId: data.edition.id, drawId: draw.id, confirmation: "ANULAR REPARTO" });
+  await deleteOwnedParticipant(data.admin.id, data.people[0].id, "ELIMINAR PERSONA");
+  const events = await db.select().from(s.auditEvents).where(eq(s.auditEvents.drawId, draw.id));
+  assert.deepEqual(events.map((e) => e.event).sort(), ["assignment.link_copied", "draw.generated", "draw.revoked"]);
+  assert.equal(JSON.stringify(events).includes(result.revealUrl.split("#")[1]), false);
+  await db.delete(s.auditEvents).where(eq(s.auditEvents.drawId, draw.id));
+}));

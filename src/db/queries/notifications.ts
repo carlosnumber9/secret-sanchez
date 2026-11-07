@@ -1,9 +1,10 @@
+import { hasOptionalTable } from "@/db/capabilities";
 import { previousStatusesFor, type WhatsappDeliveryStatus } from "@/services/notifications/whatsappStatus";
 import { canResumePending, notificationLeaseMs, pendingRateLimit } from "@/services/notifications/retry";
 import { isEligibleNotification } from "@/services/notifications/eligibility";
 import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
-import { assignments, notificationLogs } from "@/db/schema";
+import { auditEvents, assignments, notificationLogs } from "@/db/schema";
 
 export async function createNotificationLog(input: typeof notificationLogs.$inferInsert) {
   const [log] = await db.insert(notificationLogs).values(input).returning();
@@ -107,5 +108,8 @@ export async function getDrawExposure(drawId: string) {
     opened: sql<number>`(select count(*)::int from assignments a where a.draw_id = ${drawId} and a.opened_at is not null)`
   }).from(notificationLogs).innerJoin(assignments, eq(notificationLogs.assignmentId, assignments.id))
     .where(eq(assignments.drawId, drawId));
-  return counts;
+  if (!await hasOptionalTable("audit_events")) return { ...counts, manual: null };
+  const [audit] = await db.select({ count: sql<number>`count(*)::int` }).from(auditEvents)
+    .where(and(eq(auditEvents.drawId, drawId), eq(auditEvents.event, "assignment.link_copied")));
+  return { ...counts, manual: counts.manual + audit.count };
 }

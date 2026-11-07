@@ -1,7 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
-export default function RevokeDraw({ editionId, drawId, exposure }: { editionId: string; drawId: string; exposure: { notifications: number; manual: number; opened: number } }) {
+export default function RevokeDraw({ editionId, drawId, exposure }: { editionId: string; drawId: string; exposure: { notifications: number; manual: number | null; opened: number } }) {
   const [confirmation, setConfirmation] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -19,7 +19,7 @@ export default function RevokeDraw({ editionId, drawId, exposure }: { editionId:
     }
   }
   return <section className="stack">
-    <p><strong>Atención:</strong> se invalidarán todos los enlaces. Ya se han registrado {exposure.notifications} emails, {exposure.manual} copias manuales y {exposure.opened} aperturas; lo que alguien haya visto no puede deshacerse.</p>
+    <p><strong>Atención:</strong> se invalidarán todos los enlaces. Ya se han registrado {exposure.notifications} intentos de envío, {exposure.manual ?? "un número desconocido de"} copias manuales y {exposure.opened} aperturas; lo que alguien haya visto no puede deshacerse.</p>
     <label className="form-field">Motivo opcional<input value={reason} onChange={(event) => setReason(event.target.value)} /></label>
     <label className="form-field">Escribe <strong>ANULAR REPARTO</strong><input value={confirmation} onChange={(event) => setConfirmation(event.target.value)} /></label>
     <Button variant="destructive" disabled={busy || confirmation !== "ANULAR REPARTO"} onClick={revoke}>{busy ? "Anulando..." : "Revertir reparto"}</Button>

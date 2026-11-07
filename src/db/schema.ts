@@ -325,3 +325,14 @@ export const assignmentsRelations = relations(assignments, ({ one, many }) => ({
   receiver: one(drawParticipants, { fields: [assignments.receiverId], references: [drawParticipants.id], relationName: "receiver" }),
   notifications: many(notificationLogs)
 }));
+
+// Audit identifiers deliberately survive deletion of application rows.
+export const auditEvents = pgTable("audit_events", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  event: varchar("event", { length: 80 }).notNull(),
+  actorAdminId: uuid("actor_admin_id").notNull(),
+  editionId: uuid("edition_id").notNull(),
+  drawId: uuid("draw_id").notNull(),
+  assignmentId: uuid("assignment_id"),
+  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
+}, (table) => [index("audit_events_draw_event_idx").on(table.drawId, table.event, table.createdAt)]).enableRLS();

@@ -1,3 +1,4 @@
+import { recordAuditEvent } from "@/services/audit/recordEvent";
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawEditions, draws, families } from "@/db/schema";
@@ -38,6 +39,7 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
   if (!owned) throw new AppError(404, "DRAW_NOT_FOUND", "No hay un reparto vigente para esta edición.");
   if (input.drawId && input.drawId !== owned.draw.id) throw new AppError(409, "DRAW_CHANGED", "El reparto cambió. Recarga el panel antes de enviar.");
 
+  if (!input.cursor) await recordAuditEvent({ event: "notifications.requested", actorAdminId: input.admin.id, editionId: input.editionId, drawId: owned.draw.id });
   const allRows = (await listAssignmentsForDraw(owned.draw.id)).sort((a, b) => a.assignment.id.localeCompare(b.assignment.id));
   const selectedIds = new Set(input.assignmentIds ?? []);
   const rows = input.scope === "selected" ? allRows.filter(({ assignment }) => selectedIds.has(assignment.id)) : allRows;
@@ -125,6 +127,7 @@ export async function prepareManualDelivery(input: { adminId: string; assignment
   if (!row) throw new AppError(404, "ASSIGNMENT_NOT_FOUND", "No se ha encontrado la entrega.");
   if (row.draw.status === "revoked") throw new AppError(409, "DRAW_REVOKED", "Este reparto está anulado.");
   if (!row.assignment.revealTokenCiphertext) throw new AppError(409, "LEGACY_TOKEN", "Este enlace antiguo no se puede recuperar.");
+  await recordAuditEvent({ event: "assignment.link_copied", actorAdminId: input.adminId, editionId: row.edition.id, drawId: row.draw.id, assignmentId: row.assignment.id });
   const token = decryptRevealToken(row.assignment.revealTokenCiphertext);
   logger.info("assignment_link_copied", {
     adminUserId: input.adminId,

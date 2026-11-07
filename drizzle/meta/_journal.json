@@ -78,6 +78,13 @@
       "when": 1794046572555,
       "tag": "0010_request_rate_limits",
       "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1794046829748,
+      "tag": "0011_audit_events",
+      "breakpoints": true
     }
   ]
 }

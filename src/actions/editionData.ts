@@ -1,3 +1,4 @@
+import { recordAuditEvent } from "@/services/audit/recordEvent";
 import { lockOwnedEdition, withEditableEdition } from "@/db/locks";
 import { and, desc, eq, max, ne } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -172,7 +173,7 @@ export async function getEditionAppState(adminId: string, editionId: string, vie
     legacyToken: boolean;
     opened: boolean;
   }> = [];
-  let exposure = { notifications: 0, manual: 0, opened: 0 };
+  let exposure: { notifications: number; manual: number | null; opened: number } = { notifications: 0, manual: null, opened: 0 };
   if (currentDraw && view === "configuration") exposure = await getDrawExposure(currentDraw.id);
   if (currentDraw && view === "deliveries") {
     const [assignmentRows, logRows] = await Promise.all([listDeliveryAssignmentsForDraw(currentDraw.id), listCurrentNotificationLogsForDraw(currentDraw.id)]);
@@ -358,6 +359,7 @@ export async function generateEditionDraw(input: { editionId: string; generatedB
     } else {
       await tx.insert(drawRules).values({ editionId: input.editionId, type: "ATTEMPT_COUNTER", config: { lastUsed: attemptNumber } });
     }
+    await recordAuditEvent({ event: "draw.generated", actorAdminId: input.generatedByAdminId, editionId: input.editionId, drawId: draw.id }, tx);
     logger.info("draw.generation_succeeded", { editionId: input.editionId, drawId: draw.id, assignmentCount: personalValues.length + babyValues.length, babyAssignmentCount: babyValues.length, durationMs: Math.round(performance.now() - startedAt) });
     return { draw, assignmentCount: personalValues.length + babyValues.length, adultAssignmentCount: personalValues.length, babyAssignmentCount: babyValues.length };
   });
@@ -387,6 +389,7 @@ export async function revokeEditionDraw(input: { adminId: string; editionId: str
       }).where(eq(editionParticipants.id, config.id));
     }
     await tx.update(drawEditions).set({ status: "ready", updatedAt: new Date() }).where(eq(drawEditions.id, input.editionId));
+    await recordAuditEvent({ event: "draw.revoked", actorAdminId: input.adminId, editionId: input.editionId, drawId: draw.id }, tx);
     return draw;
   });
 }
