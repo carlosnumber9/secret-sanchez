@@ -26,6 +26,8 @@ El webhook `/api/webhooks/kapso` verifica `X-Webhook-Signature` con HMAC SHA-256
 
 Los fallos de un segundo canal siguen visibles aunque otro haya cubierto la asignación.
 
+El envío comprueba la vigencia antes de cada mensaje y la transición final a `sent` es condicional. Una revocación concurrente nunca se deshace al terminar un lote. Un mensaje que el proveedor ya esté procesando puede llegar después de revocar, pero su enlace permanece invalidado.
+
 ## Copia de respaldo
 
 El icono de copia obtiene el enlace bajo autorización para que Juan lo comparta si el envío falla o se lo solicitan. No es un canal, no crea `notification_logs` y no cambia el estado de entrega.

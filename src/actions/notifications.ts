@@ -55,6 +55,9 @@ export async function sendAdminNotifications(input: SendInput) {
     const revealUrl = buildRevealUrl(appUrl, decryptRevealToken(assignment.revealTokenCiphertext));
 
     for (const deliveryChannel of channels) {
+      const [current] = await db.select({ id: draws.id }).from(draws)
+        .where(and(eq(draws.id, owned.draw.id), ne(draws.status, "revoked"))).limit(1);
+      if (!current) throw new AppError(409, "DRAW_REVOKED", "El reparto fue anulado. Se han detenido los envíos pendientes.");
       const latest = logs.find((log) => log.assignmentId === assignment.id && log.channel === deliveryChannel);
       if (!isEligibleNotification(latest?.status ?? null, input.mode)) { skipped += 1; continue; }
       const attemptKey = buildNotificationAttemptKey(input.idempotencyKey, assignment.id, deliveryChannel);
@@ -85,13 +88,19 @@ export async function sendAdminNotifications(input: SendInput) {
 
   const currentLogs = (await listNotificationLogsForDraw(owned.draw.id)).map(({ log }) => log);
   const allCovered = allRows.every(({ assignment }) => currentLogs.some((log) => log.assignmentId === assignment.id && log.channel !== "manual" && successfulStatuses.has(log.status)));
+  let finalized = false;
   if (allCovered) {
-    await db.transaction(async (tx) => {
-      await tx.update(draws).set({ status: "sent" }).where(eq(draws.id, owned.draw.id));
+    finalized = await db.transaction(async (tx) => {
+      await tx.select({ id: drawEditions.id }).from(drawEditions)
+        .where(eq(drawEditions.id, input.editionId)).for("update");
+      const [current] = await tx.update(draws).set({ status: "sent" })
+        .where(and(eq(draws.id, owned.draw.id), ne(draws.status, "revoked"))).returning({ id: draws.id });
+      if (!current) return false;
       await tx.update(drawEditions).set({ status: "sent", updatedAt: new Date() }).where(eq(drawEditions.id, input.editionId));
+      return true;
     });
   }
-  return { sent, failed, skipped, redirected: owned.edition.kind === "test", allCovered };
+  return { sent, failed, skipped, redirected: owned.edition.kind === "test", allCovered: finalized };
 }
 
 export async function prepareManualDelivery(input: { adminId: string; assignmentId: string }) {
