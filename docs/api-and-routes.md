@@ -15,7 +15,7 @@
 
 ## APIs administrativas
 
-- Familia: `POST /api/admin/groups`, `POST /api/admin/islands`, `PATCH|DELETE /api/admin/islands/[id]`, `POST /api/admin/participants`, `PATCH|DELETE /api/admin/participants/[id]` y `PATCH /api/admin/families/[id]/layout`.
+- Familia: `POST /api/admin/groups`, `POST /api/admin/islands`, `PATCH|DELETE /api/admin/islands/[id]`, `POST /api/admin/participants`, `PATCH|DELETE /api/admin/participants/[id]`, `PATCH /api/admin/families/[id]/layout` y `PATCH /api/admin/families/[id]/name`.
 - Impacto destructivo: `GET /api/admin/participants/[id]/deletion-impact` y `GET /api/admin/islands/[id]/deletion-impact`.
 - Ediciones: `GET|POST /api/admin/editions`, `PATCH /api/admin/editions/[id]`.
 - Reglas: `PUT /api/admin/editions/[id]/rules`, con `noSameIsland` y hasta 500 pares dirigidos `exclusions`.
@@ -26,6 +26,8 @@
 Todas requieren sesión y autorización mediante la familia propietaria. Las respuestas mantienen `{ ok, data?, message?, code?, errorId? }`.
 
 `PATCH /api/admin/families/[id]/layout` recibe el borrador completo de unidades y personas, incluidas altas, campos editados, unidad, posición, condición de bebé e identificadores de borrados ya confirmados. Valida que el censo no haya cambiado y aplica la familia completa en una sola transacción. El orden de las unidades no forma parte del contrato.
+
+`PATCH /api/admin/families/[id]/name` recibe `{ revision, kind: "island" | "participant", id, name }`. Guarda únicamente el nombre de una entidad existente de esa familia y devuelve `{ name, revision }`. Comprueba propiedad y revisión bajo el mismo bloqueo de familia que el guardado completo; rechaza censos obsoletos con `409 FAMILY_DRAFT_STALE`. El cliente actualiza su referencia guardada sin perder ni confirmar otros cambios del borrador.
 
 ## APIs públicas
 

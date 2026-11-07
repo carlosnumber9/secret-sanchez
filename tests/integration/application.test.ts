@@ -6,6 +6,7 @@ import { db } from "../../src/db/client";
 import * as s from "../../src/db/schema";
 import { createOwnedEdition, generateEditionDraw, updateOwnedEdition, revokeEditionDraw } from "../../src/actions/editionData";
 import { getAdminAppState, saveOwnedFamilyDraft, deleteOwnedParticipant } from "../../src/actions/adminData";
+import { renameOwnedFamilyMember } from "../../src/actions/familyNames";
 import { sendAdminNotifications } from "../../src/actions/notifications";
 import { claimNotificationAttempt, applyWhatsappEvent, updateNotificationLog } from "../../src/db/queries/notifications";
 import { getRevealPreparation } from "../../src/db/queries/assignments";
@@ -95,6 +96,44 @@ test("stale drafts are rejected and invalid drafts roll back all changes", async
   await assert.rejects(saveOwnedFamilyDraft(data.admin.id, data.family.id, invalid), { code: "ISLAND_MISMATCH" });
   const [island] = await db.select().from(s.familyIslands).where(eq(s.familyIslands.id, data.islands[0].id));
   assert.notEqual(island.name, "Must roll back");
+}));
+
+test("individual renames preserve other fields and serialize with family drafts", async () => fixture(async (data) => {
+  const state = await getAdminAppState(data.admin.id);
+  const person = state.participants[0];
+  const renamed = await renameOwnedFamilyMember(data.admin.id, data.family.id, {
+    revision: state.revision!, kind: "participant", id: person.id, name: "Renamed person"
+  });
+  const afterPerson = await getAdminAppState(data.admin.id);
+  assert.equal(renamed.revision, afterPerson.revision);
+  const saved = afterPerson.participants.find(({ id }) => id === person.id)!;
+  assert.deepEqual({ ...saved, name: person.name, updatedAt: person.updatedAt }, person);
+  assert.equal(saved.name, "Renamed person");
+  await assert.rejects(renameOwnedFamilyMember(data.admin.id, data.family.id, {
+    revision: state.revision!, kind: "participant", id: person.id, name: "Stale name"
+  }), { code: "FAMILY_DRAFT_STALE" });
+  await assert.rejects(renameOwnedFamilyMember(crypto.randomUUID(), data.family.id, {
+    revision: renamed.revision, kind: "participant", id: person.id, name: "Foreign name"
+  }), { code: "FAMILY_NOT_FOUND" });
+  await assert.rejects(renameOwnedFamilyMember(data.admin.id, data.family.id, {
+    revision: renamed.revision, kind: "island", id: crypto.randomUUID(), name: "Missing unit"
+  }), { code: "ISLAND_NOT_FOUND" });
+  const renamedIsland = await renameOwnedFamilyMember(data.admin.id, data.family.id, {
+    revision: renamed.revision, kind: "island", id: data.islands[0].id, name: "Renamed unit"
+  });
+  const current = await getAdminAppState(data.admin.id);
+  assert.equal(current.revision, renamedIsland.revision);
+  assert.equal(current.islands.find(({ id }) => id === data.islands[0].id)!.name, "Renamed unit");
+  const draft = {
+    revision: renamedIsland.revision, confirmedParticipantDeletionIds: [], confirmedIslandDeletionIds: [],
+    islands: current.islands.map((i) => ({ clientId: i.id, id: i.id, name: i.name, color: i.color ?? "#d6a84f" })),
+    participants: current.participants.map((p) => ({ clientId: p.id, id: p.id, familyIslandClientId: p.familyIslandId, name: p.name, email: p.email ?? "", phone: p.phone ?? "", preferredChannel: p.preferredChannel === "manual" ? null : p.preferredChannel, isBaby: p.isBaby, sortOrder: p.sortOrder }))
+  };
+  const savedDraft = await saveOwnedFamilyDraft(data.admin.id, data.family.id, draft);
+  const finalState = await getAdminAppState(data.admin.id);
+  assert.equal(savedDraft.revision, finalState.revision);
+  assert.equal(finalState.participants.find(({ id }) => id === person.id)!.name, "Renamed person");
+  assert.equal(finalState.islands.find(({ id }) => id === data.islands[0].id)!.name, "Renamed unit");
 }));
 
 test("public reveal preserves secrecy before opening and rejects revoked links", async () => fixture(async (data) => {

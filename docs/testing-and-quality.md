@@ -34,12 +34,14 @@ Prioridad máxima para código de dominio:
 - Selección de canales de notificación.
 - Asignación de bebés a unidades distintas y no repetidas.
 - Progresión monotónica de estados de WhatsApp.
+- Contrato de renombrado individual: validación de entradas, nombres normalizados y propagación de errores de propiedad o revisión.
 
 Las pruebas del sorteo deben repetir generaciones y validar invariantes, no afirmar una asignación aleatoria exacta.
 
 ### Integración
 
 - Queries contra una base aislada.
+- Renombrado individual bajo bloqueo de familia, revisión obsoleta, propiedad y compatibilidad con el guardado del borrador.
 - Creación atómica de sorteo y asignaciones.
 - Restricciones e índices.
 - Login por contraseña y cookies de Supabase con dobles controlados.

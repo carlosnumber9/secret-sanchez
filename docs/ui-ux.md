@@ -49,7 +49,8 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 - Abrir las altas de unidad y participante desde dos botones de icono y formularios en el mismo componente de diálogo reutilizado por el alta de ediciones.
 - Exigir una unidad existente y seleccionada para dar de alta una persona; el formulario permite omitir el contacto y solo se habilita cuando el nombre y cualquier dato introducido son válidos.
 - Editar email y teléfono directamente en las filas de `/familia`, como parte del borrador pendiente de `Guardar familia`.
-- Mantener altas, ediciones, borrados y movimientos como borrador local y persistirlos juntos en una sola transacción al pulsar `Guardar familia`.
+- Editar los nombres de personas y unidades al pulsarlos: caja con el nombre actual y tick verde a la derecha. Clic fuera o Escape cancela sin aviso; el tick o Intro guarda solo ese nombre en base de datos y vuelve a texto al completar. Durante la petición muestra un spinner y bloquea los controles y tiradores de la familia. Un error conserva la edición y permite reintentar. No hay botones de lápiz separados.
+- Mantener altas, contactos, canales, condición de bebé, borrados y movimientos como borrador local y persistirlos juntos en una sola transacción al pulsar `Guardar familia`. Los nombres de altas todavía no guardadas también permanecen en ese borrador. Guardar un nombre existente conserva el resto de cambios pendientes.
 - Advertir con el diálogo nativo del navegador antes de abandonar la ruta cuando el borrador tiene cambios sin guardar.
 - Reordenar mediante tiradores tanto unidades completas como personas, con soporte de ratón, touch y teclado; las personas pueden cambiar de unidad y soltarse también en unidades vacías.
 - Mostrar durante el arrastre un preview específico para la unidad o persona, indicar el destino válido y restaurar el borrador anterior si la operación se cancela o termina fuera de un destino.

@@ -31,7 +31,6 @@ import {
   CircleAlert,
   GripVertical,
   HousePlus,
-  Pencil,
   Save,
   Trash2,
   UserPlus
@@ -44,6 +43,7 @@ import ParticipantForm, {
   participantPhoneIsValid,
   type ParticipantDraft
 } from "../ParticipantForm/ParticipantForm";
+import InlineName from "./InlineName";
 import "./FamilyEditor.css";
 
 type PreferredChannel = "email" | "whatsapp" | "both" | null;
@@ -188,6 +188,7 @@ function SortableIsland({ island, disabled, children }: {
     ref={setNodeRef}
     className={`family-editor__island${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
     style={style}
+    aria-busy={disabled}
   >
     {children({ attributes, listeners, setActivatorNodeRef })}
   </article>;
@@ -240,6 +241,7 @@ function SortableParticipant({ island, person, disabled, children }: {
     className={`${person.isBaby ? "is-baby" : ""}${babyTransition ? ` is-baby-changing-${babyTransition}` : ""}${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
     style={style}
     data-participant-row
+    aria-busy={disabled}
   >
     {children({ attributes, listeners, setActivatorNodeRef })}
   </TableRow>;
@@ -325,7 +327,8 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   const preparedInitialIslands = useMemo(() => prepareInitialIslands(initialIslands), [initialIslands]);
   const [islands, setIslands] = useState(preparedInitialIslands);
   const [revision, setRevision] = useState(initialRevision);
-  const [savedSnapshot, setSavedSnapshot] = useState(() => familySnapshot(preparedInitialIslands));
+  const [savedIslands, setSavedIslands] = useState(preparedInitialIslands);
+  const savedSnapshot = useMemo(() => familySnapshot(savedIslands), [savedIslands]);
   const [selectedIslandId, setSelectedIslandId] = useState(preparedInitialIslands[0]?.clientId ?? "");
   const [newIslandName, setNewIslandName] = useState("");
   const [participant, setParticipant] = useState(emptyParticipant);
@@ -479,11 +482,33 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     })));
   }
 
-  function editPerson(person: Participant) {
-    const name = window.prompt("Nombre", person.name);
-    if (name === null || !name.trim()) return;
-    replaceParticipant({ ...person, name: name.trim() });
-    setMessage("Nombre actualizado en el borrador.");
+  async function saveName(kind: "island" | "participant", target: Island | Participant, name: string) {
+    if (busy) throw new Error("Espera a que termine la operación actual.");
+    const rename = (current: Island[]) => current.map((island) => ({
+      ...island,
+      name: kind === "island" && island.clientId === target.clientId ? name : island.name,
+      participants: kind === "participant"
+        ? island.participants.map((person) => person.clientId === target.clientId ? { ...person, name } : person)
+        : island.participants
+    }));
+    // New entries remain part of the explicitly saved family draft.
+    if (!target.id) {
+      setIslands(rename);
+      setMessage("Nombre actualizado en el borrador. Pulsa Guardar familia para confirmarlo.");
+      return;
+    }
+    setBusy(true);
+    try {
+      const updated = await api<{ name: string; revision: string }>(`/api/admin/families/${familyId}/name`, "PATCH", {
+        revision, kind, id: target.id, name
+      });
+      setIslands(rename);
+      setSavedIslands(rename);
+      setRevision(updated.revision);
+      setMessage("Nombre guardado.");
+    } finally {
+      setBusy(false);
+    }
   }
 
   function changeChannel(person: Participant, preferredChannel: PreferredChannel) {
@@ -513,13 +538,6 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     setMessage(!person.isBaby
       ? `${person.name} se marcará como bebé al guardar la familia.`
       : `${person.name} se marcará como adulto al guardar la familia.`);
-  }
-
-  function renameIsland(island: Island) {
-    const name = window.prompt("Nombre de la unidad", island.name);
-    if (!name?.trim()) return;
-    setIslands((current) => current.map((item) => item.clientId === island.clientId ? { ...item, name: name.trim() } : item));
-    setMessage("Unidad actualizada en el borrador.");
   }
 
   async function deletePerson(person: Participant) {
@@ -759,7 +777,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
         participants: island.participants.map((person) => ({ ...person, id: person.id }))
       }));
       setIslands(next);
-      setSavedSnapshot(familySnapshot(next));
+      setSavedIslands(next);
       setRevision(updated.revision);
       setConfirmedParticipantDeletionIds([]);
       setConfirmedIslandDeletionIds([]);
@@ -809,11 +827,10 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                 ><GripVertical /></button>
                 <span className="family-editor__island-color" style={{ background: island.color }} />
                 <div>
-                  <h2>{island.name}</h2>
+                  <InlineName heading name={island.name} label="Nombre de la unidad" disabled={busy} onSave={(name) => saveName("island", island, name)} />
                   <p>{island.participants.length} {island.participants.length === 1 ? "persona" : "personas"}</p>
                 </div>
                 <div className="family-editor__island-actions">
-                  <Button variant="ghost" size="icon" disabled={busy} onClick={() => renameIsland(island)} aria-label={`Renombrar ${island.name}`}><Pencil /></Button>
                   <Button variant="ghost" size="icon" disabled={busy} onClick={() => deleteIsland(island)} aria-label={`Eliminar ${island.name}`}><Trash2 /></Button>
                 </div>
               </header>
@@ -852,7 +869,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                             aria-label={`Mover a ${person.name}`}
                           ><GripVertical /></button>
                         </TableCell>
-                        <TableCell><strong>{person.name}</strong>{person.isBaby && <small>Bebé · recibe, no regala</small>}</TableCell>
+                        <TableCell className="family-editor__name-cell"><InlineName name={person.name} label="Nombre del familiar" disabled={busy} onSave={(name) => saveName("participant", person, name)} />{person.isBaby && <small>Bebé · recibe, no regala</small>}</TableCell>
                         <TableCell>{person.isBaby
                           ? <span className="family-editor__muted">Sin contacto propio</span>
                           : <div className="family-editor__contact-fields">
@@ -892,7 +909,6 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                           <BabyToggle person={person} disabled={busy} onConfirm={() => toggleBaby(person)} />
                         </TableCell>
                         <TableCell className="family-editor__actions-cell"><div className="family-editor__row-actions">
-                          <Button variant="ghost" size="icon" disabled={busy || person.isBaby} onClick={() => editPerson(person)} aria-label={`Editar ${person.name}`}><Pencil /></Button>
                           <Button variant="destructive" size="icon" disabled={busy} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
                         </div></TableCell>
                       </>}
