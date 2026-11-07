@@ -46,7 +46,7 @@ export const adminUsers = pgTable(
     uniqueIndex("admin_users_email_idx").on(sql`lower(${table.email})`),
     uniqueIndex("admin_users_auth_user_id_idx").on(table.authUserId)
   ]
-);
+).enableRLS();
 
 export const families = pgTable("families", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -57,7 +57,7 @@ export const families = pgTable("families", {
     .references(() => adminUsers.id),
   themeConfig: jsonb("theme_config"),
   ...timestamps
-});
+}).enableRLS();
 
 export const familyIslands = pgTable("family_islands", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -68,7 +68,7 @@ export const familyIslands = pgTable("family_islands", {
   color: varchar("color", { length: 32 }),
   description: text("description"),
   ...timestamps
-});
+}).enableRLS();
 
 export const participants = pgTable("participants", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -88,7 +88,7 @@ export const participants = pgTable("participants", {
   ...timestamps
 }, (table) => [
   check("participants_baby_without_contact_check", sql`not ${table.isBaby} or (${table.email} is null and ${table.phone} is null and ${table.preferredChannel} is null)`)
-]);
+]).enableRLS();
 
 export const drawEditions = pgTable(
   "draw_editions",
@@ -109,7 +109,7 @@ export const drawEditions = pgTable(
       .on(table.familyId, table.year)
       .where(sql`${table.kind} = 'final' and ${table.status} <> 'archived'`)
   ]
-);
+).enableRLS();
 
 export const editionParticipants = pgTable(
   "edition_participants",
@@ -132,7 +132,7 @@ export const editionParticipants = pgTable(
     uniqueIndex("edition_participants_edition_participant_idx").on(table.editionId, table.participantId),
     check("edition_participants_baby_roles_check", sql`not ${table.isBaby} or (not ${table.canGive} and ${table.canReceive} and ${table.preferredChannel} is null)`)
   ]
-);
+).enableRLS();
 
 export const editionIslandConfigs = pgTable(
   "edition_island_configs",
@@ -149,7 +149,7 @@ export const editionIslandConfigs = pgTable(
     ...timestamps
   },
   (table) => [uniqueIndex("edition_island_configs_edition_island_idx").on(table.editionId, table.familyIslandId)]
-);
+).enableRLS();
 
 export const drawRules = pgTable("draw_rules", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -160,7 +160,7 @@ export const drawRules = pgTable("draw_rules", {
   enabled: boolean("enabled").default(true).notNull(),
   config: jsonb("config").default({}).notNull(),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
-});
+}).enableRLS();
 
 export const exclusionRules = pgTable("exclusion_rules", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -175,7 +175,7 @@ export const exclusionRules = pgTable("exclusion_rules", {
     .references(() => participants.id, { onDelete: "cascade" }),
   reason: text("reason"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
-});
+}).enableRLS();
 
 export const draws = pgTable(
   "draws",
@@ -199,7 +199,7 @@ export const draws = pgTable(
       .on(table.editionId)
       .where(sql`${table.status} <> 'revoked'`)
   ]
-);
+).enableRLS();
 
 export const drawParticipants = pgTable(
   "draw_participants",
@@ -221,7 +221,7 @@ export const drawParticipants = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => [uniqueIndex("draw_participants_draw_source_idx").on(table.drawId, table.sourceParticipantId)]
-);
+).enableRLS();
 
 export const drawIslands = pgTable(
   "draw_islands",
@@ -240,7 +240,7 @@ export const drawIslands = pgTable(
     createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
   },
   (table) => [uniqueIndex("draw_islands_draw_source_idx").on(table.drawId, table.sourceFamilyIslandId)]
-);
+).enableRLS();
 
 export const assignments = pgTable(
   "assignments",
@@ -266,7 +266,7 @@ export const assignments = pgTable(
     uniqueIndex("assignments_draw_receiver_idx").on(table.drawId, table.receiverId),
     check("assignments_exactly_one_giver_check", sql`num_nonnulls(${table.giverId}, ${table.giverIslandId}) = 1`)
   ]
-);
+).enableRLS();
 
 export const notificationLogs = pgTable("notification_logs", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -281,7 +281,7 @@ export const notificationLogs = pgTable("notification_logs", {
   idempotencyKey: varchar("idempotency_key", { length: 128 }).unique(),
   sentAt: timestamp("sent_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull()
-}, (table) => [uniqueIndex("notification_logs_provider_message_idx").on(table.providerMessageId).where(sql`${table.providerMessageId} is not null`)]);
+}, (table) => [uniqueIndex("notification_logs_provider_message_idx").on(table.providerMessageId).where(sql`${table.providerMessageId} is not null`)]).enableRLS();
 
 export const familiesRelations = relations(families, ({ one, many }) => ({
   owner: one(adminUsers, { fields: [families.ownerAdminId], references: [adminUsers.id] }),

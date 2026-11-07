@@ -130,3 +130,7 @@ Row Level Security. Antes de producción se debe:
 ## Diagnósticos de errores
 
 Los logs técnicos conservan evento, identificadores, tipos de error conocidos y códigos de sistema permitidos. No serializan `message`, SQL, parámetros ni mensajes de causas: una expresión de redacción no puede garantizar la eliminación de nombres, teléfonos o contraseñas arbitrarias.
+
+## Acceso directo a tablas
+
+La migración `0008_restricted_public_access.sql` habilita RLS sin políticas públicas y revoca privilegios de `PUBLIC`, `anon` y `authenticated` en las tablas de aplicación. El servidor necesita una conexión propietaria o con `BYPASSRLS`; Supabase Auth no necesita acceso a estas tablas. La migración debe aplicarse después de verificar ese rol y disponer de backup. La existencia del SQL no acredita su aplicación en Supabase.
