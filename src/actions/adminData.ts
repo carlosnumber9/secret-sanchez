@@ -1,3 +1,4 @@
+import { familyRevision } from "@/lib/family-revision";
 import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -19,7 +20,7 @@ import { AppError } from "@/lib/errors";
 
 export async function getAdminAppState(adminId: string) {
   const family = await getActiveFamilyGroupForAdmin(adminId);
-  if (!family) return { family: null, group: null, islands: [], participants: [], editions: [] };
+  if (!family) return { family: null, group: null, islands: [], participants: [], editions: [], revision: null };
 
   const [islands, people, editions] = await Promise.all([
     listFamilyIslands(family.id),
@@ -27,7 +28,7 @@ export async function getAdminAppState(adminId: string) {
     db.select().from(drawEditions).where(eq(drawEditions.familyId, family.id))
       .orderBy(desc(drawEditions.year), desc(drawEditions.createdAt))
   ]);
-  return { family, group: family, islands, participants: people, editions };
+  return { family, group: family, islands, participants: people, editions, revision: familyRevision(islands, people) };
 }
 
 export async function createOwnedGroup(adminId: string, input: { name: string }) {
@@ -175,6 +176,7 @@ export async function updateOwnedFamilyLayout(adminId: string, familyId: string,
 }
 
 type FamilyDraftInput = {
+  revision: string;
   islands: Array<{
     clientId: string;
     id: string | null;
@@ -210,6 +212,9 @@ export async function saveOwnedFamilyDraft(adminId: string, familyId: string, dr
       .where(eq(familyIslands.familyId, familyId)).for("update");
     const currentParticipants = await tx.select().from(participants)
       .where(eq(participants.familyId, familyId)).for("update");
+    if (draft.revision !== familyRevision(currentIslands, currentParticipants)) {
+      throw new AppError(409, "FAMILY_DRAFT_STALE", "La familia cambió en otra operación. Conserva tus cambios y recarga antes de guardar.");
+    }
     const currentIslandIds = new Set(currentIslands.map(({ id }) => id));
     const currentParticipantIds = new Set(currentParticipants.map(({ id }) => id));
     const keptIslandIds = draft.islands.flatMap(({ id }) => id ? [id] : []);
@@ -339,6 +344,7 @@ export async function saveOwnedFamilyDraft(adminId: string, familyId: string, dr
     }
 
     return {
+      revision: familyRevision(savedIslands, savedParticipants),
       islands: savedIslands.map((island) => ({
         id: island.id,
         clientId: island.clientId,

@@ -58,7 +58,7 @@ type Island = Omit<InitialIsland, "id" | "participants"> & {
   clientId: string;
   participants: Participant[];
 };
-type Props = { familyId: string; initialIslands: InitialIsland[] };
+type Props = { familyId: string; initialIslands: InitialIsland[]; initialRevision: string };
 type ApiResponse<T> = { ok: boolean; data?: T; message?: string };
 type IslandDragData = { type: "island"; islandId: string; name: string; participantCount: number };
 type ParticipantDragData = { type: "participant"; participantId: string; islandId: string; name: string; islandName: string };
@@ -280,9 +280,10 @@ const screenReaderInstructions = {
   draggable: "Para empezar a mover, pulsa espacio o Intro. Usa las flechas para elegir una posición, espacio o Intro para soltar y Escape para cancelar."
 };
 
-export default function FamilyEditor({ familyId, initialIslands }: Props) {
+export default function FamilyEditor({ familyId, initialIslands, initialRevision }: Props) {
   const preparedInitialIslands = useMemo(() => prepareInitialIslands(initialIslands), [initialIslands]);
   const [islands, setIslands] = useState(preparedInitialIslands);
+  const [revision, setRevision] = useState(initialRevision);
   const [savedSnapshot, setSavedSnapshot] = useState(() => familySnapshot(preparedInitialIslands));
   const [selectedIslandId, setSelectedIslandId] = useState(preparedInitialIslands[0]?.clientId ?? "");
   const [newIslandName, setNewIslandName] = useState("");
@@ -690,6 +691,7 @@ export default function FamilyEditor({ familyId, initialIslands }: Props) {
     setBusy(true);
     try {
       const payload = {
+        revision,
         islands: islands.map((island) => ({
           clientId: island.clientId,
           id: island.id,
@@ -710,7 +712,7 @@ export default function FamilyEditor({ familyId, initialIslands }: Props) {
         confirmedParticipantDeletionIds,
         confirmedIslandDeletionIds
       };
-      const updated = await api<{ islands: Array<Island & { id: string }> }>(`/api/admin/families/${familyId}/layout`, "PATCH", payload);
+      const updated = await api<{ revision: string; islands: Array<Island & { id: string }> }>(`/api/admin/families/${familyId}/layout`, "PATCH", payload);
       const next: Island[] = updated.islands.map((island) => ({
         ...island,
         id: island.id,
@@ -718,6 +720,7 @@ export default function FamilyEditor({ familyId, initialIslands }: Props) {
       }));
       setIslands(next);
       setSavedSnapshot(familySnapshot(next));
+      setRevision(updated.revision);
       setConfirmedParticipantDeletionIds([]);
       setConfirmedIslandDeletionIds([]);
       setSelectedIslandId((current) => next.some(({ clientId }) => clientId === current) ? current : next[0]?.clientId ?? "");

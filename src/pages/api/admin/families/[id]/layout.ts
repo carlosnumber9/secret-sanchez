@@ -24,6 +24,7 @@ const participantSchema = z.object({
 });
 
 const schema = z.object({
+  revision: z.string().regex(/^[a-f0-9]{64}$/),
   islands: z.array(islandSchema).max(100),
   participants: z.array(participantSchema).max(500),
   confirmedParticipantDeletionIds: z.array(z.uuid()).max(500),

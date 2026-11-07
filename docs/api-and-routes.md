@@ -33,3 +33,5 @@ Todas requieren sesión y autorización mediante la familia propietaria. Las res
 `POST /api/webhooks/kapso` recibe estados de WhatsApp. No usa sesión administrativa: exige la firma HMAC de Kapso y nunca devuelve datos del reparto.
 
 El envío administrativo admite alcance `all` o `selected` y modos `pending`, `failed` o `force`. La API de respaldo recibe solo `assignmentId`; la copia queda auditada en Runtime Logs, no como entrega.
+
+El borrador familiar incluye una `revision` opaca obtenida con el censo. Se compara bajo bloqueo antes de escribir y se devuelve una revisión nueva tras guardar. Si nombres, contactos, roles de bebé, unidades o posiciones cambiaron desde la lectura, responde `409 FAMILY_DRAFT_STALE`; el cliente conserva el borrador local.
