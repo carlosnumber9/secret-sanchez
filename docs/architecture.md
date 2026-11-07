@@ -8,7 +8,7 @@ proveedores externos.
 
 ```mermaid
 flowchart LR
-  participant["Participante"] --> reveal["Revelación pública<br>/r/:token"]
+  participant["Participante"] --> reveal["Revelación pública<br>/r#token"]
   admin["Organizador"] --> astro["Astro SSR + React Islands"]
   reveal --> astro
   astro --> auth["Supabase Auth"]
@@ -55,8 +55,7 @@ proveedores.
 `src/actions` representa casos de uso como mantener la familia, crear una edición, generar un intento o enviar notificaciones. Es el punto
 adecuado para coordinar dominio, persistencia y proveedores.
 
-Algunas acciones actuales son reexportaciones directas de queries. Al conectar la UI deben incorporar autorización,
-validación y transacciones donde corresponda.
+Los casos de uso administrativos incorporan propiedad, bloqueos y transacciones. No se exponen escrituras directas de queries como acciones sin autorización.
 
 ### Dominio
 
@@ -101,16 +100,16 @@ atravesar el límite del servidor.
 ### Revelación
 
 1. El participante abre `/r#token`.
-2. El servidor calcula SHA-256 del token.
-3. Busca la asignación por el hash y comprueba que su intento no esté revocado.
-4. Muestra el receptor y registra la primera apertura.
+2. El cliente retira el fragmento y conserva el token en memoria; solicita preparación sin receptor.
+3. El servidor busca por SHA-256 y comprueba la vigencia del intento.
+4. Una acción explícita de apertura obtiene el receptor y registra la primera apertura atómicamente.
 
 ## Decisiones arquitectónicas vigentes
 
 - SSR para mantener base de datos, claves y reglas sensibles en servidor.
 - React solo donde aporta interacción.
-- Tokens de revelación aleatorios; en base se almacena únicamente el hash.
-- Configuración obligatoria y una única base compartida por local y Vercel.
+- Tokens aleatorios con hash para búsqueda y ciphertext AES-256-GCM para entrega autorizada.
+- Supabase obligatorio; la topología histórica compartida debe separarse antes de permitir pruebas con escrituras reales.
 - shadcn/ui y Tailwind CSS 4 como base de componentes; CSS propio limitado a composición y superficies.
 - Textos de producto en español.
 - No incorporar dependencias si la plataforma o los patrones existentes resuelven el problema.

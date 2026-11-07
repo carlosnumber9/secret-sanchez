@@ -1,39 +1,42 @@
 # Estado actual
 
-Última revisión documental: **5 de agosto de 2026**.
+Última revisión documental: **7 de noviembre de 2026**.
 
 ## Implementado en código
 
-- Ediciones como página principal en `/`, con alta mediante un diálogo sobre el historial y una navegación administrativa reducida a Ediciones y Familia; las rutas generales anteriores redirigen al listado.
-- Familia maestra separada de las ediciones y snapshots inmutables por intento.
-- Edición de la familia mediante un borrador local: altas desde diálogos, cambios, borrados, unidad y orden de participantes se guardan juntos de forma transaccional; el navegador avisa antes de abandonar cambios pendientes y el orden visual de unidades no se persiste. Las unidades completas y las personas se pueden reordenar con dnd-kit mediante ratón, touch o teclado, y una persona puede moverse entre unidades, incluidas las vacías.
-- Contactos opcionales editables directamente en las filas de `/familia`; las ediciones deshabilitan y rechazan canales sin email o teléfono compatible.
-- Bebés definidos en `/familia`, sin contacto propio, receptores y nunca regaladores.
-- Configuración por edición de participación, roles, email, WhatsApp y representante por unidad.
-- Estados de edición limitados a preparación, reparto generado, enviada y archivada, con etiquetas en español; el estado legacy `draft` se normaliza a `ready` mediante migración.
-- Igualdad entre adultos que regalan y adultos que reciben.
-- Reparto personal entre adultos y reparto adicional de bebés a unidades distintas de la propia, sin repetir unidad.
-- Intentos numerados, revocación e invalidación de tokens.
-- Envíos por Resend y Kapso, uno o ambos canales, con selección y reenvío explícito.
-- Webhook firmado de Kapso para `sent`, `delivered`, `read` y `failed`.
-- Ediciones de prueba con emails redirigidos al correo de acceso del administrador que ejecuta el envío y WhatsApp al teléfono seguro configurado.
-- Copia de respaldo sin estado de entrega y auditoría estructurada en Vercel.
-- Borrado transaccional y conservación de snapshots históricos mientras no se elimine el intento.
+- Astro 7 SSR, React Islands y Node 22.23.4; dependencias acotadas y lockfile reproducible.
+- Login y logout de Supabase SSR; autorización por UUID y propiedad de familia.
+- Historial de ediciones en `/`, censo permanente en `/familia` y configuración, reparto y envíos por edición.
+- Borradores familiares transaccionales con revisión de concurrencia, persistencia en lotes y actualización exclusiva de diferencias.
+- Adultos con roles por edición; bebés receptores sin contacto y representantes de núcleos.
+- Reglas editables: evitar mismo núcleo y exclusiones dirigidas. Configuración bloqueada con intento vigente o edición archivada.
+- Emparejamiento bipartito acotado, validación independiente y generación transaccional con un único intento vigente.
+- Revocación, snapshots y contador de intentos conservado incluso al borrar el histórico.
+- Tokens con hash SHA-256 y ciphertext AES-256-GCM; fragmento retirado del navegador y reintento de revelación en memoria.
+- Reservas idempotentes de notificación, lotes reanudables de cuatro mensajes, concurrencia dos y gestión de resultados inciertos.
+- Webhooks firmados de Kapso y Resend; transiciones atómicas y fallos terminales de email.
+- Cabeceras privadas, CSP de producción, comprobación de origen y límites HTTP.
+- Fondo WebGL diferido, alternativa SVG y consultas específicas por pantalla.
+- CI con Node 22, PostgreSQL 17 efímero, unitarias, integración, build, comprobación de schema y auditoría de dependencias.
 
-## Pendiente de operación
+## Preparado, pendiente de activación
 
-- `drizzle/0005_past_winter_soldier.sql` está aplicada en el Supabase compartido desde el 4 de agosto de 2026.
-- `drizzle/0006_soft_kylun.sql` está aplicada en el Supabase compartido desde el 5 de agosto de 2026; añadió y rellenó `participants.sort_order`.
-- Aplicar `drizzle/0007_flat_dragon_man.sql`, que normaliza las ediciones legacy en `draft` a `ready` y elimina ese estado obsoleto del enum, antes de desplegar el código dependiente.
-- Configurar y aprobar la plantilla de Kapso y registrar el webhook de Production.
-- Configurar todas las variables `KAPSO_*` en Vercel; sin ellas WhatsApp falla de forma controlada.
-- Verificar dominio y remitente de Resend.
-- Ejecutar una edición de prueba completa antes del sorteo familiar definitivo.
-- No hay CI ni base aislada para pruebas de integración.
+Los SQL se versionan y se prueban únicamente en PostgreSQL local con datos sintéticos. Por instrucción del propietario, esta actualización **no aplica migraciones ni crea copias de datos reales**.
 
-## Riesgos
+- `0008`: RLS y revocación de acceso público a tablas de aplicación.
+- `0009`: índices administrativos.
+- `0010`: límites compartidos entre funciones. Sin tabla se usa memoria por instancia, sin garantía global.
+- `0011`: auditoría persistente. Sin tabla se emite aviso técnico y las copias históricas se muestran desconocidas.
+- La documentación anterior registró `0005` y `0006` como aplicadas. Eso no prueba el estado actual del entorno; `0007` normaliza estados legacy. El operador debe reconciliar el journal antes de cualquier migración futura.
+- Dominio/remitente y suscripción del webhook de Resend, con `RESEND_WEBHOOK_SECRET`.
+- Credenciales, plantilla aprobada y webhook de Kapso.
+- Una edición de prueba operativa completa, con destinatarios seguros, antes del uso definitivo.
 
-- Local, Preview y Production comparten Supabase.
-- Revocar invalida enlaces, pero no deshace información ya vista.
-- Juan puede obtener cualquier enlace desde el panel de envíos; la acción se audita sin guardar el secreto.
-- Los Runtime Logs de Vercel tienen retención operativa, no sustituyen un registro de auditoría persistente.
+## Límites y decisiones pendientes
+
+- No se han modificado variables remotas ni verificado el despliegue automático que pueda disparar Git.
+- Las pruebas aisladas no prueban la configuración real de Auth, dominio de email o plantilla de WhatsApp.
+- Un envío aceptado puede rebotar después; el panel refleja el fallo y el estado `sent` conserva el hito histórico.
+- El organizador puede obtener cualquier enlace autorizado. Revocar no borra información ya vista.
+- Falta acordar retención de auditoría, expiración de enlaces y permisos colaborativos.
+- El aislamiento de datos de desarrollo/Preview requiere configuración independiente; ver [operación](./operations.md).

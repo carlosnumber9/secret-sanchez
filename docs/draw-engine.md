@@ -9,7 +9,7 @@ El intento se genera de forma transaccional mediante dos emparejamientos indepen
 - Solo entran adultos activos.
 - El número de adultos regaladores debe coincidir con el de receptores.
 - Cada regalador y receptor aparece una sola vez.
-- Se evitan autoasignación, misma unidad y exclusiones dirigidas.
+- Se evita autoasignación siempre; misma unidad cuando su regla está activa y pares dirigidos excluidos.
 - Se utiliza emparejamiento bipartito por caminos aumentantes con candidatos barajados mediante `crypto.randomInt`.
 
 ### Bebés
@@ -21,7 +21,7 @@ El intento se genera de forma transaccional mediante dos emparejamientos indepen
 - Una unidad que contiene bebés puede regalar a otro bebé.
 - El mismo motor de emparejamiento busca una solución completa o rechaza el sorteo sin persistencia parcial.
 
-Con el censo familiar acordado se generan 21 asignaciones adultas y 6 asignaciones de unidades para bebés.
+El tamaño depende de los roles y personas habilitados de cada edición, sin un censo familiar codificado en el motor.
 
 ## Validación previa
 
@@ -29,7 +29,7 @@ Antes de crear el intento se validan roles, igualdad adulta, representantes, can
 
 ## Persistencia
 
-1. Se bloquea la edición y se rechaza otro intento vigente.
+1. Se bloquea primero la familia y después la edición y se rechaza otro intento vigente.
 2. Se generan ambas capas en memoria.
 3. Se crean `draw_participants` y `draw_islands` con contactos y canales congelados.
 4. Cada asignación recibe hash y ciphertext AES-256-GCM del token.

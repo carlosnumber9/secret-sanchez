@@ -146,8 +146,6 @@ Las mutaciones principales implementan carga, feedback y prevención de doble en
   queda registrada junto al asset.
 - El manifest incluye iconos de 192 y 512 píxeles, además de una variante `maskable`, para accesos directos e
   instalación desde navegadores móviles compatibles.
-# UI y experiencia
-
 ## Navegación administrativa
 
 - `Ediciones`: historial, creación y selección explícita; ocupa la página principal `/`.
@@ -170,3 +168,5 @@ Cada edición agrupa a la familia por unidades. El switch de la unidad prevalece
 En envíos, Email y WhatsApp muestran estados independientes. Juan puede seleccionar asignaciones para reenviar y copiar cualquier enlace mediante un icono; la copia es un respaldo y no altera los estados.
 
 La revelación distingue tokens rechazados de fallos temporales. Conserva el token únicamente en memoria después de retirarlo del fragmento y ofrece reintento tanto al preparar como al abrir. Cada petición tiene un timeout de 12 segundos y se cancela al desmontar; no guarda el token en almacenamiento del navegador.
+
+La configuración incluye reglas y exclusiones dirigidas, con guardado explícito. Las ediciones archivadas y con intento vigente muestran los controles bloqueados. El envío informa progreso por lotes y separa resultados inciertos de errores confirmados.

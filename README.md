@@ -4,10 +4,10 @@ Secret Sánchez es una aplicación familiar de Amigo Invisible para Reyes. Permi
 restricciones al sorteo y entregar a cada participante un enlace privado para descubrir a quién hace el regalo.
 
 El proyecto está construido con Astro en modo SSR, React Islands y TypeScript. Usa Supabase para autenticación y
-Postgres, Drizzle como ORM, Resend para email y está preparado para incorporar WhatsApp mediante Kapso. El despliegue
+Postgres, Drizzle como ORM, Resend para email y usa Kapso para WhatsApp, pendiente de activación operativa. El despliegue
 objetivo es Vercel.
 
-Local y Vercel utilizan el mismo Supabase y los mismos datos. No hay fixtures ni fallbacks: configuración,
+Local y Vercel utilizan el mismo Supabase y los mismos datos. La aplicación no usa fallbacks; las pruebas sí emplean fixtures aislados. Configuración,
 migraciones, sorteos y envíos locales tienen efectos reales.
 
 ## Puesta en marcha
@@ -17,16 +17,16 @@ Kapso. Si utilizas nvm, el repositorio selecciona la versión compatible mediant
 
 ```bash
 nvm use
-npm install
+npm ci
 cp .env.example .env.local
 npm run dev
 ```
 
-Configura en `.env.local` las URLs y claves de tus propios servicios. Para crear las tablas en Postgres puedes generar y
-ejecutar las migraciones con:
+Configura en `.env.local` las URLs y claves de tus propios servicios. Las migraciones ya están versionadas. Revisar [operación](./docs/operations.md), destino y autorización antes de aplicarlas:
 
 ```bash
-npm run db:generate
+npm run db:check
+# Solo en una base propia autorizada:
 npm run db:migrate
 ```
 
@@ -40,3 +40,5 @@ npm test
 ## Documentación
 
 La documentación funcional, técnica y operativa está en [`docs/`](./docs/README.md).
+
+La actualización de noviembre deja SQL y activaciones externas pendientes por instrucción del propietario: solo código, sin migraciones ni copias reales.

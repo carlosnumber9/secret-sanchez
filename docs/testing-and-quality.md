@@ -19,9 +19,9 @@
 5. Cubrir el recorrido crítico del organizador y la revelación.
 6. Mantener accesibilidad básica y estados de error.
 
-## Estrategia propuesta
+## Estrategia implementada
 
-La selección de herramientas sigue abierta; los niveles de prueba no dependen de un framework concreto.
+Unitarias e integración usan el runner nativo de Node y tsx. End-to-end y regresión visual siguen por definir.
 
 ### Unitarias
 
@@ -46,7 +46,7 @@ Las pruebas del sorteo deben repetir generaciones y validar invariantes, no afir
 - Registro de notificaciones y reintentos.
 - Lectura y marcado de una revelación.
 
-### End-to-end
+### End-to-end previsto
 
 Recorrido mínimo:
 
@@ -83,26 +83,11 @@ También debe cubrir sesión ausente, grupo ajeno, token inválido y sorteo impo
 - Probar `/r` sin fragmento y con un token inexistente.
 - Para cambios de algoritmo, ejecutar casos pequeños e imposibles con datos controlados.
 
-## CI objetivo
+## CI implementada
 
-Una primera pipeline debería:
+`.github/workflows/ci.yml` instala con `npm ci`, ejecuta unitarias, build, integración en PostgreSQL 17, `db:check` y auditoría. Solo emplea credenciales sintéticas y acciones fijadas por SHA con permisos de lectura. La ejecución local no certifica el estado de una ejecución remota de Actions.
 
-1. Instalar con `npm ci`.
-2. Ejecutar build.
-3. Ejecutar pruebas unitarias.
-4. Ejecutar lint cuando se defina.
-5. Verificar que las migraciones están actualizadas.
-
-No debe requerir secretos reales para validar una pull request.
-
-## Decisiones pendientes
-
-- Framework de pruebas.
-- Base aislada o contenedorizada para integración.
-- Herramienta end-to-end.
-- Lint y formateador.
-- Umbral de cobertura.
-- Estrategia de regresión visual.
+Pendiente: herramienta end-to-end, lint/formateador, umbral de cobertura y regresión visual.
 
 `npm run db:check` compara el schema con los snapshots en una copia temporal de las migraciones, sin conectar a ninguna base ni modificar el repositorio. La auditoría bloquea avisos altos o críticos; los bajos y moderados quedan visibles para revisión. Las acciones de CI se fijan por SHA y tienen permisos de solo lectura.
 

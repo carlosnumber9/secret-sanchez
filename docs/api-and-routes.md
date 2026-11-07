@@ -18,6 +18,7 @@
 - Familia: `POST /api/admin/groups`, `POST /api/admin/islands`, `PATCH|DELETE /api/admin/islands/[id]`, `POST /api/admin/participants`, `PATCH|DELETE /api/admin/participants/[id]` y `PATCH /api/admin/families/[id]/layout`.
 - Impacto destructivo: `GET /api/admin/participants/[id]/deletion-impact` y `GET /api/admin/islands/[id]/deletion-impact`.
 - Ediciones: `GET|POST /api/admin/editions`, `PATCH /api/admin/editions/[id]`.
+- Reglas: `PUT /api/admin/editions/[id]/rules`, con `noSameIsland` y hasta 500 pares dirigidos `exclusions`.
 - Configuración: `PATCH /api/admin/editions/[id]/islands/[islandId]` y `PATCH /api/admin/editions/[id]/participants/[participantId]`.
 - Intentos: `POST /api/admin/editions/[id]/draws/generate` y `POST /api/admin/editions/[id]/draws/[drawId]/revoke`.
 - Entrega: `POST /api/admin/editions/[id]/notifications/send` y `POST /api/admin/notifications/manual`.
@@ -32,8 +33,14 @@ Todas requieren sesión y autorización mediante la familia propietaria. Las res
 
 `POST /api/webhooks/kapso` recibe estados de WhatsApp. No usa sesión administrativa: exige la firma HMAC de Kapso y nunca devuelve datos del reparto.
 
-El envío administrativo admite alcance `all` o `selected` y modos `pending`, `failed` o `force`. La API de respaldo recibe solo `assignmentId`; la copia queda auditada en Runtime Logs, no como entrega.
+El envío administrativo admite alcance `all` o `selected` y modos `pending`, `failed` o `force`. La API de respaldo recibe solo `assignmentId`; la copia queda auditada en Runtime Logs y en la tabla opcional de auditoría, no como entrega.
 
 El borrador familiar incluye una `revision` opaca obtenida con el censo. Se compara bajo bloqueo antes de escribir y se devuelve una revisión nueva tras guardar. Si nombres, contactos, roles de bebé, unidades o posiciones cambiaron desde la lectura, responde `409 FAMILY_DRAFT_STALE`; el cliente conserva el borrador local.
 
 `POST /api/auth/logout` cierra únicamente la sesión del dispositivo mediante Supabase SSR, rechaza un `Origin` ajeno y redirige con `303` a `/login`. La respuesta no se almacena en caché. No requiere una sesión administrativa vigente, para permitir salir también de sesiones caducadas o cuentas sin autorización.
+
+`POST /api/webhooks/resend` valida los headers Svix y firma del cuerpo original; procesa entrega, retraso, fallo, rebote y supresión. No exige sesión. Ambos webhooks responden `503` para IDs todavía desconocidos, permitiendo reintentos del proveedor.
+
+El envío devuelve `drawId`, `nextCursor`, contadores, resultados inciertos y posible `retryAfterSeconds`. Cada continuación debe conservar `idempotencyKey` y `drawId`. Los errores `409 DRAW_CHANGED` requieren recargar. Las mutaciones pueden devolver `403` por origen, `413` por cuerpo o `429` con `Retry-After`. Véanse [límites](./auth-security.md) y [lotes](./notifications.md).
+
+`POST /api/auth/login` inicia sesión por contraseña; `GET /api/health` informa disponibilidad sin divulgar secretos ni mensajes de conexión.

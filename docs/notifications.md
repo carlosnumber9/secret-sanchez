@@ -32,11 +32,11 @@ El envío comprueba la vigencia antes de cada mensaje y la transición final a `
 
 El icono de copia obtiene el enlace bajo autorización para que Juan lo comparta si el envío falla o se lo solicitan. No es un canal, no crea `notification_logs` y no cambia el estado de entrega.
 
-La operación emite `assignment_link_copied` en Vercel con identificadores de administrador, edición, intento, asignación y regalador. Nunca registra token, URL, receptor, email ni teléfono.
+La operación registra `assignment.link_copied` si existe `audit_events` y emite `assignment_link_copied` en Vercel con identificadores de administrador, edición, intento, asignación y regalador. Nunca registra token, URL, receptor, email ni teléfono.
 
 ## Privacidad
 
-`notification_logs` conserva el destinatario necesario para operar el proveedor. Los Runtime Logs sanean datos personales, secretos y URLs. `assignments.opened_at` representa la apertura del enlace y es independiente del estado `read` de WhatsApp.
+`notification_logs` conserva el destinatario necesario para operar el proveedor. Los Runtime Logs omiten mensajes arbitrarios de error y filtran campos sensibles. `assignments.opened_at` representa la apertura del enlace y es independiente del estado `read` de WhatsApp.
 
 ## Idempotencia y resultados inciertos
 

@@ -1,107 +1,37 @@
 # Roadmap
 
-El orden prioriza un recorrido real completo antes que nuevas funcionalidades.
+Revisado el 7 de noviembre de 2026. Estado de código separado de operación real.
 
-## Hito 0 — Base documental
+## Completado en código
 
-- [x] README breve.
-- [x] Índice documental.
-- [x] Producto, arquitectura y estado actual.
-- [x] Datos, seguridad, sorteo y notificaciones.
-- [x] Desarrollo, Git, calidad y operación.
-- [ ] Mantener las docs actualizadas en cada cambio.
+- [x] Dependencias compatibles, Node 22 y CI reproducible.
+- [x] Login, logout, propiedad por recurso y transacciones coordinadas.
+- [x] Familia permanente, borradores con revisión y persistencia en lotes.
+- [x] Ediciones, roles, bebés, representantes, reglas y exclusiones desde UI.
+- [x] Emparejamiento acotado, validación, snapshots, revocación y contador durable de intentos.
+- [x] Tokens cifrados, revelación atómica y recuperación de fallos temporales.
+- [x] Reservas idempotentes, lotes reanudables y webhooks firmados de ambos proveedores.
+- [x] RLS, índices, límites distribuidos y auditoría preparados mediante SQL revisable.
+- [x] Unitarias e integración local/CI con datos sintéticos.
+- [x] Carga diferida de WebGL y lecturas administrativas específicas.
 
-## Hito 1 — Acceso fiable
+## Activación operativa pendiente
 
-- [x] Iniciar sesión con email y contraseña mediante endpoint servidor.
-- [x] Enlazar la allowlist con el UUID de Supabase conservando filas legacy.
-- [x] Crear un proceso seguro para el primer administrador.
-- [x] Añadir asignación y reset manual de contraseña por UUID.
-- [x] Añadir logout.
-- [x] Eliminar fixtures y exigir Supabase real en todos los entornos.
-- [ ] Actualizar APIs obsoletas de Supabase SSR.
-- [x] Añadir pruebas de identidad administrativa y redirección de login.
-- [ ] Añadir pruebas de integración del endpoint y middleware.
+- [ ] Reconciliar journal real y aplicar SQL aprobado tras el procedimiento de recuperación.
+- [ ] Verificar RLS y grants efectivos en cada proyecto.
+- [ ] Provisionar y verificar entornos independientes.
+- [ ] Verificar dominio/remitente y activar webhook de Resend.
+- [ ] Configurar credenciales, plantilla y webhook de Kapso.
+- [ ] Acordar retención, backups y realizar recuperación del entorno real.
+- [ ] Completar una edición de prueba operativa con destinatarios seguros.
 
-Resultado: Juan puede entrar y salir de forma fiable en local y producción.
+Esta sesión solo autoriza código: no exportar datos, migrar ni activar servicios externos. Las pruebas locales no completan las casillas operativas.
 
-## Hito 2 — Familia persistente
+## Por decidir
 
-- [x] Cargar o crear el grupo activo.
-- [x] Conectar dashboard con datos reales.
-- [x] Crear núcleos.
-- [x] Crear y desactivar participantes.
-- [x] Validar contactos y canales antes de sortear.
-- [x] Comprobar propiedad del grupo en servidor.
-- [x] Diseñar estados vacíos y feedback de mutación.
+- End-to-end, regresión visual, lint/formato y cobertura mínima.
+- Retención de auditoría y expiración de enlaces.
+- Varios organizadores con permisos compartidos.
+- Archivo/restauración de ediciones desde UI.
 
-Resultado: recargar la página conserva la familia preparada.
-
-## Hito 3 — Reglas y sorteo seguro
-
-- [ ] Mantener `NO_SAME_ISLAND` desde UI y base.
-- [ ] Crear y eliminar exclusiones manuales.
-- [x] Validar viabilidad antes de generar.
-- [x] Ejecutar persistencia transaccional.
-- [x] Prevenir doble generación y confirmar la acción.
-- [x] Cifrar tokens para entrega posterior.
-- [x] Mantener un único intento vigente por edición.
-- [x] Revocar intentos, invalidar tokens y permitir relanzamientos numerados.
-- [x] Separar familia maestra, ediciones y snapshots por intento.
-- [x] Configurar participación y roles dentro de cada edición.
-- [x] Añadir borrado destructivo coherente de personas, unidades e intentos afectados.
-- [x] Actualizar estados de grupo y sorteo.
-- [x] Añadir pruebas repetidas de invariantes del dominio.
-- [x] Modelar bebés como receptores sin capacidad de regalar.
-- [x] Asignar bebés a unidades distintas con representante por edición.
-
-Resultado: cada edición conserva un reparto vigente, intentos revocados auditables y snapshots estables.
-
-## Hito 4 — Entrega automática y respaldo
-
-- [x] Integrar Resend como acción posterior confirmada.
-- [x] Crear y actualizar `notification_logs`.
-- [x] Conectar `/envios` con datos reales.
-- [x] Implementar copia de respaldo auditada sin convertirla en entrega.
-- [x] Reintento masivo idempotente.
-- [ ] Verificar dominio y plantillas.
-- [x] Mostrar aperturas.
-
-Resultado: todos reciben su enlace por email o mediante Juan y el estado queda registrado.
-
-## Hito 5 — Seguridad y producción
-
-- [ ] Verificar RLS y grants.
-- [x] Aplicar autorización por recurso.
-- [ ] Añadir rate limiting.
-- [ ] Definir backups y recuperación.
-- [ ] Incorporar CI.
-- [x] Añadir observabilidad sin secretos.
-- [ ] Ejecutar una prueba completa con datos ficticios.
-- [ ] Documentar y probar rollback.
-
-Resultado: el MVP puede usarse con datos familiares reales.
-
-## Hito 5 — WhatsApp
-
-- [x] Cerrar flujo técnico con Kapso.
-- [ ] Configurar plantillas y consentimiento.
-- [x] Validar teléfonos internacionales antes de sortear.
-- [x] Integrar webhooks y estados.
-- [x] Añadir selección, reintentos y pruebas de dominio.
-
-La activación operativa depende de credenciales, plantilla aprobada y webhook registrado.
-
-## Ideas futuras
-
-No forman parte del compromiso actual:
-
-- Personalización visual por grupo.
-- Archivo y restauración de ediciones antiguas desde la UI.
-- Múltiples organizadores con roles.
-- Listas de deseos y presupuestos.
-- Recordatorios programados.
-- Exportación o impresión de entregas manuales.
-- Métricas agregadas de entrega.
-
-Cada idea debe validarse contra el objetivo de simplicidad antes de entrar en un hito.
+Personalización, listas de deseos y recordatorios quedan fuera del compromiso actual.

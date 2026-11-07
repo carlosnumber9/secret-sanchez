@@ -2,7 +2,7 @@
 
 ## Entorno
 
-Local usa el mismo Supabase/Postgres que Vercel. No existe base aislada ni fallback de datos. Cualquier mutación,
+Local usa el mismo Supabase/Postgres que Vercel. La aplicación no tiene fallback de datos; las pruebas de integración sí usan PostgreSQL aislado. Cualquier mutación,
 sorteo, migración o envío realizado desde local tiene efectos reales.
 
 El runtime requerido es Node.js 22.23.4 o un parche posterior de la rama 22, alineado entre `.nvmrc`, `package.json` y Vercel. Node.js 20 no es compatible
@@ -10,7 +10,7 @@ con el transporte WebSocket nativo que usa actualmente Supabase.
 
 ```bash
 nvm use
-npm install
+npm ci
 cp .env.example .env.local
 npm run dev
 ```
@@ -32,6 +32,9 @@ Opcionales para email: `RESEND_API_KEY`. Para WhatsApp deben configurarse conjun
 | `npm run dev` | Desarrollo conectado a los datos reales. |
 | `npm run build` | Comprobación Astro y build de Vercel. |
 | `npm test` | Pruebas unitarias sin acceso a Supabase. |
+| `npm run test:integration` | Migraciones y fixtures solo con `TEST_DATABASE_URL` local y base terminada en `_test`. |
+| `npm run db:check` | Comparación de schema y snapshots, sin conexión. |
+| `npm run benchmark:draw` | Casos sintéticos de coste del emparejamiento. |
 | `npm run admin:bootstrap -- --email ... --name ...` | Alta idempotente del administrador. |
 | `npm run admin:set-password -- --user-id ...` | Asignación o reset manual de contraseña por UUID. |
 | `npm run db:generate` | Generar migración y snapshot Drizzle. |
@@ -60,3 +63,5 @@ Los comandos de Drizzle, bootstrap y contraseña cargan `.env.local` y después 
 El override de `path-to-regexp` dentro de `@vercel/routing-utils` actualiza la rama 6 a su parche de seguridad 6.3, sin cambiar de major. Revisarlo cuando el adapter retire su versión vulnerable. Los avisos restantes de herramientas se revisan explícitamente; no se resuelven mediante downgrades automáticos del framework.
 
 El guardado familiar compara campos editables con las filas bloqueadas. Solo actualiza diferencias; altas y modificaciones se agrupan en lotes y los cambios de bebé se propagan con una actualización por conjunto a las ediciones sin reparto vigente. Un guardado sin diferencias no cambia timestamps de personas o unidades.
+
+Las migraciones compartidas y las copias reales no están autorizadas durante esta actualización. `npm run db:generate` solo produce SQL para revisión; `db:check` no lo aplica.

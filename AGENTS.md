@@ -9,7 +9,7 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - La app usa Astro con SSR y adapter de Vercel.
 - Hay React Islands para las partes interactivas de administracion.
 - Supabase se usa siempre para Auth y Postgres, tambien desde local.
-- Local, Preview y Production comparten la misma base y los mismos datos.
+- La configuración histórica comparte datos; no asumir aislamiento ni ejecutar migraciones compartidas sin autorización explícita.
 - Drizzle define el schema relacional en `src/db/schema.ts`.
 - Resend esta preparado para email.
 - Kapso esta integrado para WhatsApp; su activacion requiere credenciales, plantilla aprobada y webhook.
@@ -64,6 +64,7 @@ Variables solo servidor:
 - `DATABASE_URL`
 - `REVEAL_TOKEN_ENCRYPTION_KEY`
 - `RESEND_API_KEY`
+- `RESEND_WEBHOOK_SECRET`
 - `KAPSO_API_KEY`
 - `KAPSO_PHONE_NUMBER_ID`
 - `KAPSO_TEMPLATE_NAME`
@@ -86,7 +87,7 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 - `src/layouts`: layouts base, admin y revelacion publica.
 - `src/components`: componentes Astro reutilizables.
 - `src/components/react`: islas React interactivas.
-- `src/actions`: acciones de aplicacion; varias reexportan queries de `src/db/queries`.
+- `src/actions`: casos de uso autorizados; `drawLifecycle.ts` coordina generación y revocación.
 - `src/db/schema.ts`: schema Drizzle.
 - `src/db/queries`: acceso persistente a datos.
 - `src/lib`: utilidades de entorno, Supabase, tokens, hashing, logging, Resend y Kapso.
@@ -98,13 +99,14 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 
 - `/`: entrada inicial.
 - `/login`: acceso de administrador por email y contraseña.
-- `/inicio`: estado general del sorteo.
+- `/inicio`, `/sorteo`, `/envios` y `/ediciones`: redirecciones al historial en `/`.
 - `/familia`: gestion de nucleos y participantes.
-- `/sorteo`: reglas y generacion del reparto.
-- `/envios`: estado de mensajes.
+- `/ediciones/[id]`: roles, reglas, exclusiones e intentos.
+- `/ediciones/[id]/sorteo` y `/ediciones/[id]/envios`: reparto y mensajes por edición.
 - `/r#token`: revelacion publica sin login.
 - `/api/auth/login`: API para iniciar sesion por contraseña.
-- `/api/admin/draws/generate`: API protegida para generar sorteo.
+- `/api/admin/editions/[id]/draws/generate`: generación protegida por edición.
+- `/api/auth/logout`: cierre de sesión local.
 - `/api/admin/*`: mutaciones administrativas protegidas.
 - `/api/reveal/resolve` y `/api/reveal/open`: resolucion y apertura publica.
 - `/api/health`: comprobacion de configuracion y base.
@@ -113,7 +115,7 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 
 - El login usa email y contraseña de Supabase.
 - La autorización busca primero `admin_users.auth_user_id` y solo usa email para enlazar filas legacy sin UUID.
-- `src/middleware.ts` protege `/inicio`, `/familia`, `/sorteo`, `/envios` y APIs bajo `/api/admin`.
+- `src/middleware.ts` protege `/`, `/ediciones/*`, `/inicio`, `/familia`, `/sorteo`, `/envios` y APIs bajo `/api/admin`.
 - Las paginas protegidas redirigen a `/login?next=...` cuando no hay admin.
 - Las APIs protegidas responden `401` cuando no hay sesión y `403` cuando la cuenta no está autorizada como admin.
 - La sesion de Supabase se crea en servidor mediante `src/pages/api/auth/login.ts`.
@@ -130,15 +132,17 @@ El schema actual incluye:
 - `edition_participants`
 - `edition_island_configs`
 - `draw_rules`
+- `exclusion_rules`
 - `draws`
 - `draw_participants`
 - `draw_islands`
 - `assignments`
 - `notification_logs`
+- `request_rate_limits` y `audit_events` (opcionales hasta aplicar sus migraciones)
 
 Estados y enums principales:
 
-- Grupos: `draft`, `ready`, `drawn`, `sent`, `archived`
+- Ediciones: `ready`, `drawn`, `sent`, `archived`; `draft` solo legacy antes de `0007`
 - Sorteos: `draft`, `generated`, `locked`, `sent`, `revoked`
 - Canal preferido: `email`, `whatsapp`, `both`, `manual`
 - Canal de notificacion: `email`, `whatsapp`, `manual`
@@ -149,9 +153,9 @@ Estados y enums principales:
 - La regla implementada actualmente evita autoasignacion.
 - La regla `NO_SAME_ISLAND` evita asignaciones dentro del mismo nucleo familiar cuando `noSameIsland` esta activo.
 - Hay soporte para exclusiones manuales mediante pares `fromParticipantId` y `toParticipantId`.
-- La generacion usa backtracking y barajado con `crypto.randomInt`.
+- La generación usa emparejamiento bipartito acotado y barajado con `crypto.randomInt`.
 - La validacion vive en `src/services/draw/validateDraw.ts`.
-- La generacion persistida vive en `src/actions/generateDraw.ts`, usa transaccion y rechaza otro sorteo activo.
+- La generacion persistida vive en `src/actions/drawLifecycle.ts`, usa transaccion y rechaza otro sorteo activo.
 - Los tokens se guardan como hash y ciphertext AES-256-GCM.
 
 ## Notificaciones
@@ -190,7 +194,7 @@ Estados y enums principales:
 Estas decisiones no estan fijadas en el repo. No asumirlas sin confirmacion o sin que el codigo existente lo deje claro:
 
 - Politica exacta de tests automatizados.
-- Framework de testing preferido.
+- Herramienta end-to-end y regresión visual; unitarias e integración usan Node test y tsx.
 - Politica de lint/format mas alla de `astro check` dentro de `npm run build`.
 - Criterios finales de UI/design system.
 - Politica de permisos para multiples administradores.

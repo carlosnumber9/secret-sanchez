@@ -56,7 +56,7 @@ Relación secreta cuyo regalador es exactamente un `draw_participant` o un `draw
 
 ### `notification_logs`
 
-Intentos automáticos de email o WhatsApp. La copia de respaldo no crea un log de notificación: emite un evento seguro en Vercel.
+Intentos automáticos de email o WhatsApp. La copia de respaldo no crea un log de notificación: emite un evento seguro y, cuando existe la tabla opcional, auditoría persistente.
 
 ## Conservación e invalidación
 
@@ -73,3 +73,9 @@ Los SQL y snapshots se versionan en `drizzle/` y nunca se ejecutan durante el bu
 La migración `0009_administrative_indexes.sql` añade índices para censo ordenado, historial de ediciones, reglas, referencias de participantes y último intento de notificación. No cambia datos ni contratos. Las consultas de impacto agregan sobre intentos distintos antes de contar asignaciones y logs, evitando multiplicación de filas por edición. Revisar tamaño y duración de creación antes de aplicarla a una base grande.
 
 El registro interno `ATTEMPT_COUNTER` en `draw_rules` conserva `config.lastUsed` aunque se eliminen intentos. No es una regla editable por el organizador ni requiere cambiar el schema. Generación considera tanto ese contador como el máximo conservado y actualiza contador e intento bajo el mismo bloqueo y transacción. Las configuraciones anteriores sin contador se inicializan al siguiente sorteo; no se puede reconstruir un número que ya hubiera sido eliminado antes de incorporar este control.
+
+## Tablas opcionales de seguridad
+
+`request_rate_limits` contiene HMAC de dirección/categoría, ventana, intentos y caducidad; no direcciones en claro. `audit_events` contiene eventos e identificadores que sobreviven al borrado de los datos de aplicación, sin contactos, secretos ni texto libre. Ambas habilitan RLS y revocan grants públicos en sus migraciones. La app detecta su ausencia y declara la limitación; no las crea automáticamente.
+
+Los SQL `0008` a `0011` quedan pendientes en el servicio compartido durante esta actualización. Generar una migración y probarla con fixtures no acredita su aplicación real. No se altera ni se reescribe el historial SQL anterior.

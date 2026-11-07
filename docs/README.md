@@ -7,6 +7,7 @@ cómo está construido, cómo operarlo y qué decisiones siguen abiertas.
 
 | Documento | Contenido |
 | --- | --- |
+| [Vocabulario](../CONTEXT.md) | Términos de familia, edición, intento, asignación y entrega. |
 | [Producto](./product.md) | Visión, usuarios, alcance, principios y recorridos principales. |
 | [Estado actual](./current-state.md) | Fotografía honesta de lo implementado, lo simulado y los riesgos conocidos. |
 | [Arquitectura](./architecture.md) | Contexto técnico, módulos, límites y flujos de ejecución. |

@@ -1,15 +1,14 @@
 # Operación y despliegue
 
-## Topología prevista
+## Topología documentada
 
 - **Vercel:** ejecuta Astro SSR y sirve assets estáticos.
 - **Supabase Cloud:** autenticación y Postgres.
 - **Resend:** email transaccional.
 - **Kapso:** plantillas de WhatsApp y webhooks de entrega.
 
-El repositorio está vinculado al proyecto Vercel `carlos-projects-fa17cb11/secret-sanchez`, conectado a GitHub con
-`main` como rama de Production. El dominio reservado es `https://secret-sanchez.vercel.app`. Las migraciones que
-requiera una versión deben aplicarse antes de publicar su código dependiente.
+La configuración histórica del repositorio está vinculada al proyecto Vercel `carlos-projects-fa17cb11/secret-sanchez`, conectado a GitHub con
+`main` como rama de Production. El dominio reservado es `https://secret-sanchez.vercel.app`. Esta actualización no certifica la configuración remota. Los cambios que requieren tablas opcionales detectan su ausencia; sus funcionalidades distribuidas quedan pendientes de migración.
 
 ## Entornos
 
@@ -18,7 +17,7 @@ cualquier escritura local o de Preview es real. Las acciones de sorteo y envío 
 
 ## Configuración de Vercel
 
-1. Mantener Astro como preset, Node.js 22.23.4 o un parche posterior de la rama 22, `npm install` y `npm run build`.
+1. Mantener Astro como preset, Node.js 22.23.4 o un parche posterior de la rama 22, `npm ci` y `npm run build`.
 2. Configurar las mismas variables en Production y Preview.
 3. Definir `APP_URL` como `https://secret-sanchez.vercel.app`.
 4. Mantener habilitado Email/Password y deshabilitar `Allow new users to sign up` en Supabase Auth.
@@ -111,13 +110,12 @@ No probar esta migración contra la conexión compartida sin backup y autorizaci
 
 El servidor emite JSON estructurado para Runtime Logs de Vercel: autenticación, autorización, mutaciones, sorteo,
 notificaciones, revelación y health check. Los errores técnicos incluyen `errorId`, etapa, tipo, código y una
-cadena limitada de causas cuando existe.
+cadena limitada de tipos y códigos de causas, sin mensajes arbitrarios.
 
 `assignment_link_copied` audita la obtención autorizada de un enlace sin incluir el enlace ni su receptor.
 
 Nunca registrar tokens, URLs de revelación completas, contraseñas, claves, cookies ni payloads de autenticación. Reducir datos
-personales en logs y aplicar retención limitada. Los mensajes técnicos se sanean antes de registrarse para ocultar
-URLs de conexión, emails y credenciales largas.
+personales en logs y aplicar retención limitada. Los mensajes arbitrarios de excepciones y SQL se omiten; los campos estructurados sensibles se filtran.
 
 ## Backups y recuperación
 
@@ -164,3 +162,7 @@ idempotencia antes de reanudar.
 
 No completar asignaciones manualmente. Marcar la ejecución como fallida, revertir o invalidar el registro parcial y
 repetir mediante el flujo transaccional.
+
+## Alcance de esta actualización
+
+Por instrucción del propietario: solo código, sin copias de datos reales ni migraciones en Supabase compartido. Los SQL `0008`–`0011` se han verificado en PostgreSQL local con fixtures; no se ha certificado su aplicación remota. Sin las tablas opcionales, los límites son locales a la instancia y la auditoría persistente no está activa. No considerar completa una release operativa hasta resolver estas dependencias y verificar proveedores con destinatarios seguros.

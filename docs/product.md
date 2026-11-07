@@ -41,7 +41,7 @@ Cada familiar necesita:
 4. **La entrega admite excepciones.** Email y WhatsApp son automáticos; la copia por Juan es solo un respaldo.
 5. **Un error no debe destruir un sorteo válido.** Regenerar, reenviar o corregir contactos requiere políticas
    explícitas.
-6. **La privacidad vence a la comodidad.** Los tokens se guardan como hash y los secretos permanecen en servidor.
+6. **La privacidad vence a la comodidad.** Los tokens se buscan por hash, se cifran para entrega autorizada y sus secretos permanecen en servidor.
 
 ## Alcance del MVP
 
