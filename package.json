@@ -18,7 +18,8 @@
     "db:push": "drizzle-kit push",
     "db:studio": "drizzle-kit studio",
     "db:check": "node --import tsx scripts/check-migrations.ts",
-    "test:integration": "node --import tsx scripts/test-integration.ts"
+    "test:integration": "node --import tsx scripts/test-integration.ts",
+    "benchmark:db": "node --import tsx scripts/benchmark-db.ts"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.4",

@@ -173,3 +173,17 @@ test("delivery summaries use the latest attempt rather than any historical succe
   const configuration = await getEditionAppState(data.admin.id, data.edition.id);
   assert.equal(configuration.exposure.notifications, assignments.length + 1);
 }));
+
+test("deletion impact counts attempts once across editions and notification histories", async () => fixture(async (data) => {
+  const first = await generation(data);
+  await revokeEditionDraw({ adminId: data.admin.id, editionId: data.edition.id, drawId: first.draw.id, confirmation: "ANULAR REPARTO" });
+  await generation(data);
+  const other = await createOwnedEdition(data.admin.id, { familyId: data.family.id, name: "Other test", year: 2090, kind: "test" });
+  await generateEditionDraw({ editionId: other.id, generatedByAdminId: data.admin.id });
+  const attempts = await db.select({ id: s.draws.id }).from(s.draws).innerJoin(s.drawEditions, eq(s.draws.editionId, s.drawEditions.id)).where(eq(s.drawEditions.familyId, data.family.id));
+  const allAssignments = (await Promise.all(attempts.map((d) => db.select().from(s.assignments).where(eq(s.assignments.drawId, d.id))))).flat();
+  await db.insert(s.notificationLogs).values(allAssignments.flatMap((a) => [1, 2].map(() => ({ assignmentId: a.id, channel: "email" as const, recipient: "test@example.invalid", status: "sent" as const }))));
+  await db.update(s.assignments).set({ openedAt: new Date() }).where(eq(s.assignments.id, allAssignments[0].id));
+  const { getDeletionImpact } = await import("../../src/db/queries/deletionImpact");
+  assert.deepEqual(await getDeletionImpact(data.people.slice(0, 2).map((p) => p.id)), { editions: 2, draws: 3, assignments: 9, notifications: 18, opened: 1 });
+}));

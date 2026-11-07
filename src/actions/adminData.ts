@@ -1,9 +1,9 @@
+import { getDeletionImpact } from "@/db/queries/deletionImpact";
 import { updateIslandsInBatch, updatePeopleInBatch } from "@/db/bulk-family";
 import { familyRevision } from "@/lib/family-revision";
 import { and, desc, eq, inArray, ne, notExists, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
-  assignments,
   drawEditions,
   drawParticipants,
   draws,
@@ -11,7 +11,6 @@ import {
   editionParticipants,
   families,
   familyIslands,
-  notificationLogs,
   participants
 } from "@/db/schema";
 import { getActiveFamilyGroupForAdmin, getOwnedFamilyGroup } from "@/db/queries/familyGroups";
@@ -367,17 +366,7 @@ export async function getParticipantDeletionImpact(adminId: string, participantI
     .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).limit(1);
   if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
 
-  const [stats] = await db.select({
-    editions: sql<number>`count(distinct ${editionParticipants.editionId})::int`,
-    draws: sql<number>`count(distinct ${drawParticipants.drawId})::int`,
-    assignments: sql<number>`count(distinct ${assignments.id})::int`,
-    notifications: sql<number>`count(distinct ${notificationLogs.id})::int`,
-    opened: sql<number>`count(distinct case when ${assignments.openedAt} is not null then ${assignments.id} end)::int`
-  }).from(editionParticipants)
-    .leftJoin(drawParticipants, eq(drawParticipants.sourceParticipantId, editionParticipants.participantId))
-    .leftJoin(assignments, eq(assignments.drawId, drawParticipants.drawId))
-    .leftJoin(notificationLogs, eq(notificationLogs.assignmentId, assignments.id))
-    .where(eq(editionParticipants.participantId, participantId));
+  const stats = await getDeletionImpact([participantId]);
   return { participant: owned.participant, ...stats };
 }
 
@@ -427,14 +416,7 @@ export async function getIslandDeletionImpact(adminId: string, islandId: string)
   const people = await db.select({ id: participants.id }).from(participants).where(eq(participants.familyIslandId, islandId));
   const participantIds = people.map(({ id }) => id);
   if (!participantIds.length) return { island: owned.island, participants: 0, draws: 0, notifications: 0, opened: 0 };
-  const [stats] = await db.select({
-    draws: sql<number>`count(distinct ${drawParticipants.drawId})::int`,
-    notifications: sql<number>`count(distinct ${notificationLogs.id})::int`,
-    opened: sql<number>`count(distinct case when ${assignments.openedAt} is not null then ${assignments.id} end)::int`
-  }).from(drawParticipants)
-    .leftJoin(assignments, eq(assignments.drawId, drawParticipants.drawId))
-    .leftJoin(notificationLogs, eq(notificationLogs.assignmentId, assignments.id))
-    .where(inArray(drawParticipants.sourceParticipantId, participantIds));
+  const stats = await getDeletionImpact(participantIds);
   return { island: owned.island, participants: participantIds.length, ...stats };
 }
 

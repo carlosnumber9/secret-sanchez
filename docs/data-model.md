@@ -69,3 +69,5 @@ Intentos automáticos de email o WhatsApp. La copia de respaldo no crea un log d
 ## Migraciones
 
 Los SQL y snapshots se versionan en `drizzle/` y nunca se ejecutan durante el build. Local, Preview y Production comparten Supabase: una migración debe contar con backup y validación de conteos antes y después.
+
+La migración `0009_administrative_indexes.sql` añade índices para censo ordenado, historial de ediciones, reglas, referencias de participantes y último intento de notificación. No cambia datos ni contratos. Las consultas de impacto agregan sobre intentos distintos antes de contar asignaciones y logs, evitando multiplicación de filas por edición. Revisar tamaño y duración de creación antes de aplicarla a una base grande.

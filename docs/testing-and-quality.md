@@ -109,3 +109,5 @@ No debe requerir secretos reales para validar una pull request.
 ## Integración aislada
 
 `TEST_DATABASE_URL=postgresql://...@127.0.0.1:5432/secret_sanchez_test npm run test:integration` aplica las migraciones y ejecuta casos reales de transacción, autorización, idempotencia, revocación y revelación. El comando rechaza hosts externos y bases cuyo nombre no termine en `_test`; no carga `.env`. Los proveedores se sustituyen por transportes controlados. CI prepara PostgreSQL 17 efímero y los roles anon/authenticated. Las pruebas crean y limpian únicamente sus familias sintéticas.
+
+`TEST_DATABASE_URL=... npm run benchmark:db` compara planes `EXPLAIN (ANALYZE, BUFFERS)` con 20.000 logs sintéticos en una tabla temporal, antes y después del índice de historial. No representa latencia de producción; permite comprobar el acceso por índice sin leer datos familiares.

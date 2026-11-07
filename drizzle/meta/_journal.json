@@ -64,6 +64,13 @@
       "when": 1794043044085,
       "tag": "0008_restricted_public_access",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1794044893814,
+      "tag": "0009_administrative_indexes",
+      "breakpoints": true
     }
   ]
 }
