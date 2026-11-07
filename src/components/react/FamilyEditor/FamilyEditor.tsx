@@ -1,3 +1,4 @@
+import { Popover } from "@base-ui/react/popover";
 import { availableDeliveryChannel } from "@/lib/contact";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -27,7 +28,6 @@ import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, v
 import { CSS } from "@dnd-kit/utilities";
 import {
   Baby,
-  Check,
   CircleAlert,
   GripVertical,
   HousePlus,
@@ -219,6 +219,15 @@ function SortableParticipant({ island, person, disabled, children }: {
     } satisfies ParticipantDragData,
     disabled
   });
+  const previousBaby = useRef(person.isBaby);
+  const [babyTransition, setBabyTransition] = useState<"on" | "off" | null>(null);
+  useEffect(() => {
+    if (previousBaby.current === person.isBaby) return;
+    previousBaby.current = person.isBaby;
+    setBabyTransition(person.isBaby ? "on" : "off");
+    const timeout = window.setTimeout(() => setBabyTransition(null), 1000);
+    return () => window.clearTimeout(timeout);
+  }, [person.isBaby]);
   const style = {
     transform: CSS.Transform.toString(transform),
     transition,
@@ -228,12 +237,48 @@ function SortableParticipant({ island, person, disabled, children }: {
 
   return <TableRow
     ref={setNodeRef}
-    className={`${person.isBaby ? "is-baby" : ""}${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
+    className={`${person.isBaby ? "is-baby" : ""}${babyTransition ? ` is-baby-changing-${babyTransition}` : ""}${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
     style={style}
     data-participant-row
   >
     {children({ attributes, listeners, setActivatorNodeRef })}
   </TableRow>;
+}
+
+function BabyToggle({ person, disabled, onConfirm }: {
+  person: Participant;
+  disabled: boolean;
+  onConfirm: () => void;
+}) {
+  const [open, setOpen] = useState(false);
+
+  return <Popover.Root modal open={open} onOpenChange={setOpen}>
+    <Popover.Trigger
+      className="family-editor__baby-check"
+      type="button"
+      aria-pressed={person.isBaby}
+      aria-label={`${person.isBaby ? "Desmarcar" : "Marcar"} a ${person.name} como bebé`}
+      title={`${person.isBaby ? "Desmarcar" : "Marcar"} como bebé`}
+      disabled={disabled}
+    ><Baby aria-hidden="true" /></Popover.Trigger>
+    <Popover.Portal>
+      <Popover.Positioner className="family-editor__baby-positioner" side="top" align="end" sideOffset={10} collisionPadding={16}>
+        <Popover.Popup className="family-editor__baby-popover">
+          <Popover.Arrow className="family-editor__baby-arrow" />
+          <Popover.Title className="family-editor__baby-title">{person.isBaby ? "¿Dejar de ser bebé?" : "¿Marcar como bebé?"}</Popover.Title>
+          <Popover.Description className="family-editor__baby-description">
+            {person.isBaby
+              ? `Al guardar la familia, ${person.name} pasará a ser adulto y podrá regalar. Podrás añadir su contacto en la fila.`
+              : `Al guardar la familia, ${person.name} recibirá sin regalar y se eliminarán sus datos de contacto.`}
+          </Popover.Description>
+          <div className="family-editor__baby-confirm-actions">
+            <Popover.Close render={<Button variant="ghost" />}>Cancelar</Popover.Close>
+            <Button onClick={() => { setOpen(false); onConfirm(); }} disabled={disabled}>Confirmar</Button>
+          </div>
+        </Popover.Popup>
+      </Popover.Positioner>
+    </Popover.Portal>
+  </Popover.Root>;
 }
 
 const announcements: Announcements = {
@@ -458,7 +503,6 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }
 
   function toggleBaby(person: Participant) {
-    if (!person.isBaby && !window.confirm(`Al guardar, ${person.name} se marcará como bebé y se eliminarán sus datos de contacto. ¿Continuar?`)) return;
     replaceParticipant({
       ...person,
       isBaby: !person.isBaby,
@@ -845,21 +889,12 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                             </select>}
                         </TableCell>
                         <TableCell className="family-editor__baby-cell">
-                          <button
-                            className="family-editor__baby-check"
-                            type="button"
-                            role="checkbox"
-                            aria-checked={person.isBaby}
-                            aria-label={`${person.isBaby ? "Desmarcar" : "Marcar"} a ${person.name} como bebé`}
-                            title={`${person.isBaby ? "Desmarcar" : "Marcar"} como bebé`}
-                            disabled={busy}
-                            onClick={() => toggleBaby(person)}
-                          ><Baby /><Check className="family-editor__baby-checkmark" /></button>
+                          <BabyToggle person={person} disabled={busy} onConfirm={() => toggleBaby(person)} />
                         </TableCell>
-                        <TableCell className="family-editor__row-actions">
+                        <TableCell className="family-editor__actions-cell"><div className="family-editor__row-actions">
                           <Button variant="ghost" size="icon" disabled={busy || person.isBaby} onClick={() => editPerson(person)} aria-label={`Editar ${person.name}`}><Pencil /></Button>
                           <Button variant="destructive" size="icon" disabled={busy} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
-                        </TableCell>
+                        </div></TableCell>
                       </>}
                     </SortableParticipant>)}
                   </SortableContext>

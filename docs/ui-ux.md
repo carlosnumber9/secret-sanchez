@@ -54,7 +54,9 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 - Reordenar mediante tiradores tanto unidades completas como personas, con soporte de ratón, touch y teclado; las personas pueden cambiar de unidad y soltarse también en unidades vacías.
 - Mostrar durante el arrastre un preview específico para la unidad o persona, indicar el destino válido y restaurar el borrador anterior si la operación se cancela o termina fuera de un destino.
 - Reordenar unidades únicamente para organizar la vista actual, sin persistir ese orden; el orden y la unidad de las personas sí forman parte del borrador guardable.
-- Marcar bebés mediante su icono y reforzar ese estado con una fila rosa y texto accesible.
+- Marcar bebés mediante un icono de 32 px sin borde ni fondo: verde para bebés y gris para adultos. Confirmar ambos cambios en un popover modal anclado al icono, con cancelación mediante botón, Escape o clic fuera.
+- Reforzar la condición de bebé con una fila rosa y texto accesible; al cambiarla, barrer el color de izquierda a derecha durante un segundo, sin animación cuando se solicita movimiento reducido.
+- Alinear las acciones de cada persona horizontalmente dentro de una celda centrada en vertical.
 - Crear, editar y eliminar con previsualización de impacto.
 - Mostrar email, teléfono y preferencia.
 - Señalar contactos incompatibles con el canal elegido.

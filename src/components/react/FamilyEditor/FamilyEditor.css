@@ -147,15 +147,46 @@
 }
 
 .family-editor [data-slot="table-row"] {
-  background: color-mix(in oklch, var(--card) 80%, transparent);
+  --family-row-normal: color-mix(in oklch, var(--card) 80%, transparent);
+  --family-row-baby: color-mix(in oklch, oklch(0.91 0.06 10) 38%, var(--card));
+  background-color: var(--family-row-normal);
 }
 
 .family-editor [data-slot="table-row"].is-baby {
-  background: color-mix(in oklch, oklch(0.91 0.06 10) 38%, var(--card));
+  background-color: var(--family-row-baby);
 }
 
 .family-editor [data-slot="table-row"].is-baby:hover {
-  background: color-mix(in oklch, oklch(0.88 0.08 10) 44%, var(--card));
+  background-color: color-mix(in oklch, oklch(0.88 0.08 10) 44%, var(--card));
+}
+
+.family-editor [data-slot="table-row"].is-baby-changing-on,
+.family-editor [data-slot="table-row"].is-baby-changing-off {
+  background-image: linear-gradient(90deg, var(--family-wipe-new) 33.333%, var(--family-wipe-old) 66.667%);
+  background-size: 300% 100%;
+  background-repeat: no-repeat;
+}
+
+.family-editor [data-slot="table-row"].is-baby-changing-on {
+  --family-wipe-new: var(--family-row-baby);
+  --family-wipe-old: var(--family-row-normal);
+  animation: family-baby-on 1s ease-in-out both;
+}
+
+.family-editor [data-slot="table-row"].is-baby-changing-off {
+  --family-wipe-new: var(--family-row-normal);
+  --family-wipe-old: var(--family-row-baby);
+  animation: family-baby-off 1s ease-in-out both;
+}
+
+@keyframes family-baby-on {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
+}
+
+@keyframes family-baby-off {
+  from { background-position: 100% 0; }
+  to { background-position: 0 0; }
 }
 
 .family-editor [data-slot="table-row"].is-drag-target td {
@@ -250,50 +281,89 @@
 }
 
 .family-editor__actions-heading,
-.family-editor__row-actions {
+.family-editor__actions-cell {
   width: 5.5rem;
 }
 
 .family-editor__baby-check {
-  position: relative;
   display: inline-grid;
-  width: 2.25rem;
-  height: 2.25rem;
+  width: 2.75rem;
+  height: 2.75rem;
   padding: 0;
   place-items: center;
   color: var(--muted-foreground);
-  background: color-mix(in oklch, var(--muted) 65%, transparent);
-  border: 1px solid var(--border);
-  border-radius: 999px;
+  background: transparent;
+  border: 0;
+  border-radius: var(--radius-lg);
   cursor: pointer;
+  transition: color 160ms ease;
 }
 
-.family-editor__baby-check[aria-checked="true"] {
-  color: oklch(0.47 0.17 15);
-  background: oklch(0.94 0.045 10);
-  border-color: oklch(0.78 0.1 10);
+.family-editor__baby-check[aria-pressed="true"] {
+  color: oklch(0.53 0.14 155);
 }
 
-.family-editor__baby-check > svg:first-child {
-  width: 1.15rem;
-  height: 1.15rem;
+.family-editor__baby-check:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
 }
 
-.family-editor__baby-checkmark {
-  position: absolute;
-  right: -0.15rem;
-  bottom: -0.1rem;
-  width: 0.85rem;
-  height: 0.85rem;
-  padding: 0.12rem;
-  color: white;
-  background: oklch(0.55 0.18 15);
-  border-radius: 999px;
-  opacity: 0;
+.family-editor__baby-check > svg {
+  width: 2rem;
+  height: 2rem;
 }
 
-.family-editor__baby-check[aria-checked="true"] .family-editor__baby-checkmark {
-  opacity: 1;
+.family-editor__baby-positioner {
+  z-index: 50;
+}
+
+.family-editor__baby-popover {
+  width: min(20rem, calc(100vw - 2rem));
+  padding: 1rem;
+  color: var(--foreground);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-2xl);
+  box-shadow: var(--shadow-md);
+}
+
+.family-editor__baby-arrow {
+  width: 0.65rem;
+  height: 0.65rem;
+  background: var(--card);
+  transform: rotate(45deg);
+}
+
+.family-editor__baby-arrow[data-side="top"] {
+  bottom: -0.375rem;
+  border-right: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.family-editor__baby-arrow[data-side="bottom"] {
+  top: -0.375rem;
+  border-left: 1px solid var(--border);
+  border-top: 1px solid var(--border);
+}
+
+.family-editor__baby-title {
+  margin: 0 0 0.5rem;
+  font-size: 1rem;
+  font-weight: 650;
+  line-height: 1.35;
+}
+
+.family-editor__baby-description {
+  margin: 0;
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.family-editor__baby-confirm-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.5rem;
+  margin-top: 1rem;
 }
 
 .family-editor__empty {
@@ -364,7 +434,10 @@
 
 @media (prefers-reduced-motion: reduce) {
   .family-editor__island,
-  .family-editor [data-slot="table-row"] {
+  .family-editor [data-slot="table-row"],
+  .family-editor__baby-check {
+    animation: none;
+    background-image: none;
     transition: none;
   }
 }
