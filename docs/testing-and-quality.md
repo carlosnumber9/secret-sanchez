@@ -6,7 +6,7 @@
 - TypeScript usa la configuración estricta de Astro.
 - Existe una suite unitaria con el runner nativo de Node y `tsx`.
 - No hay scripts separados de lint o formato.
-- No hay CI en el repositorio.
+- CI instala con `npm ci`, ejecuta unitarias, build, comprobación de schema y auditoría de dependencias. No utiliza secretos reales.
 
 `npm test` y `npm run build` son los controles automáticos locales y deben ejecutarse antes de cerrar cambios de código.
 
@@ -103,3 +103,5 @@ No debe requerir secretos reales para validar una pull request.
 - Lint y formateador.
 - Umbral de cobertura.
 - Estrategia de regresión visual.
+
+`npm run db:check` compara el schema con los snapshots en una copia temporal de las migraciones, sin conectar a ninguna base ni modificar el repositorio. La auditoría bloquea avisos altos o críticos; los bajos y moderados quedan visibles para revisión. Las acciones de CI se fijan por SHA y tienen permisos de solo lectura.
