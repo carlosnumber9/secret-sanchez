@@ -1,5 +1,6 @@
+import { updateIslandsInBatch, updatePeopleInBatch } from "@/db/bulk-family";
 import { familyRevision } from "@/lib/family-revision";
-import { and, desc, eq, inArray, ne, sql } from "drizzle-orm";
+import { and, desc, eq, inArray, ne, notExists, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
   assignments,
@@ -233,34 +234,17 @@ export async function saveOwnedFamilyDraft(adminId: string, familyId: string, dr
 
     const editions = await tx.select({ id: drawEditions.id }).from(drawEditions)
       .where(eq(drawEditions.familyId, familyId));
-    const islandIdByClientId = new Map<string, string>();
-    const savedIslands: Array<typeof familyIslands.$inferSelect & { clientId: string }> = [];
-    for (const item of draft.islands) {
-      if (item.id) {
-        const [island] = await tx.update(familyIslands).set({
-          name: item.name,
-          color: item.color,
-          updatedAt: new Date()
-        }).where(and(eq(familyIslands.id, item.id), eq(familyIslands.familyId, familyId))).returning();
-        islandIdByClientId.set(item.clientId, island.id);
-        savedIslands.push({ clientId: item.clientId, ...island });
-      } else {
-        const [island] = await tx.insert(familyIslands).values({
-          familyId,
-          name: item.name,
-          color: item.color
-        }).returning();
-        if (editions.length) {
-          await tx.insert(editionIslandConfigs).values(editions.map(({ id }) => ({
-            editionId: id,
-            familyIslandId: island.id,
-            enabled: true
-          })));
-        }
-        islandIdByClientId.set(item.clientId, island.id);
-        savedIslands.push({ clientId: item.clientId, ...island });
-      }
-    }
+    const currentIslandById = new Map(currentIslands.map((island) => [island.id, island]));
+    const preparedIslands = draft.islands.map((item) => ({ ...item, id: item.id ?? crypto.randomUUID(), isNew: !item.id }));
+    const islandIdByClientId = new Map(preparedIslands.map((item) => [item.clientId, item.id]));
+    const newIslands = preparedIslands.filter((item) => item.isNew);
+    const insertedIslands = newIslands.length ? await tx.insert(familyIslands).values(newIslands.map((item) => ({ id: item.id, familyId, name: item.name, color: item.color }))).returning() : [];
+    const changedIslands = preparedIslands.filter((item) => !item.isNew && (currentIslandById.get(item.id)!.name !== item.name || currentIslandById.get(item.id)!.color !== item.color));
+    const updatedIslands = await updateIslandsInBatch(tx, familyId, changedIslands);
+    const savedIslandById = new Map([...currentIslands, ...insertedIslands, ...updatedIslands].map((item) => [item.id, item]));
+    const savedIslands = preparedIslands.map((item) => ({ ...savedIslandById.get(item.id)!, clientId: item.clientId }));
+    const islandConfigs = newIslands.flatMap((island) => editions.map((edition) => ({ editionId: edition.id, familyIslandId: island.id, enabled: true })));
+    for (let offset = 0; offset < islandConfigs.length; offset += 500) await tx.insert(editionIslandConfigs).values(islandConfigs.slice(offset, offset + 500));
 
     if (removedParticipantIds.length) {
       await lockFamilyEditions(tx, familyId);
@@ -269,74 +253,37 @@ export async function saveOwnedFamilyDraft(adminId: string, familyId: string, dr
     }
 
     const currentById = new Map(currentParticipants.map((participant) => [participant.id, participant]));
-    const changedBabyIds: string[] = [];
-    const savedParticipants: Array<typeof participants.$inferSelect & {
-      clientId: string;
-      familyIslandClientId: string;
-    }> = [];
-    for (const item of draft.participants) {
+    const preparedPeople = draft.participants.map((item) => {
       const familyIslandId = islandIdByClientId.get(item.familyIslandClientId);
       if (!familyIslandId) throw new AppError(422, "ISLAND_MISMATCH", "Una persona apunta a una unidad inexistente.");
-      const contact = item.isBaby
-        ? { email: null, phone: null, preferredChannel: null }
-        : { email: item.email || null, phone: item.phone || null, preferredChannel: item.preferredChannel };
-      if (item.id) {
-        const current = currentById.get(item.id)!;
-        if (current.isBaby !== item.isBaby) changedBabyIds.push(item.id);
-        const [participant] = await tx.update(participants).set({
-          familyIslandId,
-          name: item.name,
-          ...contact,
-          isBaby: item.isBaby,
-          sortOrder: item.sortOrder,
-          updatedAt: new Date()
-        }).where(and(eq(participants.id, item.id), eq(participants.familyId, familyId))).returning();
-        savedParticipants.push({ clientId: item.clientId, familyIslandClientId: item.familyIslandClientId, ...participant });
-      } else {
-        const [participant] = await tx.insert(participants).values({
-          familyId,
-          familyIslandId,
-          name: item.name,
-          ...contact,
-          isBaby: item.isBaby,
-          sortOrder: item.sortOrder
-        }).returning();
-        if (editions.length) {
-          await tx.insert(editionParticipants).values(editions.map(({ id }) => ({
-            editionId: id,
-            participantId: participant.id,
-            enabled: false,
-            canGive: !participant.isBaby,
-            canReceive: true,
-            isBaby: participant.isBaby,
-            preferredChannel: participant.isBaby ? null : participant.preferredChannel
-          })));
-        }
-        savedParticipants.push({ clientId: item.clientId, familyIslandClientId: item.familyIslandClientId, ...participant });
-      }
-    }
-
-    if (changedBabyIds.length) {
-      const activeDrawEditions = await tx.select({ editionId: draws.editionId }).from(draws)
-        .innerJoin(drawEditions, eq(draws.editionId, drawEditions.id))
-        .where(and(eq(drawEditions.familyId, familyId), ne(draws.status, "revoked")));
-      const lockedEditionIds = new Set(activeDrawEditions.map(({ editionId }) => editionId));
-      for (const participantId of changedBabyIds) {
-        const participant = savedParticipants.find(({ id }) => id === participantId)!;
-        for (const edition of editions) {
-          if (lockedEditionIds.has(edition.id)) continue;
-          await tx.update(editionParticipants).set({
-            isBaby: participant.isBaby,
-            canGive: !participant.isBaby,
-            canReceive: true,
-            preferredChannel: participant.isBaby ? null : participant.preferredChannel,
-            updatedAt: new Date()
-          }).where(and(
-            eq(editionParticipants.editionId, edition.id),
-            eq(editionParticipants.participantId, participantId)
-          ));
-        }
-      }
+      return { item, values: {
+        id: item.id ?? crypto.randomUUID(), familyId, familyIslandId, name: item.name,
+        email: item.isBaby ? null : item.email || null, phone: item.isBaby ? null : item.phone || null,
+        preferredChannel: item.isBaby ? null : item.preferredChannel, isBaby: item.isBaby, sortOrder: item.sortOrder
+      } };
+    });
+    const editable = ["familyIslandId", "name", "email", "phone", "preferredChannel", "isBaby", "sortOrder"] as const;
+    const changedPeople = preparedPeople.filter(({ item, values }) => item.id && editable.some((key) => currentById.get(item.id!)![key] !== values[key]));
+    const newPeople = preparedPeople.filter(({ item }) => !item.id);
+    const updatedPeople = await updatePeopleInBatch(tx, familyId, changedPeople.map(({ values }) => values));
+    const insertedPeople = newPeople.length ? await tx.insert(participants).values(newPeople.map(({ values }) => values)).returning() : [];
+    const savedPersonById = new Map([...currentParticipants, ...insertedPeople, ...updatedPeople].map((person) => [person.id, person]));
+    const savedParticipants = preparedPeople.map(({ item, values }) => ({ ...savedPersonById.get(values.id)!, clientId: item.clientId, familyIslandClientId: item.familyIslandClientId }));
+    const personConfigs = insertedPeople.flatMap((person) => editions.map((edition) => ({
+      editionId: edition.id, participantId: person.id, enabled: false, canGive: !person.isBaby,
+      canReceive: true, isBaby: person.isBaby, preferredChannel: person.preferredChannel
+    })));
+    for (let offset = 0; offset < personConfigs.length; offset += 500) await tx.insert(editionParticipants).values(personConfigs.slice(offset, offset + 500));
+    const changedBabyIds = changedPeople.filter(({ item, values }) => currentById.get(item.id!)!.isBaby !== values.isBaby).map(({ values }) => values.id);
+    if (changedBabyIds.length && editions.length) {
+      await tx.update(editionParticipants).set({
+        isBaby: participants.isBaby, canGive: sql`not ${participants.isBaby}`, canReceive: true,
+        preferredChannel: sql`case when ${participants.isBaby} or ${participants.preferredChannel} = 'manual' then null else ${participants.preferredChannel} end`, updatedAt: new Date()
+      }).from(participants).where(and(
+        eq(editionParticipants.participantId, participants.id), inArray(participants.id, changedBabyIds),
+        inArray(editionParticipants.editionId, editions.map(({ id }) => id)),
+        notExists(tx.select({ id: draws.id }).from(draws).where(and(eq(draws.editionId, editionParticipants.editionId), ne(draws.status, "revoked"))))
+      ));
     }
 
     if (removedIslandIds.length) {

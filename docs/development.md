@@ -58,3 +58,5 @@ Los comandos de Drizzle, bootstrap y contraseña cargan `.env.local` y después 
 `shadcn` es una herramienta de generación y se instala solo como dependencia de desarrollo. El compilador permanece en TypeScript 6; actualizar su major requiere validar primero Astro y el runner. Las instalaciones reproducibles utilizan `npm ci`.
 
 El override de `path-to-regexp` dentro de `@vercel/routing-utils` actualiza la rama 6 a su parche de seguridad 6.3, sin cambiar de major. Revisarlo cuando el adapter retire su versión vulnerable. Los avisos restantes de herramientas se revisan explícitamente; no se resuelven mediante downgrades automáticos del framework.
+
+El guardado familiar compara campos editables con las filas bloqueadas. Solo actualiza diferencias; altas y modificaciones se agrupan en lotes y los cambios de bebé se propagan con una actualización por conjunto a las ediciones sin reparto vigente. Un guardado sin diferencias no cambia timestamps de personas o unidades.

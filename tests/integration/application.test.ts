@@ -130,3 +130,28 @@ test("public roles cannot read protected application tables", async () => {
     }), (error: unknown) => Boolean(error && typeof error === "object" && "cause" in error && (error.cause as { code?: string })?.code === "42501"));
   }
 });
+
+test("family batches preserve unchanged rows and synchronize baby roles", async () => fixture(async (data) => {
+  const state = await getAdminAppState(data.admin.id);
+  const draft = {
+    revision: state.revision!, confirmedParticipantDeletionIds: [], confirmedIslandDeletionIds: [],
+    islands: state.islands.map((i) => ({ clientId: i.id, id: i.id, name: i.name, color: i.color ?? "#d6a84f" })),
+    participants: state.participants.map((p) => ({ clientId: p.id, id: p.id as string | null, familyIslandClientId: p.familyIslandId, name: p.name, email: p.email ?? "", phone: p.phone ?? "", preferredChannel: p.preferredChannel === "manual" ? null : p.preferredChannel, isBaby: p.isBaby, sortOrder: p.sortOrder }))
+  };
+  const saved = await saveOwnedFamilyDraft(data.admin.id, data.family.id, draft);
+  await saveOwnedFamilyDraft(data.admin.id, data.family.id, { ...draft, revision: saved.revision });
+  const unchanged = await db.select().from(s.participants).where(eq(s.participants.familyId, data.family.id));
+  for (const person of unchanged) assert.equal(person.updatedAt.getTime(), data.people.find((p) => p.id === person.id)!.updatedAt.getTime());
+  const changed = { ...draft, revision: saved.revision, participants: draft.participants.map((p, index) => index === 0 ? { ...p, isBaby: true, email: "", preferredChannel: null } : p) };
+  changed.participants.push({ ...changed.participants[0], clientId: "new-baby", id: null, name: "New baby", sortOrder: 1 });
+  const result = await saveOwnedFamilyDraft(data.admin.id, data.family.id, changed);
+  const baby = result.islands.flatMap((i) => i.participants).find((p) => p.name === "New baby")!;
+  assert.ok(baby.id);
+  const configs = await db.select().from(s.editionParticipants).where(eq(s.editionParticipants.editionId, data.edition.id));
+  const newConfig = configs.find((c) => c.participantId === baby.id)!;
+  assert.equal(newConfig.enabled, false);
+  assert.equal(newConfig.canGive, false);
+  const changedConfig = configs.find((c) => c.participantId === changed.participants[0].id)!;
+  assert.equal(changedConfig.isBaby, true);
+  assert.equal(changedConfig.preferredChannel, null);
+}));
