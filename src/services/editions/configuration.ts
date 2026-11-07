@@ -28,6 +28,6 @@ export function validateEditionRoles(participants: EditionConfiguredParticipant[
   return null;
 }
 
-export function nextAttemptNumber(attemptNumbers: number[]) {
-  return attemptNumbers.length ? Math.max(...attemptNumbers) + 1 : 1;
+export function nextAttemptNumber(attemptNumbers: number[], lastUsed = 0) {
+  return Math.max(lastUsed, 0, ...attemptNumbers) + 1;
 }

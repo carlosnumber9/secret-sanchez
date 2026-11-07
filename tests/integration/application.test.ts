@@ -237,3 +237,11 @@ test("concurrent reveal opens mark the first opening exactly once", async () => 
   assert.equal(opens.filter((r) => r?.firstOpen).length, 1);
   assert.equal(opens[0]!.receiverName, opens[1]!.receiverName);
 }));
+
+test("attempt counters survive deletion of the latest attempt", async () => fixture(async (data) => {
+  const first = await generation(data);
+  assert.equal(first.draw.attemptNumber, 1);
+  await deleteOwnedParticipant(data.admin.id, data.people[0].id, "ELIMINAR PERSONA");
+  const next = await generation(data);
+  assert.equal(next.draw.attemptNumber, 2);
+}));

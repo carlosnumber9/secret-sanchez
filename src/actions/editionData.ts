@@ -23,7 +23,7 @@ import { logger } from "@/lib/logger";
 import { createRevealToken, encryptRevealToken, hashRevealToken } from "@/lib/tokens";
 import { generateDraw as generateDrawAssignments } from "@/services/draw/generateDraw";
 import { generateBabyAssignments } from "@/services/draw/generateBabyAssignments";
-import { resolveEditionParticipants, validateEditionRoles } from "@/services/editions/configuration";
+import { nextAttemptNumber, resolveEditionParticipants, validateEditionRoles } from "@/services/editions/configuration";
 
 export type EditionKind = "test" | "final";
 type DeliveryChannel = "email" | "whatsapp" | "both" | null;
@@ -292,9 +292,14 @@ export async function generateEditionDraw(input: { editionId: string; generatedB
     );
     if (!generatedBabies.ok) throw new AppError(422, "BABY_DRAW_IMPOSSIBLE", generatedBabies.message);
 
+    const persistedCounter = rules.filter((rule) => rule.type === "ATTEMPT_COUNTER").reduce((highest, rule) => {
+      const value = (rule.config as { lastUsed?: unknown })?.lastUsed;
+      return typeof value === "number" && Number.isSafeInteger(value) && value >= 0 ? Math.max(highest, value) : highest;
+    }, 0);
+    const attemptNumber = nextAttemptNumber([attempt[0]?.value ?? 0], persistedCounter);
     const [draw] = await tx.insert(draws).values({
       editionId: input.editionId,
-      attemptNumber: (attempt[0]?.value ?? 0) + 1,
+      attemptNumber,
       status: "locked",
       generatedByAdminId: input.generatedByAdminId
     }).returning();
@@ -347,6 +352,12 @@ export async function generateEditionDraw(input: { editionId: string; generatedB
     });
     await tx.insert(assignments).values([...personalValues, ...babyValues]);
     await tx.update(drawEditions).set({ status: "drawn", updatedAt: new Date() }).where(eq(drawEditions.id, input.editionId));
+    if (rules.some((rule) => rule.type === "ATTEMPT_COUNTER")) {
+      await tx.update(drawRules).set({ config: { lastUsed: attemptNumber } })
+        .where(and(eq(drawRules.editionId, input.editionId), eq(drawRules.type, "ATTEMPT_COUNTER")));
+    } else {
+      await tx.insert(drawRules).values({ editionId: input.editionId, type: "ATTEMPT_COUNTER", config: { lastUsed: attemptNumber } });
+    }
     logger.info("draw.generation_succeeded", { editionId: input.editionId, drawId: draw.id, assignmentCount: personalValues.length + babyValues.length, babyAssignmentCount: babyValues.length, durationMs: Math.round(performance.now() - startedAt) });
     return { draw, assignmentCount: personalValues.length + babyValues.length, adultAssignmentCount: personalValues.length, babyAssignmentCount: babyValues.length };
   });

@@ -25,6 +25,8 @@ test("giver and receiver totals must be balanced", () => {
 test("attempt numbers are monotonic and gaps are not reused", () => {
   assert.equal(nextAttemptNumber([]), 1);
   assert.equal(nextAttemptNumber([1, 3, 4]), 5);
+  assert.equal(nextAttemptNumber([], 4), 5);
+  assert.equal(nextAttemptNumber([1, 3], 4), 5);
 });
 
 test("edition lifecycle states have clear Spanish labels", () => {
