@@ -3,6 +3,7 @@ import Button from "@/components/Button/Button.astro";
 import Card from "@/components/Card/Card.astro";
 import StatusBadge from "@/components/StatusBadge/StatusBadge.astro";
 import EditionConfigurator from "@/components/react/EditionConfigurator/EditionConfigurator";
+import EditionRules from "@/components/react/EditionRules/EditionRules";
 import RevokeDraw from "@/components/react/RevokeDraw/RevokeDraw";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { getEditionAppState } from "@/actions/editionData";
@@ -27,7 +28,8 @@ const peopleProps = state.participants.map(({ participant, config }) => ({
 <AdminLayout title={state.edition.name}>
   <div class="section-header"><p>{state.edition.year}</p><h1>{state.edition.name}</h1><div class="cluster"><StatusBadge tone={state.edition.kind === "final" ? "ok" : "neutral"}>{state.edition.kind === "final" ? "Definitiva" : "Prueba"}</StatusBadge><StatusBadge tone="neutral">{getEditionStatusLabel(state.edition.status)}</StatusBadge></div></div>
   <div class="cluster cluster--actions"><Button href={`/ediciones/${id}/sorteo`} size="large">{state.currentDraw ? "Ver reparto" : "Ir al reparto"}</Button>{state.currentDraw && <Button href={`/ediciones/${id}/envios`} variant="secondary">Ver envíos</Button>}</div>
-  <Card><div class="stack"><h2>Participantes y roles</h2><p>Los núcleos desactivados prevalecen sobre la configuración individual.</p><EditionConfigurator client:load editionId={id} initialIslands={islandProps} initialPeople={peopleProps} locked={Boolean(state.currentDraw)} /></div></Card>
+  <Card><div class="stack"><h2>Participantes y roles</h2><p>Los núcleos desactivados prevalecen sobre la configuración individual.</p><EditionConfigurator client:load editionId={id} initialIslands={islandProps} initialPeople={peopleProps} locked={Boolean(state.currentDraw) || state.edition.status === "archived"} /></div></Card>
+  <Card><div class="stack"><h2>Reglas y exclusiones</h2><EditionRules client:load editionId={id} people={peopleProps.filter((p) => !p.isBaby).map(({ id, name }) => ({ id, name }))} initialNoSameIsland={state.rules.find((r) => r.type === "NO_SAME_ISLAND")?.enabled ?? true} initialExclusions={state.exclusions.map(({ fromParticipantId, toParticipantId }) => ({ fromParticipantId, toParticipantId }))} locked={Boolean(state.currentDraw) || state.edition.status === "archived"} /></div></Card>
   {state.currentDraw && <Card tone="warm"><div class="stack"><h2>Revertir intento {state.currentDraw.attemptNumber}</h2><RevokeDraw client:load editionId={id} drawId={state.currentDraw.id} exposure={state.exposure} /></div></Card>}
   {state.attempts.some((attempt) => attempt.status === "revoked") && <Card><div class="stack"><h2>Intentos anulados</h2>{state.attempts.filter((attempt) => attempt.status === "revoked").map((attempt) => <p>Intento {attempt.attemptNumber} · anulado {attempt.revokedAt?.toLocaleString("es-ES")}</p>)}</div></Card>}
 </AdminLayout>

@@ -52,3 +52,7 @@ El validador comprueba la cobertura exacta y única de regaladores y receptores 
 La configuración, generación y revocación bloquean primero la familia y después la edición, dentro de la misma transacción que comprueba y modifica el estado. Las ediciones archivadas no son editables. Los conflictos de unicidad se traducen a `409` sin exponer mensajes SQL.
 
 La búsqueda tiene coste polinómico `O(V·E)` y se limita a 500 nodos por lado. Los candidatos y las exclusiones se preparan una vez; no se enumeran permutaciones completas. El barajado conserva aleatoriedad, sin declarar muestreo uniforme de todos los repartos posibles. La clave de cifrado se valida una vez por generación.
+
+## Edición de reglas
+
+La configuración de una edición permite activar `NO_SAME_ISLAND` y añadir o quitar hasta 500 exclusiones dirigidas entre adultos de esa edición. Se guardan juntas mediante `PUT /api/admin/editions/:id/rules`, con autorización de propietario y los mismos bloqueos de familia/edición que la generación. Los pares idénticos, repetidos, ajenos o de bebés se rechazan. El contador interno de intentos no se expone ni se modifica. Las ediciones archivadas o con reparto vigente son inmutables. Cambiar roles puede dejar una exclusión temporalmente sin efecto; no altera las asignaciones ya generadas.

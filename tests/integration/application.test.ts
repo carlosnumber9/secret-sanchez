@@ -323,3 +323,25 @@ test("signed email webhooks handle bounces, replays and out of order events", as
     assert.equal(await claimNotificationAttempt({ assignmentId: assignment.id, channel: "email", recipient: log.recipient, mode: "force", idempotencyKey: crypto.randomUUID() }), null);
   } finally { delete process.env.RESEND_WEBHOOK_SECRET; }
 }));
+
+test("edition rules are owned, atomic, enforced and preserve internal counters", async () => fixture(async (data) => {
+  const { updateEditionRules } = await import("../../src/actions/editionRules");
+  const input = { noSameIsland: false, exclusions: [{ fromParticipantId: data.people[0].id, toParticipantId: data.people[1].id }] };
+  await assert.rejects(updateEditionRules(crypto.randomUUID(), data.edition.id, input), { code: "EDITION_NOT_FOUND" });
+  await assert.rejects(updateEditionRules(data.admin.id, data.edition.id, { ...input, exclusions: [...input.exclusions, ...input.exclusions] }), { name: "ZodError" });
+  await assert.rejects(updateEditionRules(data.admin.id, data.edition.id, { ...input, exclusions: [{ fromParticipantId: data.people[0].id, toParticipantId: data.people[0].id }] }), { name: "ZodError" });
+  await updateEditionRules(data.admin.id, data.edition.id, input);
+  await assert.rejects(updateEditionRules(data.admin.id, data.edition.id, { ...input, exclusions: [...input.exclusions, { fromParticipantId: data.people[0].id, toParticipantId: crypto.randomUUID() }] }), { code: "INVALID_EXCLUSION" });
+  const rows = await db.select().from(s.exclusionRules).where(eq(s.exclusionRules.editionId, data.edition.id));
+  assert.equal(rows.length, 1);
+  const first = await generation(data);
+  const pairs = await db.select({ giver: s.drawParticipants.sourceParticipantId, receiverId: s.assignments.receiverId }).from(s.assignments).innerJoin(s.drawParticipants, eq(s.assignments.giverId, s.drawParticipants.id)).where(eq(s.assignments.drawId, first.draw.id));
+  const snapshots = await db.select().from(s.drawParticipants).where(eq(s.drawParticipants.drawId, first.draw.id));
+  const pair = pairs.find((p) => p.giver === data.people[0].id)!;
+  assert.notEqual(snapshots.find((p) => p.id === pair.receiverId)!.sourceParticipantId, data.people[1].id);
+  await assert.rejects(updateEditionRules(data.admin.id, data.edition.id, input), { code: "EDITION_LOCKED" });
+  await revokeEditionDraw({ adminId: data.admin.id, editionId: data.edition.id, drawId: first.draw.id, confirmation: "ANULAR REPARTO" });
+  await updateEditionRules(data.admin.id, data.edition.id, { noSameIsland: true, exclusions: [] });
+  const next = await generation(data);
+  assert.equal(next.draw.attemptNumber, 2);
+}));
