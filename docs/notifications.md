@@ -41,3 +41,7 @@ La operación emite `assignment_link_copied` en Vercel con identificadores de ad
 ## Idempotencia y resultados inciertos
 
 La reserva de intentos se serializa por asignación dentro de una transacción. Las peticiones repetidas conservan la clave en la interfaz y la misma clave se envía a Resend. Los intentos pendientes recientes se omiten durante 60 segundos. Los emails pendientes se pueden recuperar con la clave original durante 23 horas, dentro de la ventana de deduplicación del proveedor. Un timeout o un fallo de transporte conserva `pending` con `outcome_unknown`; no se afirma que el proveedor rechazara el mensaje. WhatsApp y los emails fuera de esa ventana necesitan comprobación en proveedor y reenvío explícito seleccionado; no se reintentan automáticamente porque podrían duplicarse. Ambos transportes tienen un timeout de 20 segundos.
+
+## Concurrencia del webhook
+
+Las transiciones de estado son condicionales en SQL; eventos duplicados o concurrentes no degradan `delivered` o `read`. Si llega un evento antes de guardar el identificador del proveedor, el endpoint devuelve `503` y `Retry-After` para activar los reintentos de Kapso. Los fallos persistentes deben reconciliarse desde el panel del proveedor. Un JSON firmado inválido devuelve `400`.

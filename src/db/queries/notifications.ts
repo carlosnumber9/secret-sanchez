@@ -1,6 +1,7 @@
+import { previousStatusesFor, type WhatsappDeliveryStatus } from "@/services/notifications/whatsappStatus";
 import { canResumePending, notificationLeaseMs } from "@/services/notifications/retry";
 import { isEligibleNotification } from "@/services/notifications/eligibility";
-import { and, desc, eq } from "drizzle-orm";
+import { and, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@/db/client";
 import { assignments, notificationLogs } from "@/db/schema";
 
@@ -10,7 +11,9 @@ export async function createNotificationLog(input: typeof notificationLogs.$infe
 }
 
 export async function updateNotificationLog(id: string, input: Partial<typeof notificationLogs.$inferInsert>) {
-  const [log] = await db.update(notificationLogs).set(input).where(eq(notificationLogs.id, id)).returning();
+  const condition = input.status && ["pending", "sent", "failed", "delivered", "read"].includes(input.status)
+    ? inArray(notificationLogs.status, [...previousStatusesFor(input.status as WhatsappDeliveryStatus | "pending")]) : undefined;
+  const [log] = await db.update(notificationLogs).set(input).where(and(eq(notificationLogs.id, id), condition)).returning();
   return log;
 }
 
@@ -74,4 +77,12 @@ export async function claimNotificationAttempt(input: {
     }).onConflictDoNothing().returning();
     return log ?? null;
   });
+}
+
+export async function applyWhatsappEvent(providerMessageId: string, status: WhatsappDeliveryStatus) {
+  const [updated] = await db.update(notificationLogs).set({ status, error: status === "failed" ? "delivery_failed" : null })
+    .where(and(eq(notificationLogs.providerMessageId, providerMessageId), eq(notificationLogs.channel, "whatsapp"),
+      inArray(notificationLogs.status, [...previousStatusesFor(status)]))).returning({ id: notificationLogs.id });
+  if (updated) return true;
+  return Boolean(await findNotificationByProviderMessageId(providerMessageId));
 }

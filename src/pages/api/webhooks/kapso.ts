@@ -1,10 +1,11 @@
 import { createHmac, timingSafeEqual } from "node:crypto";
 import type { APIRoute } from "astro";
 import { z } from "zod";
-import { findNotificationByProviderMessageId, updateNotificationLog } from "@/db/queries/notifications";
+import { applyWhatsappEvent } from "@/db/queries/notifications";
 import { getEnv } from "@/lib/env";
+import { handleApiError } from "@/lib/api";
 import { logger } from "@/lib/logger";
-import { shouldApplyWhatsappStatus, type WhatsappDeliveryStatus } from "@/services/notifications/whatsappStatus";
+import { type WhatsappDeliveryStatus } from "@/services/notifications/whatsappStatus";
 
 const payloadSchema = z.object({
   message: z.object({
@@ -14,6 +15,7 @@ const payloadSchema = z.object({
 });
 
 function validSignature(rawBody: string, signature: string, secret: string) {
+  if (!/^[a-fA-F0-9]{64}$/.test(signature)) return false;
   const expected = createHmac("sha256", secret).update(rawBody).digest("hex");
   const providedBuffer = Buffer.from(signature, "hex");
   const expectedBuffer = Buffer.from(expected, "hex");
@@ -29,14 +31,17 @@ export const POST: APIRoute = async ({ request }) => {
     logger.warn("kapso.webhook_rejected", { reason: "invalid_signature" });
     return Response.json({ ok: false }, { status: 401 });
   }
-  const parsed = payloadSchema.safeParse(JSON.parse(rawBody));
+  let body: unknown;
+  try { body = JSON.parse(rawBody); }
+  catch { return Response.json({ ok: false }, { status: 400 }); }
+  const parsed = payloadSchema.safeParse(body);
   if (!parsed.success) return Response.json({ ok: true, ignored: true });
-  const status = parsed.data.message.kapso.status as WhatsappDeliveryStatus;
-  const log = await findNotificationByProviderMessageId(parsed.data.message.id);
-  if (!log || log.channel !== "whatsapp") return Response.json({ ok: true, ignored: true });
-  if (shouldApplyWhatsappStatus(log.status, status)) {
-    await updateNotificationLog(log.id, { status, error: status === "failed" ? "delivery_failed" : null });
+  try {
+    const applied = await applyWhatsappEvent(parsed.data.message.id, parsed.data.message.kapso.status as WhatsappDeliveryStatus);
+    if (!applied) return Response.json({ ok: false, retry: true }, { status: 503, headers: { "Retry-After": "2" } });
+    logger.info("kapso.delivery_updated", { status: parsed.data.message.kapso.status });
+    return Response.json({ ok: true });
+  } catch (error) {
+    return handleApiError("kapso.webhook_failed", error);
   }
-  logger.info("kapso.delivery_updated", { notificationId: log.id, assignmentId: log.assignmentId, status });
-  return Response.json({ ok: true });
 };
