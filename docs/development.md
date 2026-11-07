@@ -46,3 +46,7 @@ No registrar ni copiar secretos, contactos, tokens, hashes o URLs de revelación
 `admin:set-password` carga `PUBLIC_SUPABASE_URL` desde `.env.local` o `.env`. Solicita de forma oculta la contraseña
 y, si no están exportadas, `SUPABASE_SECRET_KEY` o `SUPABASE_SERVICE_ROLE_KEY`. Estas claves administrativas son
 exclusivas de operación local: no se añaden a `AppEnv`, no se configuran en Vercel y nunca se pasan como argumento.
+
+## Actualizaciones de dependencias
+
+Las dependencias de aplicación usan rangos explícitos y el lockfile se versiona. Las actualizaciones de React y React DOM se realizan juntas. Los cambios de major de Postgres, TypeScript y dotenv requieren una migración independiente y no se aplican con `npm audit fix --force`.
