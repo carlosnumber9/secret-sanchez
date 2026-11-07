@@ -8,10 +8,10 @@ export default defineConfig({
   adapter: vercel({ maxDuration: 60 }),
   integrations: [react()],
   security: {
-    csp: process.env.NODE_ENV === "production" ? {
+    csp: {
       styleDirective: { resources: [{ resource: "'self'", kind: "element" }, { resource: "'unsafe-inline'", kind: "attribute" }] },
       directives: ["default-src 'self'", "base-uri 'self'", "object-src 'none'", "form-action 'self'", "img-src 'self' data: blob:", "connect-src 'self' blob:"]
-    } : false
+    }
   },
 
   vite: {

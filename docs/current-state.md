@@ -18,6 +18,7 @@
 - Cabeceras privadas, CSP de producción, comprobación de origen y límites HTTP.
 - Guardas de aislamiento por entorno y destinatarios seguros fuera de Production; provisionamiento externo pendiente.
 - Fondo WebGL diferido, alternativa SVG y consultas específicas por pantalla.
+- Smoke SSR y simulacro de restauración sintética; ver [evidencia de actualización](./maintenance-2026-11.md).
 - CI con Node 22, PostgreSQL 17 efímero, unitarias, integración, build, comprobación de schema y auditoría de dependencias.
 
 ## Preparado, pendiente de activación

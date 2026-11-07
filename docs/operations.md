@@ -118,6 +118,8 @@ personales en logs y aplicar retención limitada. Los mensajes arbitrarios de ex
 
 ## Backups y recuperación
 
+Procedimiento y evidencia sintética en [release y recuperación](./release-recovery.md). Ninguna restauración ni exportación real se ha ejecutado en esta actualización.
+
 Antes del uso familiar real debe verificarse:
 
 - Política de backups de Supabase.

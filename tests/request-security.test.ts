@@ -15,9 +15,13 @@ test("private response headers preserve cookies and reject foreign origins", () 
   const headers = new Headers();
   headers.append("Set-Cookie", "one=value; Path=/");
   headers.append("Set-Cookie", "two=value; Path=/");
+  headers.set("Content-Security-Policy", "script-src 'self' 'sha256-synthetic'; frame-ancestors *");
   const response = privateResponse(new Response(null, { status: 303, headers }));
   assert.equal(response.headers.getSetCookie().length, 2);
   assert.match(response.headers.get("Cache-Control")!, /no-store/);
+  assert.match(response.headers.get("Content-Security-Policy")!, /sha256-synthetic/);
+  assert.match(response.headers.get("Content-Security-Policy")!, /frame-ancestors 'none'/);
+  assert.doesNotMatch(response.headers.get("Content-Security-Policy")!, /frame-ancestors \*/);
   assert.equal(isSameOrigin(new Request("https://app.example.invalid", { headers: { Origin: "https://foreign.example.invalid" } })), false);
   assert.equal(isSameOrigin(new Request("https://app.example.invalid", { headers: { Origin: "https://app.example.invalid" } })), true);
 });

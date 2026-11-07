@@ -96,3 +96,7 @@ Pendiente: herramienta end-to-end, lint/formateador, umbral de cobertura y regre
 `TEST_DATABASE_URL=postgresql://...@127.0.0.1:5432/secret_sanchez_test npm run test:integration` aplica las migraciones y ejecuta casos reales de transacción, autorización, idempotencia, revocación y revelación. El comando rechaza hosts externos y bases cuyo nombre no termine en `_test`; no carga `.env`. Los proveedores se sustituyen por transportes controlados. CI prepara PostgreSQL 17 efímero y los roles anon/authenticated. Las pruebas crean y limpian únicamente sus familias sintéticas.
 
 `TEST_DATABASE_URL=... npm run benchmark:db` compara planes `EXPLAIN (ANALYZE, BUFFERS)` con 20.000 logs sintéticos en una tabla temporal, antes y después del índice de historial. No representa latencia de producción; permite comprobar el acceso por índice sin leer datos familiares.
+
+## Pruebas operativas locales
+
+Después del build, `npm run test:ssr` comprueba el handler Vercel compilado y los hashes CSP con configuración sintética. `npm run test:recovery` crea y elimina bases efímeras locales con fixtures, sin archivos de copia. Requiere herramientas PostgreSQL compatibles y permisos locales de creación de bases/roles. Véase [procedimiento](./release-recovery.md). Ninguno certifica el entorno remoto.

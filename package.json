@@ -20,7 +20,9 @@
     "db:check": "node --import tsx scripts/check-migrations.ts",
     "test:integration": "node --import tsx scripts/test-integration.ts",
     "benchmark:db": "node --import tsx scripts/benchmark-db.ts",
-    "benchmark:draw": "node --import tsx scripts/benchmark-draw.ts"
+    "benchmark:draw": "node --import tsx scripts/benchmark-draw.ts",
+    "test:recovery": "node --import tsx scripts/test-recovery.ts",
+    "test:ssr": "node --import tsx scripts/smoke-ssr.ts"
   },
   "dependencies": {
     "@astrojs/react": "^7.1.4",

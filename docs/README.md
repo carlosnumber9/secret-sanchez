@@ -21,6 +21,8 @@ cómo está construido, cómo operarlo y qué decisiones siguen abiertas.
 | [Git y commits](./git-workflow.md) | Flujo de trabajo y formato obligatorio de commits. |
 | [Calidad y pruebas](./testing-and-quality.md) | Estado de validación y estrategia de pruebas prevista. |
 | [Operación y despliegue](./operations.md) | Servicios externos, despliegue, observabilidad y recuperación. |
+| [Release y recuperación](./release-recovery.md) | Procedimiento del operador y simulacro exclusivamente sintético. |
+| [Actualización noviembre](./maintenance-2026-11.md) | Commits en orden, evidencia y activación pendiente. |
 | [Roadmap](./roadmap.md) | Prioridades, hitos y trabajo pendiente. |
 | [Decisiones](./decisions.md) | Decisiones confirmadas, abiertas y plantilla de ADR. |
 

@@ -32,6 +32,8 @@ Opcionales para email: `RESEND_API_KEY`. Para WhatsApp deben configurarse conjun
 | `npm run build` | Comprobación Astro y build de Vercel. |
 | `npm test` | Pruebas unitarias sin acceso a Supabase. |
 | `npm run test:integration` | Migraciones y fixtures solo con `TEST_DATABASE_URL` local y base terminada en `_test`. |
+| `npm run test:ssr` | Smoke del handler compilado, con entorno sintético local. |
+| `npm run test:recovery` | Restauración de fixtures en bases locales efímeras. |
 | `npm run db:check` | Comparación de schema y snapshots, sin conexión. |
 | `npm run benchmark:draw` | Casos sintéticos de coste del emparejamiento. |
 | `npm run admin:bootstrap -- --email ... --name ...` | Alta idempotente del administrador. |

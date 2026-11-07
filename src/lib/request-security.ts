@@ -41,7 +41,8 @@ export function privateResponse(response: Response) {
   headers.set("Referrer-Policy", "no-referrer");
   headers.set("X-Content-Type-Options", "nosniff");
   headers.set("X-Frame-Options", "DENY");
-  headers.set("Content-Security-Policy", "frame-ancestors 'none'");
+  const csp = headers.get("Content-Security-Policy")?.split(";").filter((directive) => !/^\s*frame-ancestors\b/i.test(directive)).join(";").trim();
+  headers.set("Content-Security-Policy", [csp, "frame-ancestors 'none'"].filter(Boolean).join("; "));
   headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
   headers.set("X-Robots-Tag", "noindex, nofollow");
   return new Response(response.body, { status: response.status, statusText: response.statusText, headers });
