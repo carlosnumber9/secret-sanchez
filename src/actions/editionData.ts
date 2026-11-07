@@ -15,8 +15,8 @@ import {
   familyIslands,
   participants
 } from "@/db/schema";
-import { listAssignmentsForDraw } from "@/db/queries/assignments";
-import { listNotificationLogsForDraw } from "@/db/queries/notifications";
+import { listDeliveryAssignmentsForDraw } from "@/db/queries/assignments";
+import { getDrawExposure, listCurrentNotificationLogsForDraw } from "@/db/queries/notifications";
 import { AppError } from "@/lib/errors";
 import { getEnv } from "@/lib/env";
 import { logger } from "@/lib/logger";
@@ -173,13 +173,13 @@ export async function getEditionAppState(adminId: string, editionId: string, vie
     opened: boolean;
   }> = [];
   let exposure = { notifications: 0, manual: 0, opened: 0 };
-  if (currentDraw && view !== "draw") {
-    const [assignmentRows, logRows] = await Promise.all([listAssignmentsForDraw(currentDraw.id), listNotificationLogsForDraw(currentDraw.id)]);
-    const logs = logRows.map(({ log }) => log);
+  if (currentDraw && view === "configuration") exposure = await getDrawExposure(currentDraw.id);
+  if (currentDraw && view === "deliveries") {
+    const [assignmentRows, logRows] = await Promise.all([listDeliveryAssignmentsForDraw(currentDraw.id), listCurrentNotificationLogsForDraw(currentDraw.id)]);
+    const logs = new Map(logRows.map(({ log }) => [`${log.assignmentId}:${log.channel}`, log]));
     deliveries = assignmentRows.map(({ assignment, giver, giverIsland }) => {
-      const assignmentLogs = logs.filter((log) => log.assignmentId === assignment.id);
       const latestFor = (channel: "email" | "whatsapp") => {
-        const status = assignmentLogs.find((log) => log.channel === channel)?.status;
+        const status = logs.get(`${assignment.id}:${channel}`)?.status;
         return status === "sent" || status === "pending" || status === "delivered" || status === "failed" || status === "read" ? status : null;
       };
       const rawChannel = giver?.preferredChannel ?? giverIsland?.preferredChannel ?? null;
@@ -199,11 +199,6 @@ export async function getEditionAppState(adminId: string, editionId: string, vie
         opened: Boolean(assignment.openedAt)
       };
     });
-    exposure = {
-      notifications: logs.filter((log) => log.channel === "email" || log.channel === "whatsapp").length,
-      manual: logs.filter((log) => log.channel === "manual").length,
-      opened: assignmentRows.filter(({ assignment }) => assignment.openedAt).length
-    };
   }
   return { ...owned, islands: islandRows, participants: participantRows, attempts, currentDraw, rules, exclusions, deliveries, exposure };
 }

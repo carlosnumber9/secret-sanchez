@@ -45,3 +45,5 @@ La reserva de intentos se serializa por asignación dentro de una transacción. 
 ## Concurrencia del webhook
 
 Las transiciones de estado son condicionales en SQL; eventos duplicados o concurrentes no degradan `delivered` o `read`. Si llega un evento antes de guardar el identificador del proveedor, el endpoint devuelve `503` y `Retry-After` para activar los reintentos de Kapso. Los fallos persistentes deben reconciliarse desde el panel del proveedor. Un JSON firmado inválido devuelve `400`.
+
+El panel y la cobertura consultan el último intento por asignación y canal mediante `DISTINCT ON`, con desempate estable por identificador. Un fallo reciente no se oculta detrás de un envío histórico exitoso. Los contadores de exposición se agregan en SQL y el panel no carga ciphertexts ni hashes para mostrar los estados.

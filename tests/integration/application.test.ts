@@ -155,3 +155,21 @@ test("family batches preserve unchanged rows and synchronize baby roles", async 
   assert.equal(changedConfig.isBaby, true);
   assert.equal(changedConfig.preferredChannel, null);
 }));
+
+test("delivery summaries use the latest attempt rather than any historical success", async () => fixture(async (data) => {
+  const { draw } = await generation(data);
+  const assignments = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
+  await db.insert(s.notificationLogs).values(assignments.map((a) => ({ assignmentId: a.id, channel: "email" as const, recipient: "test@example.invalid", status: "sent" as const, createdAt: new Date(0) })));
+  await db.insert(s.notificationLogs).values({ assignmentId: assignments[0].id, channel: "email", recipient: "test@example.invalid", status: "failed" });
+  const { getEditionAppState } = await import("../../src/actions/editionData");
+  const state = await getEditionAppState(data.admin.id, data.edition.id, "deliveries");
+  assert.equal(state.deliveries.find((d) => d.id === assignments[0].id)!.emailStatus, "failed");
+  assert.deepEqual(state.participants, []);
+  const result = await sendAdminNotifications({ admin: data.admin, editionId: data.edition.id, mode: "pending", scope: "all", idempotencyKey: crypto.randomUUID() }, {
+    email: async () => { throw new Error("Unexpected send"); }, whatsapp: async () => { throw new Error("Unexpected send"); }
+  });
+  assert.equal(result.sent, 0);
+  assert.equal(result.allCovered, false);
+  const configuration = await getEditionAppState(data.admin.id, data.edition.id);
+  assert.equal(configuration.exposure.notifications, assignments.length + 1);
+}));

@@ -1,4 +1,4 @@
-import { and, eq, isNull, ne } from "drizzle-orm";
+import { and, eq, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { assignments, drawEditions, drawIslands, drawParticipants, draws, families } from "@/db/schema";
 
@@ -51,4 +51,14 @@ export async function getOwnedAssignment(assignmentId: string, adminId: string) 
     .where(and(eq(assignments.id, assignmentId), eq(families.ownerAdminId, adminId)))
     .limit(1);
   return row ?? null;
+}
+
+export async function listDeliveryAssignmentsForDraw(drawId: string) {
+  return db.select({
+    assignment: { id: assignments.id, openedAt: assignments.openedAt, revealTokenCiphertext: sql<boolean>`${assignments.revealTokenCiphertext} is not null` },
+    giver: drawParticipants, giverIsland: drawIslands
+  }).from(assignments)
+    .leftJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
+    .leftJoin(drawIslands, eq(assignments.giverIslandId, drawIslands.id))
+    .where(eq(assignments.drawId, drawId));
 }

@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawEditions, draws, families } from "@/db/schema";
-import { claimNotificationAttempt, listNotificationLogsForDraw, updateNotificationLog } from "@/db/queries/notifications";
+import { claimNotificationAttempt, listCurrentNotificationLogsForDraw, updateNotificationLog } from "@/db/queries/notifications";
 import { getOwnedAssignment, listAssignmentsForDraw } from "@/db/queries/assignments";
 import { AppError } from "@/lib/errors";
 import { getEnv } from "@/lib/env";
@@ -34,11 +34,11 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
     .where(and(eq(drawEditions.id, input.editionId), eq(families.ownerAdminId, input.admin.id))).limit(1);
   if (!owned) throw new AppError(404, "DRAW_NOT_FOUND", "No hay un reparto vigente para esta edición.");
 
-  const [allRows, logRows] = await Promise.all([listAssignmentsForDraw(owned.draw.id), listNotificationLogsForDraw(owned.draw.id)]);
+  const [allRows, logRows] = await Promise.all([listAssignmentsForDraw(owned.draw.id), listCurrentNotificationLogsForDraw(owned.draw.id)]);
   const selectedIds = new Set(input.assignmentIds ?? []);
   const rows = input.scope === "selected" ? allRows.filter(({ assignment }) => selectedIds.has(assignment.id)) : allRows;
   if (input.scope === "selected" && !rows.length) throw new AppError(422, "EMPTY_NOTIFICATION_SELECTION", "Selecciona al menos una entrega.");
-  const logs = logRows.map(({ log }) => log);
+  const logs = new Map(logRows.map(({ log }) => [`${log.assignmentId}:${log.channel}`, log]));
   const { appUrl, kapsoTestRecipientPhone } = getEnv();
   let sent = 0;
   let failed = 0;
@@ -58,7 +58,7 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
       const [current] = await db.select({ id: draws.id }).from(draws)
         .where(and(eq(draws.id, owned.draw.id), ne(draws.status, "revoked"))).limit(1);
       if (!current) throw new AppError(409, "DRAW_REVOKED", "El reparto fue anulado. Se han detenido los envíos pendientes.");
-      const latest = logs.find((log) => log.assignmentId === assignment.id && log.channel === deliveryChannel);
+      const latest = logs.get(`${assignment.id}:${deliveryChannel}`);
       if (!isEligibleNotification(latest?.status ?? null, input.mode)) { skipped += 1; continue; }
       const attemptKey = buildNotificationAttemptKey(input.idempotencyKey, assignment.id, deliveryChannel);
       const recipient = deliveryChannel === "email"
@@ -86,8 +86,9 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
     }
   }
 
-  const currentLogs = (await listNotificationLogsForDraw(owned.draw.id)).map(({ log }) => log);
-  const allCovered = allRows.every(({ assignment }) => currentLogs.some((log) => log.assignmentId === assignment.id && log.channel !== "manual" && successfulStatuses.has(log.status)));
+  const currentLogs = (await listCurrentNotificationLogsForDraw(owned.draw.id)).map(({ log }) => log);
+  const coveredAssignments = new Set(currentLogs.filter((log) => log.channel !== "manual" && successfulStatuses.has(log.status)).map((log) => log.assignmentId));
+  const allCovered = allRows.length > 0 && allRows.every(({ assignment }) => coveredAssignments.has(assignment.id));
   let finalized = false;
   if (allCovered) {
     finalized = await db.transaction(async (tx) => {
