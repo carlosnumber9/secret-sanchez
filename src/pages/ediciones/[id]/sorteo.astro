@@ -6,7 +6,7 @@ import AdminLayout from "@/layouts/AdminLayout.astro";
 import { getEditionAppState } from "@/actions/editionData";
 
 const id = Astro.params.id!;
-const state = await getEditionAppState(Astro.locals.admin.id, id);
+const state = await getEditionAppState(Astro.locals.admin.id, id, "draw");
 const enabledIslands = new Set(state.islands.filter(({ config }) => config.enabled).map(({ island }) => island.id));
 const participants = state.participants.filter(({ participant, config }) => enabledIslands.has(participant.familyIslandId) && config.enabled);
 ---

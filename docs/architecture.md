@@ -118,3 +118,5 @@ atravesar el límite del servidor.
 Las decisiones aún abiertas están centralizadas en [decisions.md](./decisions.md).
 
 El fondo Three.js se importa dinámicamente cuando el navegador queda libre. Pantallas pequeñas, ahorro de datos y movimiento reducido usan un regalo SVG estático sin descargar Three.js. Los recursos WebGL se liberan al salir y se reinicializan al restaurar una página desde la caché de navegación.
+
+Las lecturas administrativas se acotan por pantalla: el historial no carga el censo, Familia no carga ediciones y la pantalla de sorteo no consulta entregas ni logs. Envíos obtiene el intento vigente sin cargar configuración ni censo. No existe caché global de datos privados entre usuarios.

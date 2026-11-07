@@ -19,17 +19,17 @@ import { listFamilyIslands } from "@/db/queries/familyIslands";
 import { listParticipants } from "@/db/queries/participants";
 import { AppError } from "@/lib/errors";
 
-export async function getAdminAppState(adminId: string) {
+export async function getAdminAppState(adminId: string, include: { census?: boolean; editions?: boolean } = {}) {
   const family = await getActiveFamilyGroupForAdmin(adminId);
   if (!family) return { family: null, group: null, islands: [], participants: [], editions: [], revision: null };
 
   const [islands, people, editions] = await Promise.all([
-    listFamilyIslands(family.id),
-    listParticipants(family.id),
-    db.select().from(drawEditions).where(eq(drawEditions.familyId, family.id))
+    include.census === false ? Promise.resolve([]) : listFamilyIslands(family.id),
+    include.census === false ? Promise.resolve([]) : listParticipants(family.id),
+    include.editions === false ? Promise.resolve([]) : db.select().from(drawEditions).where(eq(drawEditions.familyId, family.id))
       .orderBy(desc(drawEditions.year), desc(drawEditions.createdAt))
   ]);
-  return { family, group: family, islands, participants: people, editions, revision: familyRevision(islands, people) };
+  return { family, group: family, islands, participants: people, editions, revision: include.census === false ? null : familyRevision(islands, people) };
 }
 
 export async function createOwnedGroup(adminId: string, input: { name: string }) {

@@ -7,7 +7,7 @@ import AdminLayout from "@/layouts/AdminLayout.astro";
 import { getAdminAppState } from "@/actions/adminData";
 import { getEditionStatusLabel } from "@/services/editions/status";
 
-const state = await getAdminAppState(Astro.locals.admin.id);
+const state = await getAdminAppState(Astro.locals.admin.id, { census: false });
 const initiallyOpenCreateDialog = Astro.url.searchParams.get("crear-edicion") === "1";
 ---
 

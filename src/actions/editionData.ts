@@ -147,19 +147,19 @@ export async function updateEditionParticipant(adminId: string, editionId: strin
   });
 }
 
-export async function getEditionAppState(adminId: string, editionId: string) {
+export async function getEditionAppState(adminId: string, editionId: string, view: "configuration" | "draw" | "deliveries" = "configuration") {
   const owned = await getOwnedEdition(editionId, adminId);
   if (!owned) throw new AppError(404, "EDITION_NOT_FOUND", "No se ha encontrado la edición.");
   const [islandRows, participantRows, attempts, rules, exclusions] = await Promise.all([
-    db.select({ island: familyIslands, config: editionIslandConfigs }).from(editionIslandConfigs)
+    view === "deliveries" ? Promise.resolve([]) : db.select({ island: familyIslands, config: editionIslandConfigs }).from(editionIslandConfigs)
       .innerJoin(familyIslands, eq(editionIslandConfigs.familyIslandId, familyIslands.id))
       .where(eq(editionIslandConfigs.editionId, editionId)),
-    db.select({ participant: participants, config: editionParticipants }).from(editionParticipants)
+    view === "deliveries" ? Promise.resolve([]) : db.select({ participant: participants, config: editionParticipants }).from(editionParticipants)
       .innerJoin(participants, eq(editionParticipants.participantId, participants.id))
       .where(eq(editionParticipants.editionId, editionId)),
-    db.select().from(draws).where(eq(draws.editionId, editionId)).orderBy(desc(draws.attemptNumber)),
-    db.select().from(drawRules).where(eq(drawRules.editionId, editionId)),
-    db.select().from(exclusionRules).where(eq(exclusionRules.editionId, editionId))
+    db.select().from(draws).where(and(eq(draws.editionId, editionId), view === "configuration" ? undefined : ne(draws.status, "revoked"))).orderBy(desc(draws.attemptNumber)),
+    view !== "configuration" ? Promise.resolve([]) : db.select().from(drawRules).where(eq(drawRules.editionId, editionId)),
+    view !== "configuration" ? Promise.resolve([]) : db.select().from(exclusionRules).where(eq(exclusionRules.editionId, editionId))
   ]);
   const currentDraw = attempts.find((attempt) => attempt.status !== "revoked") ?? null;
   let deliveries: Array<{
@@ -173,7 +173,7 @@ export async function getEditionAppState(adminId: string, editionId: string) {
     opened: boolean;
   }> = [];
   let exposure = { notifications: 0, manual: 0, opened: 0 };
-  if (currentDraw) {
+  if (currentDraw && view !== "draw") {
     const [assignmentRows, logRows] = await Promise.all([listAssignmentsForDraw(currentDraw.id), listNotificationLogsForDraw(currentDraw.id)]);
     const logs = logRows.map(({ log }) => log);
     deliveries = assignmentRows.map(({ assignment, giver, giverIsland }) => {
