@@ -10,7 +10,7 @@ El intento se genera de forma transaccional mediante dos emparejamientos indepen
 - El número de adultos regaladores debe coincidir con el de receptores.
 - Cada regalador y receptor aparece una sola vez.
 - Se evitan autoasignación, misma unidad y exclusiones dirigidas.
-- Se utiliza backtracking con barajado mediante `crypto.randomInt`.
+- Se utiliza emparejamiento bipartito por caminos aumentantes con candidatos barajados mediante `crypto.randomInt`.
 
 ### Bebés
 
@@ -19,7 +19,7 @@ El intento se genera de forma transaccional mediante dos emparejamientos indepen
 - La unidad no puede ser la del bebé.
 - Una unidad regala como máximo a un bebé.
 - Una unidad que contiene bebés puede regalar a otro bebé.
-- El mismo backtracking aleatorio busca una solución completa o rechaza el sorteo sin persistencia parcial.
+- El mismo motor de emparejamiento busca una solución completa o rechaza el sorteo sin persistencia parcial.
 
 Con el censo familiar acordado se generan 21 asignaciones adultas y 6 asignaciones de unidades para bebés.
 
@@ -50,3 +50,5 @@ El validador comprueba la cobertura exacta y única de regaladores y receptores 
 ## Exclusión mutua
 
 La configuración, generación y revocación bloquean primero la familia y después la edición, dentro de la misma transacción que comprueba y modifica el estado. Las ediciones archivadas no son editables. Los conflictos de unicidad se traducen a `409` sin exponer mensajes SQL.
+
+La búsqueda tiene coste polinómico `O(V·E)` y se limita a 500 nodos por lado. Los candidatos y las exclusiones se preparan una vez; no se enumeran permutaciones completas. El barajado conserva aleatoriedad, sin declarar muestreo uniforme de todos los repartos posibles. La clave de cifrado se valida una vez por generación.

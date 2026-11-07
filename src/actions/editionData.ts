@@ -323,6 +323,7 @@ export async function generateEditionDraw(input: { editionId: string; generatedB
       preferredChannel: representative!.config.preferredChannel!
     }))).returning() : [];
     const islandSnapshotBySource = new Map(islandSnapshots.map((snapshot) => [snapshot.sourceFamilyIslandId, snapshot.id]));
+    const encryptionKey = getEnv().revealTokenEncryptionKey;
     const personalValues = generatedAdults.assignments.map((assignment) => {
       const token = createRevealToken();
       return {
@@ -330,7 +331,7 @@ export async function generateEditionDraw(input: { editionId: string; generatedB
         giverId: snapshotBySource.get(assignment.giverId)!,
         receiverId: snapshotBySource.get(assignment.receiverId)!,
         revealTokenHash: hashRevealToken(token),
-        revealTokenCiphertext: encryptRevealToken(token)
+        revealTokenCiphertext: encryptRevealToken(token, encryptionKey)
       };
     });
     const babyValues = generatedBabies.assignments.map((assignment) => {
@@ -341,7 +342,7 @@ export async function generateEditionDraw(input: { editionId: string; generatedB
         giverIslandId: islandSnapshotBySource.get(assignment.giverIslandId)!,
         receiverId: snapshotBySource.get(assignment.receiverId)!,
         revealTokenHash: hashRevealToken(token),
-        revealTokenCiphertext: encryptRevealToken(token)
+        revealTokenCiphertext: encryptRevealToken(token, encryptionKey)
       };
     });
     await tx.insert(assignments).values([...personalValues, ...babyValues]);
