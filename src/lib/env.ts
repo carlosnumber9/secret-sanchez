@@ -5,6 +5,7 @@ export type AppEnv = {
   appUrl: string;
   revealTokenEncryptionKey: string;
   resendApiKey?: string;
+  resendWebhookSecret?: string;
   kapsoApiKey?: string;
   kapsoPhoneNumberId?: string;
   kapsoTemplateName?: string;
@@ -24,6 +25,7 @@ function defaultSource(): EnvSource {
     APP_URL: import.meta.env?.APP_URL ?? process.env.APP_URL,
     REVEAL_TOKEN_ENCRYPTION_KEY:
       import.meta.env?.REVEAL_TOKEN_ENCRYPTION_KEY ?? process.env.REVEAL_TOKEN_ENCRYPTION_KEY,
+    RESEND_WEBHOOK_SECRET: import.meta.env?.RESEND_WEBHOOK_SECRET ?? process.env.RESEND_WEBHOOK_SECRET,
     RESEND_API_KEY: import.meta.env?.RESEND_API_KEY ?? process.env.RESEND_API_KEY,
     KAPSO_API_KEY: import.meta.env?.KAPSO_API_KEY ?? process.env.KAPSO_API_KEY,
     KAPSO_PHONE_NUMBER_ID: import.meta.env?.KAPSO_PHONE_NUMBER_ID ?? process.env.KAPSO_PHONE_NUMBER_ID,
@@ -66,6 +68,7 @@ export function readEnv(source: EnvSource): AppEnv {
     appUrl,
     revealTokenEncryptionKey,
     resendApiKey: source.RESEND_API_KEY?.trim() || undefined,
+    resendWebhookSecret: source.RESEND_WEBHOOK_SECRET?.trim() || undefined,
     kapsoApiKey: source.KAPSO_API_KEY?.trim() || undefined,
     kapsoPhoneNumberId: source.KAPSO_PHONE_NUMBER_ID?.trim() || undefined,
     kapsoTemplateName: source.KAPSO_TEMPLATE_NAME?.trim() || undefined,

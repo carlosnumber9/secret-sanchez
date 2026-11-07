@@ -1,3 +1,4 @@
+import { emailTransition, suppressedEmailErrors, type EmailEvent } from "@/services/notifications/emailStatus";
 import { hasOptionalTable } from "@/db/capabilities";
 import { previousStatusesFor, type WhatsappDeliveryStatus } from "@/services/notifications/whatsappStatus";
 import { canResumePending, notificationLeaseMs, pendingRateLimit } from "@/services/notifications/retry";
@@ -14,7 +15,7 @@ export async function createNotificationLog(input: typeof notificationLogs.$infe
 export async function updateNotificationLog(id: string, input: Partial<typeof notificationLogs.$inferInsert>) {
   const condition = input.status && ["pending", "sent", "failed", "delivered", "read"].includes(input.status)
     ? inArray(notificationLogs.status, [...previousStatusesFor(input.status as WhatsappDeliveryStatus | "pending")]) : undefined;
-  const [log] = await db.update(notificationLogs).set(input).where(and(eq(notificationLogs.id, id), condition)).returning();
+  const [log] = await db.update(notificationLogs).set(input).where(and(eq(notificationLogs.id, id), condition, sql`(${notificationLogs.channel} <> 'email' or ${notificationLogs.error} is null or ${notificationLogs.error} not in ('email_bounced', 'email_complained', 'email_suppressed'))`)).returning();
   return log;
 }
 
@@ -66,6 +67,7 @@ export async function claimNotificationAttempt(input: {
     const [latest] = await tx.select().from(notificationLogs)
       .where(and(eq(notificationLogs.assignmentId, input.assignmentId), eq(notificationLogs.channel, input.channel)))
       .orderBy(desc(notificationLogs.createdAt), desc(notificationLogs.id)).limit(1);
+    if (input.channel === "email" && latest?.recipient === input.recipient && suppressedEmailErrors.includes(latest.error as typeof suppressedEmailErrors[number])) return null;
     const pending = sameAttempt ?? latest;
     if (pending?.status === "pending") {
       const cooldown = pendingRateLimit(pending.error);
@@ -112,4 +114,16 @@ export async function getDrawExposure(drawId: string) {
   const [audit] = await db.select({ count: sql<number>`count(*)::int` }).from(auditEvents)
     .where(and(eq(auditEvents.drawId, drawId), eq(auditEvents.event, "assignment.link_copied")));
   return { ...counts, manual: counts.manual + audit.count };
+}
+
+export async function applyEmailEvent(providerMessageId: string, event: EmailEvent) {
+  const transition = emailTransition(event);
+  const [updated] = await db.update(notificationLogs).set({ status: transition.status, error: transition.error })
+    .where(and(eq(notificationLogs.providerMessageId, providerMessageId), eq(notificationLogs.channel, "email"),
+      inArray(notificationLogs.status, transition.previous as Array<(typeof notificationLogs.$inferSelect)["status"]>),
+      sql`(${notificationLogs.error} is null or ${notificationLogs.error} not in ('email_bounced', 'email_complained', 'email_suppressed'))`))
+    .returning({ id: notificationLogs.id });
+  if (updated) return true;
+  const existing = await findNotificationByProviderMessageId(providerMessageId);
+  return existing?.channel === "email";
 }

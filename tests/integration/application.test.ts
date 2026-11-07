@@ -294,3 +294,32 @@ test("audit events survive history deletion and exclude copied link contents", a
   assert.equal(JSON.stringify(events).includes(result.revealUrl.split("#")[1]), false);
   await db.delete(s.auditEvents).where(eq(s.auditEvents.drawId, draw.id));
 }));
+
+test("signed email webhooks handle bounces, replays and out of order events", async () => fixture(async (data) => {
+  const { createHmac } = await import("node:crypto");
+  const { POST: webhook } = await import("../../src/pages/api/webhooks/resend");
+  const { draw } = await generation(data);
+  const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
+  const providerId = crypto.randomUUID();
+  await db.insert(s.notificationLogs).values({ assignmentId: assignment.id, channel: "email", recipient: "test@example.invalid", status: "sent", providerMessageId: providerId });
+  const secret = Buffer.alloc(32, 2);
+  process.env.RESEND_WEBHOOK_SECRET = `whsec_${secret.toString("base64")}`;
+  const send = async (type: string, valid = true, age = 0, id = providerId) => {
+    const payload = JSON.stringify({ type, data: { email_id: id } });
+    const messageId = crypto.randomUUID();
+    const timestamp = String(Math.floor(Date.now() / 1000) - age);
+    const signature = createHmac("sha256", secret).update(`${messageId}.${timestamp}.${payload}`).digest("base64");
+    return webhook({ request: new Request("https://app.example.invalid/api/webhooks/resend", { method: "POST", headers: { "svix-id": messageId, "svix-timestamp": timestamp, "svix-signature": `v1,${valid ? signature : "invalid"}` }, body: payload }) } as Parameters<APIRoute>[0]) as Promise<Response>;
+  };
+  try {
+    assert.equal((await send("email.bounced", false)).status, 401);
+    assert.equal((await send("email.bounced", true, 3600)).status, 401);
+    assert.equal((await send("email.delivered", true, 0, crypto.randomUUID())).status, 503);
+    for (const type of ["email.delivered", "email.bounced", "email.bounced", "email.sent", "email.delivered"]) assert.equal((await send(type)).status, 200);
+    const [log] = await db.select().from(s.notificationLogs).where(eq(s.notificationLogs.providerMessageId, providerId));
+    assert.equal(log.status, "failed");
+    assert.equal(log.error, "email_bounced");
+    assert.equal(await updateNotificationLog(log.id, { status: "sent", error: null }), undefined);
+    assert.equal(await claimNotificationAttempt({ assignmentId: assignment.id, channel: "email", recipient: log.recipient, mode: "force", idempotencyKey: crypto.randomUUID() }), null);
+  } finally { delete process.env.RESEND_WEBHOOK_SECRET; }
+}));

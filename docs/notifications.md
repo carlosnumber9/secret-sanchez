@@ -51,3 +51,11 @@ El panel y la cobertura consultan el último intento por asignación y canal med
 ## Lotes reanudables
 
 Cada petición procesa como máximo cuatro mensajes con concurrencia dos y separación mínima de 550 ms entre inicios. El panel continúa mediante un cursor estable y conserva la clave del lote si falla la conexión; no hay trabajo crítico desligado de la respuesta. Los `429` conservan el intento pendiente y el mismo cursor, respetando `Retry-After` entre 1 y 60 segundos. El panel hace hasta tres esperas automáticas antes de ofrecer reintento. Los resultados inciertos se muestran separados de los rechazos confirmados. El adapter permite 60 segundos por función; cada transporte tiene timeout de 20 segundos.
+
+## Estados de email
+
+`POST /api/webhooks/resend` verifica el cuerpo original y los headers `svix-*` con el SDK de Resend y `RESEND_WEBHOOK_SECRET`. La firma y su ventana temporal se validan antes de interpretar el evento. Sin secreto responde `503`; firma inválida, `401`. Un ID aún desconocido devuelve `503` para reintento. Los eventos repetidos son idempotentes y los eventos atrasados no degradan una entrega confirmada.
+
+Se procesan `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.failed`, `email.bounced`, `email.complained` y `email.suppressed`. Los tres últimos quedan como fallo terminal del intento y bloquean reenvíos al mismo destinatario en esa asignación, incluso con `force`. Debe corregirse el contacto y regenerarse el reparto o usarse un canal alternativo. Un retraso conserva `sent` con código de diagnóstico; el proveedor sigue intentando la entrega. No se guardan direcciones ni motivos libres procedentes del webhook, ni se procesan aperturas o clics de email.
+
+`sent` en reparto/edición conserva el hito histórico de aceptación de todos los mensajes. Un rebote posterior aparece en la cobertura actual y en el panel, sin cambiar ese hito ni reactivar un reparto anulado. El endpoint y secreto quedan preparados en código; configurar la suscripción en Resend sigue pendiente. Referencias: [verificación oficial](https://resend.com/docs/webhooks/verify-webhooks-requests) y [eventos oficiales](https://resend.com/docs/webhooks/event-types).
