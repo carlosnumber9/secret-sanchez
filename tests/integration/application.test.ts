@@ -226,3 +226,14 @@ test("provider rate limits preserve the cursor and resume the same attempts", as
   assert.equal(resumed.sent, data.people.length);
   assert.equal(resumed.nextCursor, null);
 }));
+
+test("concurrent reveal opens mark the first opening exactly once", async () => fixture(async (data) => {
+  const { draw } = await generation(data);
+  const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
+  const { openRevealAssignment, getRevealPreparation } = await import("../../src/db/queries/assignments");
+  const preparation = await getRevealPreparation(assignment.revealTokenHash);
+  assert.equal("receiverName" in preparation!, false);
+  const opens = await Promise.all([openRevealAssignment(assignment.revealTokenHash), openRevealAssignment(assignment.revealTokenHash)]);
+  assert.equal(opens.filter((r) => r?.firstOpen).length, 1);
+  assert.equal(opens[0]!.receiverName, opens[1]!.receiverName);
+}));

@@ -1,6 +1,6 @@
 import type { APIRoute } from "astro";
 import { z } from "zod";
-import { getAssignmentByTokenHash } from "@/db/queries/assignments";
+import { getRevealPreparation } from "@/db/queries/assignments";
 import { handleApiError } from "@/lib/api";
 import { AppError } from "@/lib/errors";
 import { logger } from "@/lib/logger";
@@ -11,22 +11,22 @@ const schema = z.object({ token: z.string().min(20).max(200) });
 export const POST: APIRoute = async ({ request }) => {
   try {
     const { token } = schema.parse(await request.json().catch(() => null));
-    const row = await getAssignmentByTokenHash(hashRevealToken(token));
-    if (!row || (!row.giver && !row.giverIsland)) {
+    const row = await getRevealPreparation(hashRevealToken(token));
+    if (!row || !row.giverName) {
       logger.warn("reveal.resolve_rejected", { reason: "invalid_token" });
       throw new AppError(404, "REVEAL_NOT_FOUND", "Este enlace no parece válido.");
     }
     logger.info("reveal.resolved", {
-      assignmentId: row.assignment.id,
-      alreadyOpened: Boolean(row.assignment.openedAt)
+      assignmentId: row.assignmentId,
+      alreadyOpened: row.alreadyOpened
     });
     return Response.json({
       ok: true,
       data: {
-        giverName: row.giver?.name ?? row.giverIsland!.representativeName,
-        giverKind: row.giver ? "participant" : "familyIsland",
-        giverIslandName: row.giverIsland?.name ?? null,
-        alreadyOpened: Boolean(row.assignment.openedAt)
+        giverName: row.giverName,
+        giverKind: row.giverKind,
+        giverIslandName: row.giverIslandName,
+        alreadyOpened: row.alreadyOpened
       }
     });
   } catch (error) {
