@@ -98,3 +98,5 @@
     flex: 0 0 auto;
   }
 }
+
+.header__logout { border: 0; background: transparent; font-family: inherit; cursor: pointer; }

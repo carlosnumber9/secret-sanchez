@@ -119,7 +119,7 @@ Row Level Security. Antes de producción se debe:
 ## Riesgos y trabajo pendiente
 
 - Ejecutar el bootstrap y asignar contraseña al primer `admin_users`.
-- Añadir logout y revocación de sesión.
+- El cierre de sesión local se realiza mediante `POST /api/auth/logout`, con invalidación del refresh token de esa sesión y cookies gestionadas por Supabase SSR.
 - Mantener la propiedad en todos los casos de uso nuevos.
 - Añadir rate limiting adicional y protección contra fuerza bruta en operaciones sensibles.
 - Definir expiración e invalidación de tokens de revelación.

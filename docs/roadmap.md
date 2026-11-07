@@ -17,7 +17,7 @@ El orden prioriza un recorrido real completo antes que nuevas funcionalidades.
 - [x] Enlazar la allowlist con el UUID de Supabase conservando filas legacy.
 - [x] Crear un proceso seguro para el primer administrador.
 - [x] Añadir asignación y reset manual de contraseña por UUID.
-- [ ] Añadir logout.
+- [x] Añadir logout.
 - [x] Eliminar fixtures y exigir Supabase real en todos los entornos.
 - [ ] Actualizar APIs obsoletas de Supabase SSR.
 - [x] Añadir pruebas de identidad administrativa y redirección de login.

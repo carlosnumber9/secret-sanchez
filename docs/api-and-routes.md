@@ -35,3 +35,5 @@ Todas requieren sesión y autorización mediante la familia propietaria. Las res
 El envío administrativo admite alcance `all` o `selected` y modos `pending`, `failed` o `force`. La API de respaldo recibe solo `assignmentId`; la copia queda auditada en Runtime Logs, no como entrega.
 
 El borrador familiar incluye una `revision` opaca obtenida con el censo. Se compara bajo bloqueo antes de escribir y se devuelve una revisión nueva tras guardar. Si nombres, contactos, roles de bebé, unidades o posiciones cambiaron desde la lectura, responde `409 FAMILY_DRAFT_STALE`; el cliente conserva el borrador local.
+
+`POST /api/auth/logout` cierra únicamente la sesión del dispositivo mediante Supabase SSR, rechaza un `Origin` ajeno y redirige con `303` a `/login`. La respuesta no se almacena en caché. No requiere una sesión administrativa vigente, para permitir salir también de sesiones caducadas o cuentas sin autorización.

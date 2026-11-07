@@ -245,3 +245,24 @@ test("attempt counters survive deletion of the latest attempt", async () => fixt
   const next = await generation(data);
   assert.equal(next.draw.attemptNumber, 2);
 }));
+
+test("logout clears SSR session cookies and the next request requires authentication", async (t) => {
+  t.mock.method(console, "log", () => undefined);
+  const sdkFetch = t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0]) => {
+    assert.match(String(input), /^https:\/\/project\.example\.invalid\/auth\/v1\/logout/);
+    return new Response(null, { status: 204 });
+  });
+  const token = `${Buffer.from('{}').toString('base64url')}.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.synthetic`;
+  const session = { access_token: token, refresh_token: "synthetic-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: { id: crypto.randomUUID(), aud: "authenticated", email: "synthetic@example.invalid" } };
+  const cookie = `sb-project-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`;
+  const writes: Array<{ name: string; value: string; options: { maxAge?: number } }> = [];
+  const cookies = { set(name: string, value: string, options: { maxAge?: number }) { writes.push({ name, value, options }); } };
+  const { createLogoutHandler } = await import("../../src/pages/api/auth/logout");
+  const response = await createLogoutHandler()({ cookies, request: new Request("https://app.example.invalid/api/auth/logout", { method: "POST", headers: { Cookie: cookie } }) } as unknown as Parameters<APIRoute>[0]) as Response;
+  assert.equal(response.status, 303);
+  assert.equal(sdkFetch.mock.calls.length, 1);
+  assert.ok(writes.some((w) => w.name.startsWith("sb-project-auth-token") && w.value === "" && w.options.maxAge === 0));
+  const { requireAdmin } = await import("../../src/lib/supabase/auth");
+  const authorization = await requireAdmin({ cookies: cookies as never, request: new Request("https://app.example.invalid/") });
+  assert.equal(authorization.status, 401);
+});
