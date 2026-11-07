@@ -1,3 +1,4 @@
+import { lockOwnedEdition, withEditableEdition } from "@/db/locks";
 import { and, desc, eq, max, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import {
@@ -61,6 +62,12 @@ export async function createOwnedEdition(adminId: string, input: { familyId: str
   }
 
   return db.transaction(async (tx) => {
+    await tx.select({ id: families.id }).from(families).where(eq(families.id, input.familyId)).for("update");
+    if (input.kind === "final") {
+      const [existing] = await tx.select({ id: drawEditions.id }).from(drawEditions)
+        .where(and(eq(drawEditions.familyId, input.familyId), eq(drawEditions.year, input.year), eq(drawEditions.kind, "final"), ne(drawEditions.status, "archived"))).limit(1);
+      if (existing) throw new AppError(409, "FINAL_EDITION_EXISTS", "Ya existe una edición definitiva para este año.");
+    }
     const [edition] = await tx.insert(drawEditions).values({ ...input, status: "ready", createdByAdminId: adminId }).returning();
     const [islands, people] = await Promise.all([
       tx.select({ id: familyIslands.id }).from(familyIslands).where(eq(familyIslands.familyId, input.familyId)),
@@ -88,64 +95,56 @@ export async function createOwnedEdition(adminId: string, input: { familyId: str
 }
 
 export async function updateOwnedEdition(adminId: string, editionId: string, input: { name?: string; year?: number }) {
-  const owned = await getOwnedEdition(editionId, adminId);
-  if (!owned) throw new AppError(404, "EDITION_NOT_FOUND", "No se ha encontrado la edición.");
-  const [current] = await db.select({ id: draws.id }).from(draws).where(and(eq(draws.editionId, editionId), ne(draws.status, "revoked"))).limit(1);
-  if (current) throw new AppError(409, "EDITION_LOCKED", "Revoca el reparto antes de editar la edición.");
-  const [edition] = await db.update(drawEditions).set({ ...input, updatedAt: new Date() }).where(eq(drawEditions.id, editionId)).returning();
-  return edition;
-}
-
-async function assertEditionEditable(adminId: string, editionId: string) {
-  const owned = await getOwnedEdition(editionId, adminId);
-  if (!owned) throw new AppError(404, "EDITION_NOT_FOUND", "No se ha encontrado la edición.");
-  const [current] = await db.select({ id: draws.id }).from(draws).where(and(eq(draws.editionId, editionId), ne(draws.status, "revoked"))).limit(1);
-  if (current) throw new AppError(409, "EDITION_LOCKED", "Revoca el reparto antes de cambiar participantes.");
-  return owned;
+  return withEditableEdition(adminId, editionId, async (tx) => {
+    const [edition] = await tx.update(drawEditions).set({ ...input, updatedAt: new Date() }).where(eq(drawEditions.id, editionId)).returning();
+    return edition;
+  });
 }
 
 export async function updateEditionIsland(adminId: string, editionId: string, islandId: string, input: { enabled?: boolean; representativeParticipantId?: string | null }) {
-  const owned = await assertEditionEditable(adminId, editionId);
-  const [island] = await db.select({ id: familyIslands.id }).from(familyIslands)
-    .where(and(eq(familyIslands.id, islandId), eq(familyIslands.familyId, owned.family.id))).limit(1);
-  if (!island) throw new AppError(404, "ISLAND_NOT_FOUND", "El núcleo no pertenece a esta edición.");
-  if (input.representativeParticipantId) {
-    const [representative] = await db.select({ id: participants.id }).from(participants)
-      .innerJoin(editionParticipants, and(eq(editionParticipants.participantId, participants.id), eq(editionParticipants.editionId, editionId)))
-      .where(and(
-        eq(participants.id, input.representativeParticipantId),
-        eq(participants.familyIslandId, islandId),
-        eq(participants.isBaby, false),
-        eq(editionParticipants.enabled, true)
-      )).limit(1);
-    if (!representative) throw new AppError(422, "INVALID_ISLAND_REPRESENTATIVE", "El representante debe ser un adulto activo de la unidad.");
-  }
-  const [config] = await db.update(editionIslandConfigs).set({ ...input, updatedAt: new Date() })
-    .where(and(eq(editionIslandConfigs.editionId, editionId), eq(editionIslandConfigs.familyIslandId, islandId))).returning();
-  if (!config) throw new AppError(404, "ISLAND_CONFIG_NOT_FOUND", "No se ha encontrado la configuración del núcleo.");
-  return config;
+  return withEditableEdition(adminId, editionId, async (tx, owned) => {
+    const [island] = await tx.select({ id: familyIslands.id }).from(familyIslands)
+      .where(and(eq(familyIslands.id, islandId), eq(familyIslands.familyId, owned.family.id))).limit(1);
+    if (!island) throw new AppError(404, "ISLAND_NOT_FOUND", "El núcleo no pertenece a esta edición.");
+    if (input.representativeParticipantId) {
+      const [representative] = await tx.select({ id: participants.id }).from(participants)
+        .innerJoin(editionParticipants, and(eq(editionParticipants.participantId, participants.id), eq(editionParticipants.editionId, editionId)))
+        .where(and(
+          eq(participants.id, input.representativeParticipantId),
+          eq(participants.familyIslandId, islandId),
+          eq(participants.isBaby, false),
+          eq(editionParticipants.enabled, true)
+        )).limit(1);
+      if (!representative) throw new AppError(422, "INVALID_ISLAND_REPRESENTATIVE", "El representante debe ser un adulto activo de la unidad.");
+    }
+    const [config] = await tx.update(editionIslandConfigs).set({ ...input, updatedAt: new Date() })
+      .where(and(eq(editionIslandConfigs.editionId, editionId), eq(editionIslandConfigs.familyIslandId, islandId))).returning();
+    if (!config) throw new AppError(404, "ISLAND_CONFIG_NOT_FOUND", "No se ha encontrado la configuración del núcleo.");
+    return config;
+  });
 }
 
 export async function updateEditionParticipant(adminId: string, editionId: string, participantId: string, input: { enabled: boolean; canGive: boolean; canReceive: boolean; preferredChannel: "email" | "whatsapp" | "both" | null }) {
-  await assertEditionEditable(adminId, editionId);
-  const [person] = await db.select({
-    isBaby: participants.isBaby,
-    email: participants.email,
-    phone: participants.phone
-  }).from(participants)
-    .where(eq(participants.id, participantId)).limit(1);
-  if (!person) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
-  if (person.isBaby && (input.canGive || !input.canReceive || input.preferredChannel !== null)) {
-    throw new AppError(422, "INVALID_BABY_CONFIGURATION", "Un bebé activo recibe, no regala y no tiene canal de contacto.");
-  }
-  if (input.preferredChannel !== availableDeliveryChannel(input.preferredChannel, person.email, person.phone)) {
-    throw new AppError(422, "MISSING_DELIVERY_CONTACT", "Ese canal no está disponible hasta que añadas el contacto en Familia.");
-  }
-  if (input.enabled && !input.canGive && !input.canReceive) throw new AppError(422, "PARTICIPANT_WITHOUT_ROLE", "Una persona activa debe regalar, recibir o ambas cosas.");
-  const [config] = await db.update(editionParticipants).set({ ...input, updatedAt: new Date() })
-    .where(and(eq(editionParticipants.editionId, editionId), eq(editionParticipants.participantId, participantId))).returning();
-  if (!config) throw new AppError(404, "PARTICIPANT_CONFIG_NOT_FOUND", "La persona no pertenece a esta edición.");
-  return config;
+  return withEditableEdition(adminId, editionId, async (tx, owned) => {
+    const [person] = await tx.select({
+      isBaby: participants.isBaby,
+      email: participants.email,
+      phone: participants.phone
+    }).from(participants)
+      .where(and(eq(participants.id, participantId), eq(participants.familyId, owned.family.id))).limit(1);
+    if (!person) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
+    if (person.isBaby && (input.canGive || !input.canReceive || input.preferredChannel !== null)) {
+      throw new AppError(422, "INVALID_BABY_CONFIGURATION", "Un bebé activo recibe, no regala y no tiene canal de contacto.");
+    }
+    if (input.preferredChannel !== availableDeliveryChannel(input.preferredChannel, person.email, person.phone)) {
+      throw new AppError(422, "MISSING_DELIVERY_CONTACT", "Ese canal no está disponible hasta que añadas el contacto en Familia.");
+    }
+    if (input.enabled && !input.canGive && !input.canReceive) throw new AppError(422, "PARTICIPANT_WITHOUT_ROLE", "Una persona activa debe regalar, recibir o ambas cosas.");
+    const [config] = await tx.update(editionParticipants).set({ ...input, updatedAt: new Date() })
+      .where(and(eq(editionParticipants.editionId, editionId), eq(editionParticipants.participantId, participantId))).returning();
+    if (!config) throw new AppError(404, "PARTICIPANT_CONFIG_NOT_FOUND", "La persona no pertenece a esta edición.");
+    return config;
+  });
 }
 
 export async function getEditionAppState(adminId: string, editionId: string) {
@@ -212,10 +211,7 @@ export async function getEditionAppState(adminId: string, editionId: string) {
 export async function generateEditionDraw(input: { editionId: string; generatedByAdminId: string }) {
   const startedAt = performance.now();
   return db.transaction(async (tx) => {
-    const [owned] = await tx.select({ edition: drawEditions, family: families }).from(drawEditions)
-      .innerJoin(families, eq(drawEditions.familyId, families.id))
-      .where(and(eq(drawEditions.id, input.editionId), eq(families.ownerAdminId, input.generatedByAdminId))).for("update").limit(1);
-    if (!owned) throw new AppError(403, "EDITION_FORBIDDEN", "No puedes sortear esta edición.");
+    const owned = await lockOwnedEdition(tx, input.generatedByAdminId, input.editionId);
     const [existing] = await tx.select({ id: draws.id }).from(draws)
       .where(and(eq(draws.editionId, input.editionId), ne(draws.status, "revoked"))).limit(1);
     if (existing) throw new AppError(409, "DRAW_ALREADY_EXISTS", "Ya existe un reparto vigente para esta edición.");
@@ -363,10 +359,9 @@ export async function generateEditionDraw(input: { editionId: string; generatedB
 export async function revokeEditionDraw(input: { adminId: string; editionId: string; drawId: string; confirmation: string; reason?: string }) {
   if (input.confirmation !== "ANULAR REPARTO") throw new AppError(400, "CONFIRMATION_REQUIRED", "Escribe ANULAR REPARTO para confirmar.");
   return db.transaction(async (tx) => {
+    await lockOwnedEdition(tx, input.adminId, input.editionId);
     const [owned] = await tx.select({ draw: draws }).from(draws)
-      .innerJoin(drawEditions, eq(draws.editionId, drawEditions.id))
-      .innerJoin(families, eq(drawEditions.familyId, families.id))
-      .where(and(eq(draws.id, input.drawId), eq(draws.editionId, input.editionId), eq(families.ownerAdminId, input.adminId))).for("update").limit(1);
+      .where(and(eq(draws.id, input.drawId), eq(draws.editionId, input.editionId))).for("update").limit(1);
     if (!owned) throw new AppError(404, "DRAW_NOT_FOUND", "No se ha encontrado el reparto.");
     if (owned.draw.status === "revoked") return owned.draw;
     const [draw] = await tx.update(draws).set({ status: "revoked", revokedAt: new Date(), revokedByAdminId: input.adminId, revokeReason: input.reason || null })

@@ -16,6 +16,12 @@ export function handleApiError(event: string, error: unknown, fields: Record<str
     );
   }
 
+  const databaseError = error && typeof error === "object" && "cause" in error ? error.cause : error;
+  if (databaseError && typeof databaseError === "object" && "code" in databaseError && databaseError.code === "23505") {
+    logger.warn(event, { ...fields, status: 409, reason: "unique_conflict" });
+    return Response.json({ ok: false, code: "RESOURCE_CONFLICT", message: "El recurso ya existe o cambió en otra operación. Recarga y vuelve a intentarlo." }, { status: 409 });
+  }
+
   const errorId = logger.error(event, error, fields);
   return Response.json(
     { ok: false, message: "Ha ocurrido un error inesperado.", errorId },
