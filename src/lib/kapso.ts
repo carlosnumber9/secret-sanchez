@@ -13,6 +13,7 @@ export async function sendKapsoMessage(input: SendWhatsappInput) {
   }
   const response = await fetch(`https://api.kapso.ai/meta/whatsapp/v24.0/${encodeURIComponent(kapsoPhoneNumberId)}/messages`, {
     method: "POST",
+    signal: AbortSignal.timeout(20_000),
     headers: { "Content-Type": "application/json", "X-API-Key": kapsoApiKey },
     body: JSON.stringify({
       messaging_product: "whatsapp",
@@ -32,8 +33,10 @@ export async function sendKapsoMessage(input: SendWhatsappInput) {
       }
     })
   });
+  if (response.status >= 500) throw new Error("WhatsApp outcome unknown.");
   const payload = await response.json().catch(() => null) as { messages?: Array<{ id?: string }> } | null;
   const providerMessageId = payload?.messages?.[0]?.id;
+  if (response.ok && !providerMessageId) throw new Error("WhatsApp outcome unknown.");
   if (!response.ok || !providerMessageId) return { ok: false as const, error: `Kapso rechazó el envío (${response.status}).` };
   return { ok: true as const, providerMessageId };
 }

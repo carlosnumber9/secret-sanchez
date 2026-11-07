@@ -1,7 +1,7 @@
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy, Mail, MessageCircle, RefreshCw, Send } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import "./DeliveryStatusPanel.css";
 
 type DeliveryStatus = "sent" | "pending" | "failed" | "delivered" | "read" | "missing" | "skipped";
@@ -26,6 +26,7 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
+  const attempt = useRef<{ signature: string; key: string } | null>(null);
 
   async function send(mode: "pending" | "failed" | "force", scope: "all" | "selected" = "all") {
     if (scope === "selected" && !selected.length) { setMessage("Selecciona al menos una entrega."); return; }
@@ -33,16 +34,19 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
       ? "Los emails de prueba se redirigirán a tu correo de acceso y los WhatsApp al teléfono de prueba. ¿Continuar?"
       : "Esto enviará mensajes reales a la familia. ¿Quieres continuar?";
     if (!window.confirm(warning)) return;
+    const signature = JSON.stringify({ mode, scope, selected: [...selected].sort() });
+    if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID() };
     setBusy(true);
     setMessage("");
     try {
       const response = await fetch(`/api/admin/editions/${editionId}/notifications/send`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ mode, scope, assignmentIds: scope === "selected" ? selected : undefined, confirmed: true, idempotencyKey: crypto.randomUUID() })
+        body: JSON.stringify({ mode, scope, assignmentIds: scope === "selected" ? selected : undefined, confirmed: true, idempotencyKey: attempt.current.key })
       });
       const payload = await response.json() as { ok: boolean; message?: string; data?: { sent: number; failed: number; skipped: number } };
       if (!response.ok || !payload.data) throw new Error(payload.message);
+      attempt.current = null;
       setMessage(`${payload.data.sent} enviados, ${payload.data.failed} fallidos y ${payload.data.skipped} omitidos.`);
       window.setTimeout(() => window.location.reload(), 900);
     } catch (error) {

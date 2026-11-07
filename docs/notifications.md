@@ -37,3 +37,7 @@ La operación emite `assignment_link_copied` en Vercel con identificadores de ad
 ## Privacidad
 
 `notification_logs` conserva el destinatario necesario para operar el proveedor. Los Runtime Logs sanean datos personales, secretos y URLs. `assignments.opened_at` representa la apertura del enlace y es independiente del estado `read` de WhatsApp.
+
+## Idempotencia y resultados inciertos
+
+La reserva de intentos se serializa por asignación dentro de una transacción. Las peticiones repetidas conservan la clave en la interfaz y la misma clave se envía a Resend. Los intentos pendientes recientes se omiten durante 60 segundos. Los emails pendientes se pueden recuperar con la clave original durante 23 horas, dentro de la ventana de deduplicación del proveedor. Un timeout o un fallo de transporte conserva `pending` con `outcome_unknown`; no se afirma que el proveedor rechazara el mensaje. WhatsApp y los emails fuera de esa ventana necesitan comprobación en proveedor y reenvío explícito seleccionado; no se reintentan automáticamente porque podrían duplicarse. Ambos transportes tienen un timeout de 20 segundos.

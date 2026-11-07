@@ -1,7 +1,7 @@
 import { and, eq, ne } from "drizzle-orm";
 import { db } from "@/db/client";
 import { drawEditions, draws, families } from "@/db/schema";
-import { createNotificationLog, findNotificationByIdempotencyKey, listNotificationLogsForDraw, updateNotificationLog } from "@/db/queries/notifications";
+import { claimNotificationAttempt, listNotificationLogsForDraw, updateNotificationLog } from "@/db/queries/notifications";
 import { getOwnedAssignment, listAssignmentsForDraw } from "@/db/queries/assignments";
 import { AppError } from "@/lib/errors";
 import { getEnv } from "@/lib/env";
@@ -61,16 +61,16 @@ export async function sendAdminNotifications(input: SendInput) {
       const latest = logs.find((log) => log.assignmentId === assignment.id && log.channel === deliveryChannel);
       if (!isEligibleNotification(latest?.status ?? null, input.mode)) { skipped += 1; continue; }
       const attemptKey = buildNotificationAttemptKey(input.idempotencyKey, assignment.id, deliveryChannel);
-      if (await findNotificationByIdempotencyKey(attemptKey)) { skipped += 1; continue; }
       const recipient = deliveryChannel === "email"
         ? (owned.edition.kind === "test" ? input.admin.email : email)
         : (owned.edition.kind === "test" ? kapsoTestRecipientPhone : phone);
       if (!recipient) { failed += 1; continue; }
-      const log = await createNotificationLog({ assignmentId: assignment.id, channel: deliveryChannel, recipient, status: "pending", idempotencyKey: attemptKey });
+      const log = await claimNotificationAttempt({ assignmentId: assignment.id, channel: deliveryChannel, recipient, mode: input.mode, idempotencyKey: attemptKey });
+      if (!log) { skipped += 1; continue; }
       try {
         const result = deliveryChannel === "email"
-          ? await sendEmailNotification({ to: recipient, name, revealUrl, testMode: owned.edition.kind === "test" })
-          : await sendWhatsappNotification({ phone: recipient, name, revealUrl });
+          ? await sendEmailNotification({ to: log.recipient, name, revealUrl, idempotencyKey: log.idempotencyKey ?? undefined, testMode: owned.edition.kind === "test" })
+          : await sendWhatsappNotification({ phone: log.recipient, name, revealUrl });
         if (!result.ok) {
           failed += 1;
           await updateNotificationLog(log.id, { status: "failed", error: "provider_rejected" });
@@ -81,7 +81,7 @@ export async function sendAdminNotifications(input: SendInput) {
       } catch (error) {
         failed += 1;
         const errorId = logger.error(`notification.${deliveryChannel}_exception`, error, { assignmentId: assignment.id, drawId: owned.draw.id });
-        await updateNotificationLog(log.id, { status: "failed", error: `errorId:${errorId}` });
+        await updateNotificationLog(log.id, { status: "pending", error: `outcome_unknown:${errorId}` });
       }
     }
   }
