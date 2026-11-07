@@ -54,3 +54,7 @@ Las dependencias de aplicación usan rangos explícitos y el lockfile se version
 ## Entorno de comandos administrativos
 
 Los comandos de Drizzle, bootstrap y contraseña cargan `.env.local` y después `.env`, sin sobrescribir variables exportadas. El bootstrap carga el entorno antes de importar la conexión. Drizzle rechaza una `DATABASE_URL` ausente o con protocolo distinto de PostgreSQL; los errores de configuración no incluyen valores.
+
+`shadcn` es una herramienta de generación y se instala solo como dependencia de desarrollo. El compilador permanece en TypeScript 6; actualizar su major requiere validar primero Astro y el runner. Las instalaciones reproducibles utilizan `npm ci`.
+
+El override de `path-to-regexp` dentro de `@vercel/routing-utils` actualiza la rama 6 a su parche de seguridad 6.3, sin cambiar de major. Revisarlo cuando el adapter retire su versión vulnerable. Los avisos restantes de herramientas se revisan explícitamente; no se resuelven mediante downgrades automáticos del framework.

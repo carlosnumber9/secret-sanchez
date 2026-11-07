@@ -40,7 +40,6 @@
     "react": "^19.3.1",
     "react-dom": "^19.3.1",
     "resend": "^6.37.0",
-    "shadcn": "^4.15.0",
     "tailwind-merge": "^3.7.0",
     "tailwindcss": "^4.3.5",
     "three": "^0.185.1",
@@ -48,13 +47,19 @@
     "zod": "^4.6.7"
   },
   "devDependencies": {
-    "@astrojs/check": "latest",
+    "@astrojs/check": "^0.9.12",
     "@types/node": "^22.19.0",
-    "@types/react": "latest",
-    "@types/react-dom": "latest",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "@types/three": "^0.185.1",
-    "drizzle-kit": "latest",
-    "tsx": "^4.22.4",
-    "typescript": "latest"
+    "drizzle-kit": "^0.31.11",
+    "tsx": "^4.23.15",
+    "typescript": "^6.0.3",
+    "shadcn": "^4.23.0"
+  },
+  "overrides": {
+    "@vercel/routing-utils": {
+      "path-to-regexp": "^6.3.0"
+    }
   }
 }
