@@ -1,3 +1,4 @@
+import { phonePattern } from "@/lib/contact";
 import type { APIRoute } from "astro";
 import { z } from "zod";
 import { deleteOwnedParticipant, updateOwnedParticipant } from "@/actions/adminData";
@@ -7,7 +8,7 @@ import { logger } from "@/lib/logger";
 const schema = z.object({
   name: z.string().trim().min(1).max(180).optional(),
   email: z.union([z.email(), z.literal(""), z.null()]).optional(),
-  phone: z.union([z.string().trim().regex(/^\+[1-9]\d{7,14}$/), z.literal(""), z.null()]).optional(),
+  phone: z.union([z.string().trim().regex(phonePattern), z.literal(""), z.null()]).optional(),
   familyIslandId: z.uuid().optional(),
   preferredChannel: z.enum(["email", "whatsapp", "both"]).nullable().optional(),
   isBaby: z.boolean().optional()

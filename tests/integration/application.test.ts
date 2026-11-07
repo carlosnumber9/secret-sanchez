@@ -8,7 +8,7 @@ import { createOwnedEdition, generateEditionDraw, updateOwnedEdition, revokeEdit
 import { getAdminAppState, saveOwnedFamilyDraft, deleteOwnedParticipant } from "../../src/actions/adminData";
 import { sendAdminNotifications } from "../../src/actions/notifications";
 import { claimNotificationAttempt, applyWhatsappEvent, updateNotificationLog } from "../../src/db/queries/notifications";
-import { getAssignmentByTokenHash } from "../../src/db/queries/assignments";
+import { getRevealPreparation } from "../../src/db/queries/assignments";
 import { decryptRevealToken } from "../../src/lib/tokens";
 import { POST as resolve } from "../../src/pages/api/reveal/resolve";
 import { POST as open } from "../../src/pages/api/reveal/open";
@@ -79,7 +79,7 @@ test("a revocation during the final delivery cannot reactivate tokens", async ()
   const [current] = await db.select().from(s.draws).where(eq(s.draws.id, draw.id));
   assert.equal(current.status, "revoked");
   const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
-  assert.equal(await getAssignmentByTokenHash(assignment.revealTokenHash), null);
+  assert.equal(await getRevealPreparation(assignment.revealTokenHash), null);
 }));
 
 test("stale drafts are rejected and invalid drafts roll back all changes", async () => fixture(async (data) => {
@@ -344,4 +344,16 @@ test("edition rules are owned, atomic, enforced and preserve internal counters",
   await updateEditionRules(data.admin.id, data.edition.id, { noSameIsland: true, exclusions: [] });
   const next = await generation(data);
   assert.equal(next.draw.attemptNumber, 2);
+}));
+
+test("legacy census mutations serialize positions and reject foreign owners", async () => fixture(async (data) => {
+  const { createOwnedParticipant, updateOwnedParticipant, updateOwnedIsland } = await import("../../src/actions/adminData");
+  const created = await Promise.all(["First", "Second"].map((name) => createOwnedParticipant(data.admin.id, { familyId: data.family.id, familyIslandId: data.islands[0].id, name, isBaby: false })));
+  assert.deepEqual(created.map((p) => p.sortOrder).sort(), [1, 2]);
+  await assert.rejects(updateOwnedParticipant(crypto.randomUUID(), created[0].id, { name: "Foreign" }), { code: "FAMILY_NOT_FOUND" });
+  await assert.rejects(updateOwnedIsland(crypto.randomUUID(), data.islands[0].id, { name: "Foreign" }), { code: "FAMILY_NOT_FOUND" });
+  const updated = await updateOwnedParticipant(data.admin.id, created[0].id, { isBaby: true });
+  assert.equal(updated.email, null);
+  const [config] = await db.select().from(s.editionParticipants).where(eq(s.editionParticipants.participantId, updated.id));
+  assert.equal(config.canGive, false);
 }));

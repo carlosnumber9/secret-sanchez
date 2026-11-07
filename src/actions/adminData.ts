@@ -1,3 +1,4 @@
+import { lockOwnedFamily, type Transaction } from "@/db/locks";
 import { getDeletionImpact } from "@/db/queries/deletionImpact";
 import { updateIslandsInBatch, updatePeopleInBatch } from "@/db/bulk-family";
 import { familyRevision } from "@/lib/family-revision";
@@ -13,10 +14,22 @@ import {
   familyIslands,
   participants
 } from "@/db/schema";
-import { getActiveFamilyGroupForAdmin, getOwnedFamilyGroup } from "@/db/queries/familyGroups";
+import { getActiveFamilyGroupForAdmin } from "@/db/queries/familyGroups";
 import { listFamilyIslands } from "@/db/queries/familyIslands";
 import { listParticipants } from "@/db/queries/participants";
 import { AppError } from "@/lib/errors";
+
+async function lockParticipantFamily(tx: Transaction, adminId: string, participantId: string) {
+  const [reference] = await tx.select({ familyId: participants.familyId }).from(participants).where(eq(participants.id, participantId)).limit(1);
+  if (!reference) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
+  await lockOwnedFamily(tx, adminId, reference.familyId);
+}
+
+async function lockIslandFamily(tx: Transaction, adminId: string, islandId: string) {
+  const [reference] = await tx.select({ familyId: familyIslands.familyId }).from(familyIslands).where(eq(familyIslands.id, islandId)).limit(1);
+  if (!reference) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
+  await lockOwnedFamily(tx, adminId, reference.familyId);
+}
 
 export async function getAdminAppState(adminId: string, include: { census?: boolean; editions?: boolean } = {}) {
   const family = await getActiveFamilyGroupForAdmin(adminId);
@@ -43,10 +56,8 @@ export async function createOwnedGroup(adminId: string, input: { name: string })
 }
 
 export async function createOwnedIsland(adminId: string, input: { familyId: string; name: string; color?: string; description?: string }) {
-  const family = await getOwnedFamilyGroup(input.familyId, adminId);
-  if (!family) throw new AppError(403, "FAMILY_FORBIDDEN", "No puedes modificar esta familia.");
-
   return db.transaction(async (tx) => {
+    const family = await lockOwnedFamily(tx, adminId, input.familyId);
     const [island] = await tx.insert(familyIslands).values(input).returning();
     const editions = await tx.select({ id: drawEditions.id }).from(drawEditions).where(eq(drawEditions.familyId, family.id));
     if (editions.length) {
@@ -57,13 +68,16 @@ export async function createOwnedIsland(adminId: string, input: { familyId: stri
 }
 
 export async function updateOwnedIsland(adminId: string, islandId: string, input: { name?: string; color?: string; description?: string }) {
-  const [owned] = await db.select({ island: familyIslands }).from(familyIslands)
-    .innerJoin(families, eq(familyIslands.familyId, families.id))
-    .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).limit(1);
-  if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
-  const [island] = await db.update(familyIslands).set({ ...input, updatedAt: new Date() })
-    .where(eq(familyIslands.id, islandId)).returning();
-  return island;
+  return db.transaction(async (tx) => {
+    await lockIslandFamily(tx, adminId, islandId);
+    const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
+      .innerJoin(families, eq(familyIslands.familyId, families.id))
+      .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).limit(1);
+    if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
+    const [island] = await tx.update(familyIslands).set({ ...input, updatedAt: new Date() })
+      .where(eq(familyIslands.id, islandId)).returning();
+    return island;
+  });
 }
 
 export async function createOwnedParticipant(adminId: string, input: {
@@ -75,12 +89,13 @@ export async function createOwnedParticipant(adminId: string, input: {
   preferredChannel?: "email" | "whatsapp" | "both" | null;
   isBaby: boolean;
 }) {
-  const [owned] = await db.select({ island: familyIslands }).from(familyIslands)
-    .innerJoin(families, eq(familyIslands.familyId, families.id))
-    .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, input.familyId), eq(families.ownerAdminId, adminId))).limit(1);
-  if (!owned) throw new AppError(403, "ISLAND_FORBIDDEN", "No puedes añadir personas a este núcleo.");
-
   return db.transaction(async (tx) => {
+    await lockOwnedFamily(tx, adminId, input.familyId);
+    const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
+      .innerJoin(families, eq(familyIslands.familyId, families.id))
+      .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, input.familyId), eq(families.ownerAdminId, adminId))).limit(1);
+    if (!owned) throw new AppError(403, "ISLAND_FORBIDDEN", "No puedes añadir personas a este núcleo.");
+
     const [lastPosition] = await tx.select({ value: sql<number>`coalesce(max(${participants.sortOrder}), -1)::int` })
       .from(participants).where(eq(participants.familyIslandId, input.familyIslandId));
     const [participant] = await tx.insert(participants).values({
@@ -322,16 +337,17 @@ export async function updateOwnedParticipant(adminId: string, participantId: str
   preferredChannel: "email" | "whatsapp" | "both" | null;
   isBaby: boolean;
 }>) {
-  const [owned] = await db.select({ participant: participants }).from(participants)
-    .innerJoin(families, eq(participants.familyId, families.id))
-    .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).limit(1);
-  if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
-  if (input.familyIslandId) {
-    const [target] = await db.select({ id: familyIslands.id }).from(familyIslands)
-      .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, owned.participant.familyId))).limit(1);
-    if (!target) throw new AppError(422, "ISLAND_MISMATCH", "El núcleo no pertenece a esta familia.");
-  }
   return db.transaction(async (tx) => {
+    await lockParticipantFamily(tx, adminId, participantId);
+    const [owned] = await tx.select({ participant: participants }).from(participants)
+      .innerJoin(families, eq(participants.familyId, families.id))
+      .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).limit(1);
+    if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
+    if (input.familyIslandId) {
+      const [target] = await tx.select({ id: familyIslands.id }).from(familyIslands)
+        .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, owned.participant.familyId))).limit(1);
+      if (!target) throw new AppError(422, "ISLAND_MISMATCH", "El núcleo no pertenece a esta familia.");
+    }
     const effectiveBaby = input.isBaby ?? owned.participant.isBaby;
     const values = effectiveBaby
       ? { ...input, email: null, phone: null, preferredChannel: null, updatedAt: new Date() }
@@ -397,6 +413,7 @@ async function lockFamilyEditions(tx: Parameters<Parameters<typeof db.transactio
 export async function deleteOwnedParticipant(adminId: string, participantId: string, confirmation: string) {
   if (confirmation !== "ELIMINAR PERSONA") throw new AppError(400, "CONFIRMATION_REQUIRED", "Escribe ELIMINAR PERSONA para confirmar.");
   return db.transaction(async (tx) => {
+    await lockParticipantFamily(tx, adminId, participantId);
     const [owned] = await tx.select({ participant: participants }).from(participants)
       .innerJoin(families, eq(participants.familyId, families.id))
       .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
@@ -426,6 +443,7 @@ export async function deleteOwnedIsland(adminId: string, islandId: string, input
   confirmation?: string;
 }) {
   return db.transaction(async (tx) => {
+    await lockIslandFamily(tx, adminId, islandId);
     const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
       .innerJoin(families, eq(familyIslands.familyId, families.id))
       .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).for("update").limit(1);

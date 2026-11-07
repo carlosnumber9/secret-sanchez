@@ -6,14 +6,3 @@ export async function listParticipants(familyId: string) {
   return db.select().from(participants).where(eq(participants.familyId, familyId))
     .orderBy(asc(participants.familyIslandId), asc(participants.sortOrder), asc(participants.createdAt));
 }
-
-export async function createParticipant(input: typeof participants.$inferInsert) {
-  const [participant] = await db.insert(participants).values(input).returning();
-  return participant;
-}
-
-export async function updateParticipant(id: string, input: Partial<typeof participants.$inferInsert>) {
-  const [participant] = await db.update(participants).set({ ...input, updatedAt: new Date() })
-    .where(eq(participants.id, id)).returning();
-  return participant;
-}

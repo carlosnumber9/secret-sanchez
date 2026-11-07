@@ -1,3 +1,4 @@
+import { availableDeliveryChannel } from "@/lib/contact";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { useMemo, useState } from "react";
@@ -25,13 +26,6 @@ function channelFromChecks(email: boolean, whatsapp: boolean): DeliveryChannel {
   return null;
 }
 
-function availableChannel(person: Pick<Person, "preferredChannel" | "hasEmail" | "hasPhone">): DeliveryChannel {
-  if (person.preferredChannel === "both") return person.hasEmail ? (person.hasPhone ? "both" : "email") : (person.hasPhone ? "whatsapp" : null);
-  if (person.preferredChannel === "email") return person.hasEmail ? "email" : null;
-  if (person.preferredChannel === "whatsapp") return person.hasPhone ? "whatsapp" : null;
-  return null;
-}
-
 export default function EditionConfigurator({ editionId, initialIslands, initialPeople, locked }: {
   editionId: string;
   initialIslands: Island[];
@@ -41,7 +35,7 @@ export default function EditionConfigurator({ editionId, initialIslands, initial
   const [islands, setIslands] = useState(initialIslands);
   const [people, setPeople] = useState(() => initialPeople.map((person) => ({
     ...person,
-    preferredChannel: person.isBaby ? null : availableChannel(person)
+    preferredChannel: person.isBaby ? null : availableDeliveryChannel(person.preferredChannel, person.hasEmail, person.hasPhone)
   })));
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);

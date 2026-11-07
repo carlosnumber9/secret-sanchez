@@ -27,3 +27,10 @@ export async function withEditableEdition<T>(adminId: string, editionId: string,
     return work(tx, owned);
   });
 }
+
+export async function lockOwnedFamily(tx: Transaction, adminId: string, familyId: string) {
+  const [family] = await tx.select().from(families)
+    .where(and(eq(families.id, familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+  if (!family) throw new AppError(404, "FAMILY_NOT_FOUND", "No se ha encontrado la familia.");
+  return family;
+}

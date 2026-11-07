@@ -1,3 +1,5 @@
+import { participantEmailIsValid, participantPhoneIsValid } from "@/lib/contact";
+export { participantEmailIsValid, participantPhoneIsValid } from "@/lib/contact";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { NativeSelect, NativeSelectOption } from "@/components/ui/native-select";
@@ -20,17 +22,6 @@ type Props = {
   onIslandChange: (islandId: string) => void;
   onSubmit: () => void;
 };
-
-const phonePattern = /^\+[1-9]\d{7,14}$/;
-const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-
-export function participantEmailIsValid(email: string) {
-  return emailPattern.test(email);
-}
-
-export function participantPhoneIsValid(phone: string) {
-  return phonePattern.test(phone);
-}
 
 export function participantDraftIsValid(value: ParticipantDraft, islandId: string, islands: Props["islands"]) {
   if (!value.name.trim() || !islands.some(({ id }) => id === islandId)) return false;

@@ -1,3 +1,4 @@
+import { availableDeliveryChannel } from "@/lib/contact";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
@@ -117,12 +118,7 @@ function moveParticipantInIslands(islands: Island[], participantId: string, targ
 }
 
 function compatibleChannel(channel: PreferredChannel, email: string, phone: string): PreferredChannel {
-  const hasEmail = participantEmailIsValid(email);
-  const hasPhone = participantPhoneIsValid(phone);
-  if (channel === "both") return hasEmail ? (hasPhone ? "both" : "email") : (hasPhone ? "whatsapp" : null);
-  if (channel === "email") return hasEmail ? "email" : null;
-  if (channel === "whatsapp") return hasPhone ? "whatsapp" : null;
-  return null;
+  return availableDeliveryChannel(channel, participantEmailIsValid(email), participantPhoneIsValid(phone));
 }
 
 function prepareInitialIslands(initialIslands: InitialIsland[]): Island[] {

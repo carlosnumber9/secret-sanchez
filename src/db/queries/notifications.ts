@@ -7,42 +7,11 @@ import { and, desc, eq, inArray, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { auditEvents, assignments, notificationLogs } from "@/db/schema";
 
-export async function createNotificationLog(input: typeof notificationLogs.$inferInsert) {
-  const [log] = await db.insert(notificationLogs).values(input).returning();
-  return log;
-}
-
 export async function updateNotificationLog(id: string, input: Partial<typeof notificationLogs.$inferInsert>) {
   const condition = input.status && ["pending", "sent", "failed", "delivered", "read"].includes(input.status)
     ? inArray(notificationLogs.status, [...previousStatusesFor(input.status as WhatsappDeliveryStatus | "pending")]) : undefined;
   const [log] = await db.update(notificationLogs).set(input).where(and(eq(notificationLogs.id, id), condition, sql`(${notificationLogs.channel} <> 'email' or ${notificationLogs.error} is null or ${notificationLogs.error} not in ('email_bounced', 'email_complained', 'email_suppressed'))`)).returning();
   return log;
-}
-
-export async function listNotificationLogs(assignmentId: string) {
-  return db
-    .select()
-    .from(notificationLogs)
-    .where(eq(notificationLogs.assignmentId, assignmentId))
-    .orderBy(desc(notificationLogs.createdAt));
-}
-
-export async function listNotificationLogsForDraw(drawId: string) {
-  return db
-    .select({ log: notificationLogs })
-    .from(notificationLogs)
-    .innerJoin(assignments, eq(notificationLogs.assignmentId, assignments.id))
-    .where(eq(assignments.drawId, drawId))
-    .orderBy(desc(notificationLogs.createdAt));
-}
-
-export async function findNotificationByIdempotencyKey(idempotencyKey: string) {
-  const [log] = await db
-    .select()
-    .from(notificationLogs)
-    .where(eq(notificationLogs.idempotencyKey, idempotencyKey))
-    .limit(1);
-  return log ?? null;
 }
 
 export async function findNotificationByProviderMessageId(providerMessageId: string) {

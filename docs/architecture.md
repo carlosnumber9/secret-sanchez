@@ -122,3 +122,7 @@ El fondo Three.js se importa dinámicamente cuando el navegador queda libre. Pan
 Las lecturas administrativas se acotan por pantalla: el historial no carga el censo, Familia no carga ediciones y la pantalla de sorteo no consulta entregas ni logs. Envíos obtiene el intento vigente sin cargar configuración ni censo. No existe caché global de datos privados entre usuarios.
 
 La preparación pública obtiene únicamente identidad del regalador y apertura en una consulta. La apertura resuelve receptor y registra primera apertura mediante una sola sentencia SQL; mantiene un bloqueo compartido sobre el intento y exclusivo sobre la asignación, coordinándose con revocaciones sin serializar las aperturas de personas distintas.
+
+## Casos de uso autorizados
+
+Las rutas administrativas llaman a `adminData`, `editionData`, `editionRules`, `drawLifecycle` o `notifications`; no existen wrappers de escritura sin propietario ni un envío masivo alternativo sin reserva de intentos. `editionData` conserva las reexportaciones del ciclo de sorteo para compatibilidad interna. Las escrituras de censo adquieren primero el bloqueo de familia, antes de consultar o bloquear hijos; generación, revocación y reglas usan el mismo orden. Las consultas públicas de revelación proyectan únicamente la preparación o realizan la apertura atómica. La política de canales y formato de teléfono se comparte entre servidor y formularios en `src/lib/contact.ts`.

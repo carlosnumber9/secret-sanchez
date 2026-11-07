@@ -1,34 +1,6 @@
-import { and, eq, isNull, ne, sql } from "drizzle-orm";
+import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
 import { assignments, drawEditions, drawIslands, drawParticipants, draws, families } from "@/db/schema";
-
-export async function createAssignments(values: (typeof assignments.$inferInsert)[]) {
-  return db.insert(assignments).values(values).returning();
-}
-
-export async function getAssignmentByTokenHash(tokenHash: string) {
-  const [row] = await db
-    .select({ assignment: assignments, giver: drawParticipants, giverIsland: drawIslands, draw: draws })
-    .from(assignments)
-    .leftJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
-    .leftJoin(drawIslands, eq(assignments.giverIslandId, drawIslands.id))
-    .innerJoin(draws, eq(assignments.drawId, draws.id))
-    .where(and(eq(assignments.revealTokenHash, tokenHash), ne(draws.status, "revoked")))
-    .limit(1);
-  if (!row) return null;
-
-  const [receiver] = await db.select().from(drawParticipants).where(eq(drawParticipants.id, row.assignment.receiverId)).limit(1);
-  return { ...row, receiver: receiver ?? null };
-}
-
-export async function markAssignmentOpened(assignmentId: string) {
-  const [updated] = await db
-    .update(assignments)
-    .set({ openedAt: new Date() })
-    .where(and(eq(assignments.id, assignmentId), isNull(assignments.openedAt)))
-    .returning();
-  return updated ?? null;
-}
 
 export async function listAssignmentsForDraw(drawId: string) {
   return db
