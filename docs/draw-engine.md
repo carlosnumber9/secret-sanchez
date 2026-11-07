@@ -45,6 +45,8 @@ El panel administrativo muestra a quién pertenece cada enlace, pero nunca el re
 
 Las pruebas repiten las invariantes adultas y el escenario de 9 unidades y 6 bebés, comprobando unidades distintas, ausencia de asignación propia e imposibilidad explícita cuando faltan unidades.
 
+El validador comprueba la cobertura exacta y única de regaladores y receptores de forma independiente del generador, y rechaza identidades duplicadas en la entrada.
+
 ## Exclusión mutua
 
 La configuración, generación y revocación bloquean primero la familia y después la edición, dentro de la misma transacción que comprueba y modifica el estado. Las ediciones archivadas no son editables. Los conflictos de unicidad se traducen a `409` sin exponer mensajes SQL.

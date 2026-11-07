@@ -24,3 +24,18 @@ test("an impossible same-island draw is rejected", () => {
   );
   assert.equal(result.ok, false);
 });
+
+test("validation rejects duplicate givers even when every receiver is unique", () => {
+  const error = validateDraw(people, [
+    { giverId: "a", receiverId: "b" },
+    { giverId: "a", receiverId: "c" },
+    { giverId: "b", receiverId: "a" }
+  ], { noSameIsland: true, exclusions: [] });
+  assert.equal(error, "Cada persona que regala debe aparecer exactamente una vez.");
+});
+
+test("validation rejects an unknown giver and duplicate participant identities", () => {
+  const assignments = [{ giverId: "a", receiverId: "b" }, { giverId: "b", receiverId: "c" }, { giverId: "other", receiverId: "a" }];
+  assert.notEqual(validateDraw(people, assignments, { noSameIsland: true, exclusions: [] }), null);
+  assert.notEqual(validateDraw([...people, people[0]], assignments, { noSameIsland: true, exclusions: [] }), null);
+});

@@ -12,9 +12,16 @@ export function validateDraw(
 ) {
   const activeGivers = participants.filter((participant) => participant.active && participant.canGive);
   const activeReceivers = participants.filter((participant) => participant.active && participant.canReceive);
+  const byId = new Map(participants.map((participant) => [participant.id, participant]));
+  if (byId.size !== participants.length) return "Hay participantes duplicados.";
 
   if (assignments.length !== activeGivers.length) {
     return "No todos los participantes activos tienen receptor.";
+  }
+
+  const giverIds = new Set(assignments.map((assignment) => assignment.giverId));
+  if (giverIds.size !== activeGivers.length || activeGivers.some((giver) => !giverIds.has(giver.id))) {
+    return "Cada persona que regala debe aparecer exactamente una vez.";
   }
 
   const receiverIds = new Set(assignments.map((assignment) => assignment.receiverId));
@@ -27,8 +34,8 @@ export function validateDraw(
   }
 
   for (const assignment of assignments) {
-    const giver = participants.find((participant) => participant.id === assignment.giverId);
-    const receiver = participants.find((participant) => participant.id === assignment.receiverId);
+    const giver = byId.get(assignment.giverId);
+    const receiver = byId.get(assignment.receiverId);
     if (!giver || !receiver || !canAssign(giver, receiver, config, new Set())) {
       return "Hay una asignación que incumple las reglas del sorteo.";
     }
