@@ -1,10 +1,9 @@
 import { pathToFileURL } from "node:url";
 import { emitKeypressEvents } from "node:readline";
 import { createClient } from "@supabase/supabase-js";
-import { config } from "dotenv";
+import "./load-env";
 import { z } from "zod";
 
-config({ path: [".env.local", ".env"], quiet: true });
 
 export function parseUserId(argv: string[]) {
   if (argv.some((argument) => argument === "--password" || argument.startsWith("--password="))) {

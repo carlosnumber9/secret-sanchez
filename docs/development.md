@@ -50,3 +50,7 @@ exclusivas de operación local: no se añaden a `AppEnv`, no se configuran en Ve
 ## Actualizaciones de dependencias
 
 Las dependencias de aplicación usan rangos explícitos y el lockfile se versiona. Las actualizaciones de React y React DOM se realizan juntas. Los cambios de major de Postgres, TypeScript y dotenv requieren una migración independiente y no se aplican con `npm audit fix --force`.
+
+## Entorno de comandos administrativos
+
+Los comandos de Drizzle, bootstrap y contraseña cargan `.env.local` y después `.env`, sin sobrescribir variables exportadas. El bootstrap carga el entorno antes de importar la conexión. Drizzle rechaza una `DATABASE_URL` ausente o con protocolo distinto de PostgreSQL; los errores de configuración no incluyen valores.
