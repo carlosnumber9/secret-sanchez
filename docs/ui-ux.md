@@ -6,7 +6,12 @@ La base visual implementada usa el preset shadcn `bgo6OSRWs` (`base-rhea`): pale
 tipografías Outfit y Noto Sans, radios amplios y componentes compactos basados en Base UI. La prioridad es que un
 organizador no técnico pueda completar el sorteo sin interpretar conceptos internos.
 
-Los contenedores son la única adaptación deliberada al preset: tarjetas, paneles, filas y cabecera usan los mismos
+El fondo común usa un tono piedra cálido, con dos degradados radiales estáticos muy tenues: rojo en la esquina
+superior izquierda y dorado en el lateral derecho. Las tarjetas y popovers conservan superficies claras para separar
+el contenido sin contrastes fuertes. El texto secundario se oscurece ligeramente para mantener la legibilidad sobre
+el fondo teñido; las superficies del tema oscuro no incorporan estos degradados.
+
+Los contenedores adaptan el preset: tarjetas, paneles, filas y cabecera usan los mismos
 colores semánticos con una translucidez contenida, saturación suave y `backdrop-filter`. Los tokens de vidrio viven
 en `src/styles/tokens.css` y también alimentan la primitiva `Card`; el resto de controles debe mantenerse alineado con
 el preset.

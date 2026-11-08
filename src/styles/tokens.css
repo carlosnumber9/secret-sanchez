@@ -1,4 +1,7 @@
 :root {
+  --page-background-image:
+    radial-gradient(ellipse 70rem 42rem at 0 0, oklch(from var(--primary) l c h / 4%), transparent 70%),
+    radial-gradient(ellipse 65rem 50rem at 100% 20rem, oklch(0.82 0.1 80 / 8%), transparent 72%);
   --glass-background: oklch(from var(--background) l c h / 86%);
   --glass-card: oklch(from var(--card) l c h / 88%);
   --glass-secondary: oklch(from var(--secondary) l c h / 84%);
