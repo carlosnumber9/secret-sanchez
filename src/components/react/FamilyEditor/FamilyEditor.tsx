@@ -45,6 +45,7 @@ import ParticipantForm, {
 } from "../ParticipantForm/ParticipantForm";
 import InlineName from "./InlineName";
 import ContactPreferenceInput from "./ContactPreferenceInput";
+import MoveMenu from "./MoveMenu";
 import "./FamilyEditor.css";
 
 type PreferredChannel = "email" | "whatsapp" | "both" | null;
@@ -565,7 +566,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     try {
       await locked(async () => {
         const impact = await api<{ draws: number; assignments: number; notifications: number; opened: number }>(`/api/admin/participants/${person.id}/deletion-impact`, "GET");
-        const warning = `Se eliminarán ${impact.draws} repartos completos, ${impact.assignments} asignaciones, ${impact.notifications} logs y ${impact.opened} aperturas. Escribe ELIMINAR PERSONA para continuar.`;
+        const warning = `Se eliminará a ${person.name}. Se eliminarán ${impact.draws} repartos completos, ${impact.assignments} asignaciones, ${impact.notifications} logs y ${impact.opened} aperturas. Escribe ELIMINAR PERSONA para continuar.`;
         if (window.prompt(warning) !== "ELIMINAR PERSONA") return;
         await persistChange((current) => current.map((island) => ({ ...island,
           participants: island.participants.filter(({ clientId }) => clientId !== person.clientId)
@@ -581,14 +582,14 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
         const alternatives = savedIslandsRef.current.filter(({ clientId }) => clientId !== island.clientId);
         let targetId: string | undefined;
         if (island.participants.length && alternatives.length) {
-          const answer = window.prompt(`La unidad contiene ${island.participants.length} personas. Escribe MOVER para trasladarlas o ELIMINAR UNIDAD para borrarlas con ${impact.draws} repartos afectados.`);
+          const answer = window.prompt(`La unidad ${island.name} contiene ${island.participants.length} personas. Escribe MOVER para trasladarlas o ELIMINAR UNIDAD para borrarlas con ${impact.draws} repartos afectados.`);
           if (answer === "MOVER") {
             const destination = window.prompt(`Destino: ${alternatives.map(({ name }) => name).join(", ")}`);
             targetId = alternatives.find(({ name }) => name.toLowerCase() === destination?.trim().toLowerCase())?.clientId;
             if (!targetId) throw new Error("No se ha encontrado la unidad de destino.");
           } else if (answer !== "ELIMINAR UNIDAD") return;
         } else if (island.participants.length) {
-          if (window.prompt("Escribe ELIMINAR UNIDAD para borrar también a sus integrantes.") !== "ELIMINAR UNIDAD") return;
+          if (window.prompt(`Escribe ELIMINAR UNIDAD para borrar ${island.name}, sus ${island.participants.length} integrantes y ${impact.draws} repartos afectados.`) !== "ELIMINAR UNIDAD") return;
         } else if (!window.confirm(`¿Eliminar la unidad ${island.name}?`)) return;
         await persistChange((current) => {
           const source = current.find(({ clientId }) => clientId === island.clientId)!;
@@ -612,6 +613,24 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
       return next;
     });
     setMessage("Orden visual actualizado. Este orden no se guarda en la base de datos.");
+  }
+
+  async function movePerson(personId: string, direction: -1 | 1, destinationId?: string) {
+    await locked(() => persistChange((current) => {
+      const source = findParticipantLocation(current, personId);
+      if (!source) throw new Error("La persona ya no está disponible.");
+      const target = destinationId ? current.find(({ clientId }) => clientId === destinationId) : source.island;
+      if (!target) throw new Error("La unidad de destino ya no está disponible.");
+      const index = destinationId ? target.participants.length : source.participantIndex + direction;
+      return moveParticipantInIslands(current, personId, target.clientId, index);
+    }));
+  }
+
+  async function moveUnit(islandId: string, direction: -1 | 1) {
+    if (busyRef.current) return;
+    const index = islands.findIndex(({ clientId }) => clientId === islandId);
+    const target = islands[index + direction];
+    if (target) reorderIsland(islandId, target.clientId);
   }
 
   function finishDrag() {
@@ -707,20 +726,20 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     <div className="family-editor__hint">
       <GripVertical aria-hidden="true" />
       <div>
-        <p>Arrastra desde los bordes izquierdos para ordenar o cambiar de unidad. Con teclado, usa espacio, flechas y Escape.</p>
-        <p>Elige email o WhatsApp desde los iconos de los contactos. Puedes activar ambos o ninguno.</p>
+        <p>Mueve personas y unidades desde sus opciones o arrastrando el borde izquierdo.</p>
+        <p>El sobre y el bocadillo eligen canales preferidos; no envían mensajes. El teléfono necesita prefijo internacional, por ejemplo +34.</p>
       </div>
     </div>
 
     <div className="family-editor__toolbar">
-      <dl className="family-editor__totals" aria-label="Resumen de la familia" aria-live="polite" aria-atomic="true">
-        <div><dt>{totals.units === 1 ? "Unidad" : "Unidades"}</dt><dd>{totals.units}</dd></div>
-        <div><dt>{totals.people === 1 ? "Persona" : "Personas"}</dt><dd>{totals.people}</dd></div>
-        <div><dt>{totals.babies === 1 ? "Bebé" : "Bebés"}</dt><dd>{totals.babies}</dd></div>
-      </dl>
+      <p className="family-editor__totals" aria-label="Resumen de la familia" aria-live="polite" aria-atomic="true">
+        <span><strong>{totals.units}</strong> {totals.units === 1 ? "unidad" : "unidades"}</span>
+        <span aria-hidden="true">·</span>
+        <span><strong>{totals.people}</strong> {totals.people === 1 ? "persona" : "personas"} en total, con <strong>{totals.babies}</strong> {totals.babies === 1 ? "bebé" : "bebés"}</span>
+      </p>
       <div className="family-editor__create-actions" aria-label="Añadir a la familia">
-        <Button size="icon-lg" onClick={showIslandDialog} disabled={editingDisabled} aria-label="Añadir unidad" title="Añadir unidad"><HousePlus /></Button>
-        <Button size="icon-lg" variant="secondary" onClick={() => showParticipantDialog()} disabled={editingDisabled || !islands.length} aria-label="Añadir persona" title={islands.length ? "Añadir persona" : "Crea una unidad primero"}><UserPlus /></Button>
+        <Button className="family-editor__create-button" size="icon-lg" onClick={showIslandDialog} disabled={editingDisabled} aria-label="Añadir unidad" title="Añadir unidad"><HousePlus /><span className="family-editor__desktop-label">Añadir unidad</span></Button>
+        <Button className="family-editor__create-button" size="icon-lg" variant="secondary" onClick={() => showParticipantDialog()} disabled={editingDisabled || !islands.length} aria-label="Añadir persona" title={islands.length ? "Añadir persona" : "Crea una unidad primero"}><UserPlus /><span className="family-editor__desktop-label">Añadir persona</span></Button>
       </div>
     </div>
 
@@ -736,7 +755,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     >
       <section className="family-editor__board" aria-label="Unidades familiares">
         <SortableContext items={islands.map(({ clientId }) => islandDndId(clientId))} strategy={verticalListSortingStrategy}>
-          {islands.map((island) => <SortableIsland island={island} disabled={busy || dirty} saving={busy || pendingCount > 0} key={island.clientId}>
+          {islands.map((island, islandIndex) => <SortableIsland island={island} disabled={busy || dirty} saving={busy || pendingCount > 0} key={island.clientId}>
             {({ attributes, listeners, setActivatorNodeRef }) => <>
               <header className="family-editor__island-header">
                 <button
@@ -747,14 +766,23 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                   {...attributes}
                   {...listeners}
                   aria-label={`Mover la unidad ${island.name}`}
-                />
+                  title={`Arrastrar para mover la unidad ${island.name}`}
+                ><GripVertical aria-hidden="true" /></button>
                 <span className="family-editor__island-color" style={{ background: island.color }} />
                 <div>
                   <InlineName heading name={island.name} label="Nombre de la unidad" disabled={editingDisabled} onSave={(name) => saveName("island", island, name)} />
                   <p>{island.participants.length} {island.participants.length === 1 ? "persona" : "personas"}</p>
                 </div>
                 <div className="family-editor__island-actions">
-                  <Button variant="ghost" size="icon" disabled={editingDisabled} onClick={() => deleteIsland(island)} aria-label={`Eliminar ${island.name}`}><Trash2 /></Button>
+                  <MoveMenu
+                    name={island.name}
+                    unit
+                    disabled={editingDisabled || dirty}
+                    canMoveUp={islandIndex > 0}
+                    canMoveDown={islandIndex < islands.length - 1}
+                    onMove={(direction) => moveUnit(island.clientId, direction)}
+                  />
+                  <button type="button" className="family-editor__action family-editor__action--delete" disabled={editingDisabled} onClick={() => deleteIsland(island)} aria-label={`Eliminar ${island.name}`} title={`Eliminar la unidad ${island.name}`}><Trash2 aria-hidden="true" /><span className="family-editor__desktop-label">Eliminar</span></button>
                 </div>
               </header>
 
@@ -763,7 +791,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                   items={island.participants.map(({ clientId }) => participantDndId(clientId))}
                   strategy={verticalListSortingStrategy}
                 >
-                  {island.participants.map((person) => <SortableParticipant
+                  {island.participants.map((person, personIndex) => <SortableParticipant
                     island={island}
                     person={person}
                     disabled={busy || dirty}
@@ -779,7 +807,8 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                         {...participantAttributes}
                         {...participantListeners}
                         aria-label={`Mover a ${person.name}`}
-                      />
+                        title={`Arrastrar para mover a ${person.name}`}
+                      ><GripVertical aria-hidden="true" /></button>
                       <div className="family-editor__baby-cell">
                         <BabyToggle person={person} disabled={editingDisabled} onConfirm={() => toggleBaby(person)} />
                       </div>
@@ -809,12 +838,21 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                         </>}
                       </div>
                       <div className="family-editor__row-actions">
-                        <Button variant="destructive" size="icon" disabled={editingDisabled} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
+                        <MoveMenu
+                          name={person.name}
+                          disabled={editingDisabled || dirty}
+                          canMoveUp={personIndex > 0}
+                          canMoveDown={personIndex < island.participants.length - 1}
+                          onMove={(direction) => movePerson(person.clientId, direction)}
+                          destinations={islands.filter(({ clientId }) => clientId !== island.clientId).map(({ clientId, name }) => ({ id: clientId, name }))}
+                          onMoveTo={(destination) => movePerson(person.clientId, 1, destination)}
+                        />
+                        <button type="button" className="family-editor__action family-editor__action--delete" disabled={editingDisabled} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`} title={`Eliminar a ${person.name}`}><Trash2 aria-hidden="true" /><span className="family-editor__desktop-label">Eliminar</span></button>
                       </div>
                     </>}
                   </SortableParticipant>)}
                 </SortableContext>
-                {!island.participants.length && <li className="family-editor__empty">Arrastra aquí el primer familiar de esta unidad.</li>}
+                {!island.participants.length && <li className="family-editor__empty">Añade una persona o muévela aquí desde otra unidad.</li>}
               </ul>
             </>}
           </SortableIsland>)}
