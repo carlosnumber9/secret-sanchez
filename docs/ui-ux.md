@@ -27,6 +27,8 @@ Sorteo y Envíos viven dentro de la edición elegida explícitamente.
 
 La revelación utiliza un layout público separado y no muestra navegación administrativa.
 
+Todas las páginas comparten un footer sencillo con el tema oscuro y el texto «Para cualquier consulta, puedes contactar con Carlos Pinedo Sánchez.». En administración, el cierre de sesión se muestra justo encima como un icono sin borde ni fondo, con foco visible y tooltip «Cerrar sesión». No aparece en el navbar ni en las páginas públicas.
+
 ## Responsabilidad de cada pantalla
 
 ### Login

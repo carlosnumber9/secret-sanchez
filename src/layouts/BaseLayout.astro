@@ -1,13 +1,15 @@
 ---
+import Footer from "@/components/Footer/Footer.astro";
 import ThreeGiftBackground from "@/components/ThreeGiftBackground/ThreeGiftBackground.astro";
 import "../styles/global.css";
 
 interface Props {
   title: string;
   description?: string;
+  showLogout?: boolean;
 }
 
-const { title, description = "Amigo Invisible familiar para Reyes." } = Astro.props;
+const { title, description = "Amigo Invisible familiar para Reyes.", showLogout = false } = Astro.props;
 ---
 
 <!doctype html>
@@ -28,6 +30,7 @@ const { title, description = "Amigo Invisible familiar para Reyes." } = Astro.pr
     <ThreeGiftBackground />
     <div class="app-content-layer">
       <slot />
+      <Footer showLogout={showLogout} />
     </div>
   </body>
 </html>
@@ -40,6 +43,12 @@ const { title, description = "Amigo Invisible familiar para Reyes." } = Astro.pr
   .app-content-layer {
     position: relative;
     z-index: 1;
-    min-height: 100vh;
+    display: flex;
+    min-height: 100dvh;
+    flex-direction: column;
+  }
+
+  .app-content-layer > main {
+    flex: 1;
   }
 </style>

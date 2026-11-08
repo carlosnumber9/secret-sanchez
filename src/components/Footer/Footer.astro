@@ -1,0 +1,23 @@
+---
+import { LogOut } from "lucide-react";
+import "./Footer.css";
+
+interface Props {
+  showLogout?: boolean;
+}
+
+const { showLogout = false } = Astro.props;
+---
+
+{showLogout && <div class="footer-session page-shell">
+  <form method="post" action="/api/auth/logout">
+    <button class="footer-session__logout" type="submit" aria-label="Cerrar sesión" title="Cerrar sesión">
+      <LogOut size={32} aria-hidden="true" />
+    </button>
+  </form>
+</div>}
+<footer class="footer dark">
+  <div class="page-shell">
+    <p>Para cualquier consulta, puedes contactar con Carlos Pinedo Sánchez.</p>
+  </div>
+</footer>
