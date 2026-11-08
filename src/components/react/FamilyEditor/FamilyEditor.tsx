@@ -2,7 +2,6 @@ import { Popover } from "@base-ui/react/popover";
 import { availableDeliveryChannel } from "@/lib/contact";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   DndContext,
   DragOverlay,
@@ -44,6 +43,7 @@ import ParticipantForm, {
   type ParticipantDraft
 } from "../ParticipantForm/ParticipantForm";
 import InlineName from "./InlineName";
+import ContactPreferenceInput from "./ContactPreferenceInput";
 import "./FamilyEditor.css";
 
 type PreferredChannel = "email" | "whatsapp" | "both" | null;
@@ -236,15 +236,15 @@ function SortableParticipant({ island, person, disabled, children }: {
     position: "relative"
   } satisfies CSSProperties;
 
-  return <TableRow
+  return <li
     ref={setNodeRef}
-    className={`${person.isBaby ? "is-baby" : ""}${babyTransition ? ` is-baby-changing-${babyTransition}` : ""}${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
+    className={`family-editor__participant-row${person.isBaby ? " is-baby" : ""}${babyTransition ? ` is-baby-changing-${babyTransition}` : ""}${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
     style={style}
     data-participant-row
     aria-busy={disabled}
   >
     {children({ attributes, listeners, setActivatorNodeRef })}
-  </TableRow>;
+  </li>;
 }
 
 function BabyToggle({ person, disabled, onConfirm }: {
@@ -511,7 +511,14 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     }
   }
 
-  function changeChannel(person: Participant, preferredChannel: PreferredChannel) {
+  function changeChannel(person: Participant, channel: "email" | "whatsapp") {
+    if (person.isBaby || busy) return;
+    if (channel === "email" ? !participantEmailIsValid(person.email) : !participantPhoneIsValid(person.phone)) return;
+    const usesEmail = person.preferredChannel === "email" || person.preferredChannel === "both";
+    const usesWhatsapp = person.preferredChannel === "whatsapp" || person.preferredChannel === "both";
+    const nextEmail = channel === "email" ? !usesEmail : usesEmail;
+    const nextWhatsapp = channel === "whatsapp" ? !usesWhatsapp : usesWhatsapp;
+    const preferredChannel = nextEmail ? (nextWhatsapp ? "both" : "email") : (nextWhatsapp ? "whatsapp" : null);
     replaceParticipant({ ...person, preferredChannel });
     setMessage("Canal actualizado en el borrador.");
   }
@@ -793,7 +800,10 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   return <div className="family-editor">
     <div className="family-editor__hint">
       <GripVertical aria-hidden="true" />
-      <p>Arrastra unidades completas o personas para ordenarlas y cambiarlas de unidad. También puedes usar espacio, las flechas y Escape desde cada tirador.</p>
+      <div>
+        <p>Arrastra desde los tiradores para ordenar o cambiar de unidad. Con teclado, usa espacio, flechas y Escape.</p>
+        <p>Elige email o WhatsApp desde los iconos de los contactos. Puedes activar ambos o ninguno.</p>
+      </div>
     </div>
 
     <div className="family-editor__create-actions" aria-label="Añadir a la familia">
@@ -835,90 +845,64 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                 </div>
               </header>
 
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="family-editor__handle-cell"><span className="sr-only">Mover</span></TableHead>
-                    <TableHead>Familiar</TableHead>
-                    <TableHead>Contacto</TableHead>
-                    <TableHead>Canal</TableHead>
-                    <TableHead className="family-editor__baby-heading">Bebé</TableHead>
-                    <TableHead className="family-editor__actions-heading"><span className="sr-only">Acciones</span></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <SortableContext
-                    items={island.participants.map(({ clientId }) => participantDndId(clientId))}
-                    strategy={verticalListSortingStrategy}
+              <ul role="list" className="family-editor__participants" aria-label={`Familiares de ${island.name}`}>
+                <SortableContext
+                  items={island.participants.map(({ clientId }) => participantDndId(clientId))}
+                  strategy={verticalListSortingStrategy}
+                >
+                  {island.participants.map((person) => <SortableParticipant
+                    island={island}
+                    person={person}
+                    disabled={busy}
+                    key={person.clientId}
                   >
-                    {island.participants.map((person) => <SortableParticipant
-                      island={island}
-                      person={person}
-                      disabled={busy}
-                      key={person.clientId}
-                    >
-                      {({ attributes: participantAttributes, listeners: participantListeners, setActivatorNodeRef: setParticipantActivatorNodeRef }) => <>
-                        <TableCell className="family-editor__handle-cell">
-                          <button
-                            ref={setParticipantActivatorNodeRef}
-                            className="family-editor__drag-handle"
-                            type="button"
+                    {({ attributes: participantAttributes, listeners: participantListeners, setActivatorNodeRef: setParticipantActivatorNodeRef }) => <>
+                      <div className="family-editor__baby-cell">
+                        <BabyToggle person={person} disabled={busy} onConfirm={() => toggleBaby(person)} />
+                      </div>
+                      <div className="family-editor__identity">
+                        <InlineName name={person.name} label="Nombre del familiar" disabled={busy} onSave={(name) => saveName("participant", person, name)} />
+                        {person.isBaby && <small>Bebé · recibe, no regala</small>}
+                      </div>
+                      <div className="family-editor__row-actions">
+                        <button
+                          ref={setParticipantActivatorNodeRef}
+                          className="family-editor__drag-handle"
+                          type="button"
+                          disabled={busy}
+                          {...participantAttributes}
+                          {...participantListeners}
+                          aria-label={`Mover a ${person.name}`}
+                        ><GripVertical /></button>
+                        <Button variant="destructive" size="icon" disabled={busy} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
+                      </div>
+                      <div className="family-editor__contact-fields">
+                        {person.isBaby ? <span className="family-editor__muted">Sin contacto propio ni canal</span> : <>
+                          <ContactPreferenceInput
+                            channel="email"
+                            name={person.name}
+                            value={person.email}
+                            selected={person.preferredChannel === "email" || person.preferredChannel === "both"}
                             disabled={busy}
-                            {...participantAttributes}
-                            {...participantListeners}
-                            aria-label={`Mover a ${person.name}`}
-                          ><GripVertical /></button>
-                        </TableCell>
-                        <TableCell className="family-editor__name-cell"><InlineName name={person.name} label="Nombre del familiar" disabled={busy} onSave={(name) => saveName("participant", person, name)} />{person.isBaby && <small>Bebé · recibe, no regala</small>}</TableCell>
-                        <TableCell>{person.isBaby
-                          ? <span className="family-editor__muted">Sin contacto propio</span>
-                          : <div className="family-editor__contact-fields">
-                              <Input
-                                type="email"
-                                value={person.email}
-                                placeholder="Email opcional"
-                                aria-label={`Email de ${person.name}`}
-                                disabled={busy}
-                                onChange={(event) => changeContact(person, "email", event.target.value)}
-                              />
-                              <Input
-                                type="tel"
-                                inputMode="tel"
-                                pattern="^\\+[1-9]\\d{7,14}$"
-                                value={person.phone}
-                                placeholder="Teléfono opcional"
-                                aria-label={`Teléfono de ${person.name}`}
-                                disabled={busy}
-                                onChange={(event) => changeContact(person, "phone", event.target.value)}
-                              />
-                            </div>}</TableCell>
-                        <TableCell>
-                          {person.isBaby ? <span className="family-editor__muted">Sin canal</span> : <select
-                              aria-label={`Canal de ${person.name}`}
-                              value={person.preferredChannel ?? ""}
-                              disabled={busy}
-                              onChange={(event) => changeChannel(person, event.target.value ? event.target.value as Exclude<PreferredChannel, null> : null)}
-                            >
-                              <option value="">Sin canal</option>
-                              <option value="email" disabled={!participantEmailIsValid(person.email)}>Email</option>
-                              <option value="whatsapp" disabled={!participantPhoneIsValid(person.phone)}>WhatsApp</option>
-                              <option value="both" disabled={!participantEmailIsValid(person.email) || !participantPhoneIsValid(person.phone)}>Email y WhatsApp</option>
-                            </select>}
-                        </TableCell>
-                        <TableCell className="family-editor__baby-cell">
-                          <BabyToggle person={person} disabled={busy} onConfirm={() => toggleBaby(person)} />
-                        </TableCell>
-                        <TableCell className="family-editor__actions-cell"><div className="family-editor__row-actions">
-                          <Button variant="destructive" size="icon" disabled={busy} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
-                        </div></TableCell>
-                      </>}
-                    </SortableParticipant>)}
-                  </SortableContext>
-                  {!island.participants.length && <TableRow>
-                    <TableCell colSpan={6} className="family-editor__empty">Arrastra aquí el primer familiar de esta unidad.</TableCell>
-                  </TableRow>}
-                </TableBody>
-              </Table>
+                            onChange={(value) => changeContact(person, "email", value)}
+                            onToggle={() => changeChannel(person, "email")}
+                          />
+                          <ContactPreferenceInput
+                            channel="whatsapp"
+                            name={person.name}
+                            value={person.phone}
+                            selected={person.preferredChannel === "whatsapp" || person.preferredChannel === "both"}
+                            disabled={busy}
+                            onChange={(value) => changeContact(person, "phone", value)}
+                            onToggle={() => changeChannel(person, "whatsapp")}
+                          />
+                        </>}
+                      </div>
+                    </>}
+                  </SortableParticipant>)}
+                </SortableContext>
+                {!island.participants.length && <li className="family-editor__empty">Arrastra aquí el primer familiar de esta unidad.</li>}
+              </ul>
             </>}
           </SortableIsland>)}
         </SortableContext>

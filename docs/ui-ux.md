@@ -45,7 +45,7 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 ### Familia
 
 - Permitir crear la familia cuando todavía no existe el censo permanente.
-- Visualizar cada unidad y sus personas en tablas compactas.
+- Visualizar cada unidad con una lista de filas adaptables, sin columnas independientes para bebé ni canal y sin ancho mínimo que fuerce desplazamiento horizontal. La misma estructura en escritorio y móvil sitúa bebé y nombre al inicio, acciones a la derecha y contactos debajo; los contactos comparten línea cuando la unidad dispone de al menos 520 px y se apilan con menos espacio.
 - Abrir las altas de unidad y participante desde dos botones de icono y formularios en el mismo componente de diálogo reutilizado por el alta de ediciones.
 - Exigir una unidad existente y seleccionada para dar de alta una persona; el formulario permite omitir el contacto y solo se habilita cuando el nombre y cualquier dato introducido son válidos.
 - Editar email y teléfono directamente en las filas de `/familia`, como parte del borrador pendiente de `Guardar familia`.
@@ -55,11 +55,11 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 - Reordenar mediante tiradores tanto unidades completas como personas, con soporte de ratón, touch y teclado; las personas pueden cambiar de unidad y soltarse también en unidades vacías.
 - Mostrar durante el arrastre un preview específico para la unidad o persona, indicar el destino válido y restaurar el borrador anterior si la operación se cancela o termina fuera de un destino.
 - Reordenar unidades únicamente para organizar la vista actual, sin persistir ese orden; el orden y la unidad de las personas sí forman parte del borrador guardable.
-- Marcar bebés mediante un icono de 32 px sin borde ni fondo: verde para bebés y gris para adultos. Confirmar ambos cambios en un popover modal anclado al icono, con cancelación mediante botón, Escape o clic fuera.
+- Marcar bebés mediante un icono de 32 px al inicio de cada fila, sin borde ni fondo: verde para bebés y gris para adultos. Confirmar ambos cambios en un popover modal anclado al icono, con cancelación mediante botón, Escape o clic fuera.
 - Reforzar la condición de bebé con una fila rosa y texto accesible; al cambiarla, barrer el color de izquierda a derecha durante un segundo, sin animación cuando se solicita movimiento reducido.
-- Alinear las acciones de cada persona horizontalmente dentro de una celda centrada en vertical.
+- Alinear los tiradores y la acción de eliminar junto al nombre, en horizontal y alineados con la primera línea del nombre.
 - Crear, editar y eliminar con previsualización de impacto.
-- Mostrar email, teléfono y preferencia.
+- Mostrar email y teléfono con un botón de preferencia integrado en el extremo derecho de cada input: sobre para Email y bocadillo para WhatsApp. El icono añade una marca de confirmación y el input un borde sutil cuando ese canal está seleccionado. Los botones permiten ambos canales o ninguno y quedan deshabilitados si el contacto correspondiente no es válido. La selección sigue formando parte del borrador de `Guardar familia`.
 - Señalar contactos incompatibles con el canal elegido.
 - No mezclar el censo con la participación de una edición.
 
