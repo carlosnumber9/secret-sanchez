@@ -45,19 +45,19 @@ La revelación utiliza un layout público separado y no muestra navegación admi
 ### Familia
 
 - Permitir crear la familia cuando todavía no existe el censo permanente.
-- Visualizar cada unidad con una lista de filas adaptables, sin columnas independientes para bebé ni canal y sin ancho mínimo que fuerce desplazamiento horizontal. La misma estructura en escritorio y móvil sitúa bebé y nombre al inicio, acciones a la derecha y contactos debajo; los contactos comparten línea cuando la unidad dispone de al menos 520 px y se apilan con menos espacio.
+- Visualizar cada unidad con filas adaptables sin desplazamiento horizontal. Bebé, nombre, contactos y eliminación se alinean horizontalmente y se centran en vertical en escritorio y móvil. Email y teléfono ocupan una columna independiente a la derecha del nombre, siempre uno encima del otro. Las filas de bebés muestran solo icono, nombre y eliminación, sin textos sobre roles o contacto.
 - Abrir las altas de unidad y participante desde dos botones de icono y formularios en el mismo componente de diálogo reutilizado por el alta de ediciones.
 - Exigir una unidad existente y seleccionada para dar de alta una persona; el formulario permite omitir el contacto y solo se habilita cuando el nombre y cualquier dato introducido son válidos.
 - Editar email y teléfono directamente en las filas de `/familia`, como parte del borrador pendiente de `Guardar familia`.
 - Editar los nombres de personas y unidades al pulsarlos: caja con el nombre actual y tick verde a la derecha. Clic fuera o Escape cancela sin aviso; el tick o Intro guarda solo ese nombre en base de datos y vuelve a texto al completar. Durante la petición muestra un spinner y bloquea los controles y tiradores de la familia. Un error conserva la edición y permite reintentar. No hay botones de lápiz separados.
 - Mantener altas, contactos, canales, condición de bebé, borrados y movimientos como borrador local y persistirlos juntos en una sola transacción al pulsar `Guardar familia`. Los nombres de altas todavía no guardadas también permanecen en ese borrador. Guardar un nombre existente conserva el resto de cambios pendientes.
 - Advertir con el diálogo nativo del navegador antes de abandonar la ruta cuando el borrador tiene cambios sin guardar.
-- Reordenar mediante tiradores tanto unidades completas como personas, con soporte de ratón, touch y teclado; las personas pueden cambiar de unidad y soltarse también en unidades vacías.
+- Reordenar desde un borde izquierdo punteado tanto las filas de personas como las cabeceras de unidades, con soporte de ratón, touch y teclado. El borde completo actúa como botón accesible y tirador; las personas pueden cambiar de unidad y soltarse también en unidades vacías.
 - Mostrar durante el arrastre un preview específico para la unidad o persona, indicar el destino válido y restaurar el borrador anterior si la operación se cancela o termina fuera de un destino.
 - Reordenar unidades únicamente para organizar la vista actual, sin persistir ese orden; el orden y la unidad de las personas sí forman parte del borrador guardable.
-- Marcar bebés mediante un icono de 32 px al inicio de cada fila, sin borde ni fondo: verde para bebés y gris para adultos. Confirmar ambos cambios en un popover modal anclado al icono, con cancelación mediante botón, Escape o clic fuera.
-- Reforzar la condición de bebé con una fila rosa y texto accesible; al cambiarla, barrer el color de izquierda a derecha durante un segundo, sin animación cuando se solicita movimiento reducido.
-- Alinear los tiradores y la acción de eliminar junto al nombre, en horizontal y alineados con la primera línea del nombre.
+- Marcar bebés mediante un icono de 32 px al inicio de cada fila, sin borde ni fondo: verde para bebés y gris claro sin saturación para adultos. Los tooltips son «Marcar como bebé» y «Marcar como adulto» según el estado actual. Confirmar ambos cambios en un popover modal anclado al icono, con cancelación mediante botón, Escape o clic fuera.
+- Reforzar la condición de bebé con una fila rosa y el estado accesible del icono; al cambiarla, barrer el color de izquierda a derecha durante un segundo, sin animación cuando se solicita movimiento reducido.
+- Mantener la acción de eliminar al final de la fila y centrada verticalmente con icono, nombre y contactos.
 - Crear, editar y eliminar con previsualización de impacto.
 - Mostrar email y teléfono con un botón de preferencia integrado en el extremo derecho de cada input: sobre para Email y bocadillo para WhatsApp. El icono añade una marca de confirmación y el input un borde sutil cuando ese canal está seleccionado. Los botones permiten ambos canales o ninguno y quedan deshabilitados si el contacto correspondiente no es válido. La selección sigue formando parte del borrador de `Guardar familia`.
 - Señalar contactos incompatibles con el canal elegido.

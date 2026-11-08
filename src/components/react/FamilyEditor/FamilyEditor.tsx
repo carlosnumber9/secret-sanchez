@@ -21,6 +21,7 @@ import {
   type DragEndEvent,
   type DragOverEvent,
   type DragStartEvent,
+  type KeyboardCoordinateGetter,
   type UniqueIdentifier
 } from "@dnd-kit/core";
 import { SortableContext, arrayMove, sortableKeyboardCoordinates, useSortable, verticalListSortingStrategy } from "@dnd-kit/sortable";
@@ -80,6 +81,16 @@ function isDragData(value: unknown): value is DragData {
 function dragData(value: unknown): DragData | null {
   return isDragData(value) ? value : null;
 }
+
+const familyKeyboardCoordinates: KeyboardCoordinateGetter = (event, args) => {
+  if (dragData(args.context.active?.data.current)?.type !== "island") {
+    return sortableKeyboardCoordinates(event, args);
+  }
+  const droppableRects = new Map([...args.context.droppableRects].filter(([id]) =>
+    dragData(args.context.droppableContainers.get(id)?.data.current)?.type === "island"
+  ));
+  return sortableKeyboardCoordinates(event, { ...args, context: { ...args.context, droppableRects } });
+};
 
 function findParticipantLocation(islands: Island[], participantId: string) {
   for (const island of islands) {
@@ -259,8 +270,8 @@ function BabyToggle({ person, disabled, onConfirm }: {
       className="family-editor__baby-check"
       type="button"
       aria-pressed={person.isBaby}
-      aria-label={`${person.isBaby ? "Desmarcar" : "Marcar"} a ${person.name} como bebé`}
-      title={`${person.isBaby ? "Desmarcar" : "Marcar"} como bebé`}
+      aria-label={`Marcar a ${person.name} como ${person.isBaby ? "adulto" : "bebé"}`}
+      title={person.isBaby ? "Marcar como adulto" : "Marcar como bebé"}
       disabled={disabled}
     ><Baby aria-hidden="true" /></Popover.Trigger>
     <Popover.Portal>
@@ -351,7 +362,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
-    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+    useSensor(KeyboardSensor, { coordinateGetter: familyKeyboardCoordinates })
   );
   const collisionDetectionStrategy = useCallback<CollisionDetection>((args) => {
     const activeData = dragData(args.active.data.current);
@@ -801,7 +812,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     <div className="family-editor__hint">
       <GripVertical aria-hidden="true" />
       <div>
-        <p>Arrastra desde los tiradores para ordenar o cambiar de unidad. Con teclado, usa espacio, flechas y Escape.</p>
+        <p>Arrastra desde los bordes izquierdos para ordenar o cambiar de unidad. Con teclado, usa espacio, flechas y Escape.</p>
         <p>Elige email o WhatsApp desde los iconos de los contactos. Puedes activar ambos o ninguno.</p>
       </div>
     </div>
@@ -828,13 +839,13 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
               <header className="family-editor__island-header">
                 <button
                   ref={setActivatorNodeRef}
-                  className="family-editor__drag-handle"
+                  className="family-editor__drag-edge"
                   type="button"
                   disabled={busy}
                   {...attributes}
                   {...listeners}
                   aria-label={`Mover la unidad ${island.name}`}
-                ><GripVertical /></button>
+                />
                 <span className="family-editor__island-color" style={{ background: island.color }} />
                 <div>
                   <InlineName heading name={island.name} label="Nombre de la unidad" disabled={busy} onSave={(name) => saveName("island", island, name)} />
@@ -857,46 +868,43 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                     key={person.clientId}
                   >
                     {({ attributes: participantAttributes, listeners: participantListeners, setActivatorNodeRef: setParticipantActivatorNodeRef }) => <>
+                      <button
+                        ref={setParticipantActivatorNodeRef}
+                        className="family-editor__drag-edge"
+                        type="button"
+                        disabled={busy}
+                        {...participantAttributes}
+                        {...participantListeners}
+                        aria-label={`Mover a ${person.name}`}
+                      />
                       <div className="family-editor__baby-cell">
                         <BabyToggle person={person} disabled={busy} onConfirm={() => toggleBaby(person)} />
                       </div>
                       <div className="family-editor__identity">
                         <InlineName name={person.name} label="Nombre del familiar" disabled={busy} onSave={(name) => saveName("participant", person, name)} />
-                        {person.isBaby && <small>Bebé · recibe, no regala</small>}
                       </div>
-                      <div className="family-editor__row-actions">
-                        <button
-                          ref={setParticipantActivatorNodeRef}
-                          className="family-editor__drag-handle"
-                          type="button"
+                      {!person.isBaby && <div className="family-editor__contact-fields">
+                        <ContactPreferenceInput
+                          channel="email"
+                          name={person.name}
+                          value={person.email}
+                          selected={person.preferredChannel === "email" || person.preferredChannel === "both"}
                           disabled={busy}
-                          {...participantAttributes}
-                          {...participantListeners}
-                          aria-label={`Mover a ${person.name}`}
-                        ><GripVertical /></button>
+                          onChange={(value) => changeContact(person, "email", value)}
+                          onToggle={() => changeChannel(person, "email")}
+                        />
+                        <ContactPreferenceInput
+                          channel="whatsapp"
+                          name={person.name}
+                          value={person.phone}
+                          selected={person.preferredChannel === "whatsapp" || person.preferredChannel === "both"}
+                          disabled={busy}
+                          onChange={(value) => changeContact(person, "phone", value)}
+                          onToggle={() => changeChannel(person, "whatsapp")}
+                        />
+                      </div>}
+                      <div className="family-editor__row-actions">
                         <Button variant="destructive" size="icon" disabled={busy} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
-                      </div>
-                      <div className="family-editor__contact-fields">
-                        {person.isBaby ? <span className="family-editor__muted">Sin contacto propio ni canal</span> : <>
-                          <ContactPreferenceInput
-                            channel="email"
-                            name={person.name}
-                            value={person.email}
-                            selected={person.preferredChannel === "email" || person.preferredChannel === "both"}
-                            disabled={busy}
-                            onChange={(value) => changeContact(person, "email", value)}
-                            onToggle={() => changeChannel(person, "email")}
-                          />
-                          <ContactPreferenceInput
-                            channel="whatsapp"
-                            name={person.name}
-                            value={person.phone}
-                            selected={person.preferredChannel === "whatsapp" || person.preferredChannel === "both"}
-                            disabled={busy}
-                            onChange={(value) => changeContact(person, "phone", value)}
-                            onToggle={() => changeChannel(person, "whatsapp")}
-                          />
-                        </>}
                       </div>
                     </>}
                   </SortableParticipant>)}
