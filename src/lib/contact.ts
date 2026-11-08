@@ -10,3 +10,7 @@ export function availableDeliveryChannel(channel: DeliveryChannel | "manual", ha
   if (channel === "whatsapp") return hasPhone ? "whatsapp" : null;
   return null;
 }
+
+export function normalizePhone(value: string) {
+  return value.trim().replace(/[\s().-]/g, "").replace(/^00/, "+");
+}

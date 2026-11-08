@@ -1,4 +1,4 @@
-import { participantEmailIsValid, participantPhoneIsValid } from "@/lib/contact";
+import { normalizePhone, participantEmailIsValid, participantPhoneIsValid, phonePattern } from "@/lib/contact";
 export { participantEmailIsValid, participantPhoneIsValid } from "@/lib/contact";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -106,10 +106,10 @@ export default function ParticipantForm({
         <Input
           className="h-10"
           value={value.phone}
-          onChange={(event) => onChange({ ...value, phone: event.target.value })}
+          onChange={(event) => onChange({ ...value, phone: normalizePhone(event.target.value) })}
           placeholder="+34600000000"
           inputMode="tel"
-          pattern="^\\+[1-9]\\d{7,14}$"
+          pattern={phonePattern.source}
           required={!value.isBaby && (value.preferredChannel === "whatsapp" || value.preferredChannel === "both")}
           disabled={disabled || value.isBaby}
         />

@@ -1,13 +1,13 @@
 # Estado actual
 
-Última revisión documental: **7 de noviembre de 2026**.
+Última revisión documental: **8 de noviembre de 2026**.
 
 ## Implementado en código
 
 - Astro 7 SSR, React Islands y Node 22.23.4; dependencias acotadas y lockfile reproducible.
 - Login y logout de Supabase SSR; autorización por UUID y propiedad de familia.
 - Historial de ediciones en `/`, censo permanente en `/familia` y configuración, reparto y envíos por edición.
-- Borradores familiares transaccionales con revisión de concurrencia, persistencia en lotes y actualización exclusiva de diferencias.
+- Guardado inmediato del censo familiar por acción, con contactos al perder foco y nombres mediante tick. Peticiones serializadas, revisión de concurrencia y actualización transaccional exclusiva de diferencias; sin botón de guardado global.
 - Adultos con roles por edición; bebés receptores sin contacto y representantes de núcleos.
 - Reglas editables: evitar mismo núcleo y exclusiones dirigidas. Configuración bloqueada con intento vigente o edición archivada.
 - Emparejamiento bipartito acotado, validación independiente y generación transaccional con un único intento vigente.

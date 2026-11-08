@@ -1,5 +1,6 @@
 import { Popover } from "@base-ui/react/popover";
-import { availableDeliveryChannel } from "@/lib/contact";
+import { availableDeliveryChannel, normalizePhone } from "@/lib/contact";
+import { createSerialQueue } from "@/lib/serial-queue";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import {
@@ -31,7 +32,6 @@ import {
   CircleAlert,
   GripVertical,
   HousePlus,
-  Save,
   Trash2,
   UserPlus
 } from "lucide-react";
@@ -144,29 +144,10 @@ function prepareInitialIslands(initialIslands: InitialIsland[]): Island[] {
   }));
 }
 
-function familySnapshot(islands: Island[]) {
-  return JSON.stringify([...islands]
-    .sort((a, b) => a.clientId.localeCompare(b.clientId))
-    .map((island) => ({
-      id: island.id,
-      clientId: island.clientId,
-      name: island.name,
-      color: island.color,
-      participants: island.participants.map((person) => ({
-        id: person.id,
-        clientId: person.clientId,
-        name: person.name,
-        email: person.email,
-        phone: person.phone,
-        preferredChannel: person.preferredChannel,
-        isBaby: person.isBaby
-      }))
-    })));
-}
-
-function SortableIsland({ island, disabled, children }: {
+function SortableIsland({ island, disabled, saving, children }: {
   island: Island;
   disabled: boolean;
+  saving: boolean;
   children: (handle: SortableHandleProps) => ReactNode;
 }) {
   const {
@@ -199,16 +180,17 @@ function SortableIsland({ island, disabled, children }: {
     ref={setNodeRef}
     className={`family-editor__island${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
     style={style}
-    aria-busy={disabled}
+    aria-busy={saving}
   >
     {children({ attributes, listeners, setActivatorNodeRef })}
   </article>;
 }
 
-function SortableParticipant({ island, person, disabled, children }: {
+function SortableParticipant({ island, person, disabled, saving, children }: {
   island: Island;
   person: Participant;
   disabled: boolean;
+  saving: boolean;
   children: (handle: SortableHandleProps) => ReactNode;
 }) {
   const {
@@ -252,7 +234,7 @@ function SortableParticipant({ island, person, disabled, children }: {
     className={`family-editor__participant-row${person.isBaby ? " is-baby" : ""}${babyTransition ? ` is-baby-changing-${babyTransition}` : ""}${isOver ? " is-drag-target" : ""}${isDragging ? " is-dragging" : ""}`}
     style={style}
     data-participant-row
-    aria-busy={disabled}
+    aria-busy={saving}
   >
     {children({ attributes, listeners, setActivatorNodeRef })}
   </li>;
@@ -281,8 +263,8 @@ function BabyToggle({ person, disabled, onConfirm }: {
           <Popover.Title className="family-editor__baby-title">{person.isBaby ? "¿Dejar de ser bebé?" : "¿Marcar como bebé?"}</Popover.Title>
           <Popover.Description className="family-editor__baby-description">
             {person.isBaby
-              ? `Al guardar la familia, ${person.name} pasará a ser adulto y podrá regalar. Podrás añadir su contacto en la fila.`
-              : `Al guardar la familia, ${person.name} recibirá sin regalar y se eliminarán sus datos de contacto.`}
+              ? `${person.name} pasará a ser adulto y podrá regalar. Podrás añadir su contacto en la fila.`
+              : `${person.name} recibirá sin regalar y se eliminarán sus datos de contacto.`}
           </Popover.Description>
           <div className="family-editor__baby-confirm-actions">
             <Popover.Close render={<Button variant="ghost" />}>Cancelar</Popover.Close>
@@ -337,14 +319,16 @@ const screenReaderInstructions = {
 export default function FamilyEditor({ familyId, initialIslands, initialRevision }: Props) {
   const preparedInitialIslands = useMemo(() => prepareInitialIslands(initialIslands), [initialIslands]);
   const [islands, setIslands] = useState(preparedInitialIslands);
-  const [revision, setRevision] = useState(initialRevision);
-  const [savedIslands, setSavedIslands] = useState(preparedInitialIslands);
-  const savedSnapshot = useMemo(() => familySnapshot(savedIslands), [savedIslands]);
+  const savedIslandsRef = useRef(preparedInitialIslands);
+  const revisionRef = useRef(initialRevision);
+  const [enqueue] = useState(createSerialQueue);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [dirtyContacts, setDirtyContacts] = useState<Set<string>>(() => new Set());
+  const busyRef = useRef(false);
+  const [dialogError, setDialogError] = useState("");
   const [selectedIslandId, setSelectedIslandId] = useState(preparedInitialIslands[0]?.clientId ?? "");
   const [newIslandName, setNewIslandName] = useState("");
   const [participant, setParticipant] = useState(emptyParticipant);
-  const [confirmedParticipantDeletionIds, setConfirmedParticipantDeletionIds] = useState<string[]>([]);
-  const [confirmedIslandDeletionIds, setConfirmedIslandDeletionIds] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const [activeDrag, setActiveDrag] = useState<DragData | null>(null);
@@ -358,7 +342,17 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     () => islands.find((island) => island.clientId === selectedIslandId) ?? islands[0],
     [islands, selectedIslandId]
   );
-  const dirty = useMemo(() => familySnapshot(islands) !== savedSnapshot, [islands, savedSnapshot]);
+  const dirty = pendingCount > 0 || dirtyContacts.size > 0;
+  const editingDisabled = busy || activeDrag !== null;
+  const setContactDirty = useCallback((key: string, changed: boolean) => {
+    setDirtyContacts((current) => {
+      if (current.has(key) === changed) return current;
+      const next = new Set(current);
+      if (changed) next.add(key);
+      else next.delete(key);
+      return next;
+    });
+  }, []);
   const sensors = useSensors(
     useSensor(MouseSensor, { activationConstraint: { distance: 6 } }),
     useSensor(TouchSensor, { activationConstraint: { delay: 180, tolerance: 8 } }),
@@ -441,207 +435,164 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
 
   function showIslandDialog() {
     setNewIslandName("");
+    setDialogError("");
     islandDialogRef.current?.showModal();
   }
 
   function showParticipantDialog(islandId = selectedIsland?.clientId ?? islands[0]?.clientId ?? "") {
     if (!islands.length) return;
     setParticipant(emptyParticipant);
+    setDialogError("");
     setSelectedIslandId(islandId);
     participantDialogRef.current?.showModal();
   }
 
-  function addIsland() {
+  async function persistChange(update: (current: Island[]) => Island[], deletions: {
+    participants?: string[]; islands?: string[];
+  } = {}) {
+    setPendingCount((count) => count + 1);
+    try {
+      return await enqueue(async () => {
+        const next = update(savedIslandsRef.current);
+        const payload = {
+          revision: revisionRef.current,
+          islands: next.map(({ clientId, id, name, color }) => ({ clientId, id, name, color })),
+          participants: next.flatMap((island) => island.participants.map((person, sortOrder) => ({
+            clientId: person.clientId, id: person.id, familyIslandClientId: island.clientId,
+            name: person.name, email: person.isBaby ? "" : person.email, phone: person.isBaby ? "" : person.phone,
+            preferredChannel: person.isBaby ? null : person.preferredChannel, isBaby: person.isBaby, sortOrder
+          }))),
+          confirmedParticipantDeletionIds: deletions.participants ?? [],
+          confirmedIslandDeletionIds: deletions.islands ?? []
+        };
+        const updated = await api<{ revision: string; islands: Island[] }>(`/api/admin/families/${familyId}/layout`, "PATCH", payload);
+        savedIslandsRef.current = updated.islands;
+        revisionRef.current = updated.revision;
+        setIslands(updated.islands);
+        setSelectedIslandId((current) => updated.islands.some(({ clientId }) => clientId === current) ? current : updated.islands[0]?.clientId ?? "");
+        setMessage("Cambios guardados.");
+        return updated.islands;
+      });
+    } catch (error) {
+      showError(error);
+      throw error;
+    } finally {
+      setPendingCount((count) => count - 1);
+    }
+  }
+
+  async function locked<T>(work: () => Promise<T>) {
+    if (busyRef.current) throw new Error("Espera a que termine la operación actual.");
+    busyRef.current = true;
+    setBusy(true);
+    try { return await work(); }
+    finally { busyRef.current = false; setBusy(false); }
+  }
+
+  function showError(error: unknown) {
+    setMessage(error instanceof Error ? error.message : "No se pudo guardar el cambio.");
+  }
+
+  async function addIsland() {
     const name = newIslandName.trim();
     if (!name) return;
-    const clientId = `island-${crypto.randomUUID()}`;
-    const next: Island = {
-      id: null,
-      clientId,
-      name,
-      color: colors[islands.length % colors.length],
-      participants: []
-    };
-    setIslands((current) => [...current, next]);
-    setSelectedIslandId(clientId);
-    setNewIslandName("");
-    islandDialogRef.current?.close();
-    setMessage("Unidad añadida al borrador. Pulsa Guardar familia para confirmarla.");
+    const created: Island = { id: null, clientId: `island-${crypto.randomUUID()}`, name, color: colors[islands.length % colors.length], participants: [] };
+    try {
+      await locked(() => persistChange((current) => [...current, created]));
+      setSelectedIslandId(created.clientId);
+      setNewIslandName("");
+      islandDialogRef.current?.close();
+    } catch (error) {
+      setDialogError(error instanceof Error ? error.message : "No se pudo añadir la unidad.");
+    }
   }
 
-  function addParticipant() {
-    if (!selectedIsland || !participantDraftIsValid(participant, selectedIsland.clientId, formIslands)) return;
-    const created: Participant = {
-      ...participant,
-      id: null,
-      clientId: `participant-${crypto.randomUUID()}`,
-      preferredChannel: participant.isBaby ? null : participant.preferredChannel,
-      sortOrder: selectedIsland.participants.length
-    };
-    setIslands((current) => current.map((island) => island.clientId === selectedIsland.clientId
-      ? { ...island, participants: [...island.participants, created] }
-      : island));
-    setParticipant(emptyParticipant);
-    participantDialogRef.current?.close();
-    setMessage("Persona añadida al borrador. Pulsa Guardar familia para confirmarla.");
+  async function addParticipant() {
+    const draft = { ...participant, email: participant.email.trim(), phone: normalizePhone(participant.phone) };
+    if (!selectedIsland || !participantDraftIsValid(draft, selectedIsland.clientId, formIslands)) return;
+    const created: Participant = { ...draft, id: null, clientId: `participant-${crypto.randomUUID()}`, preferredChannel: draft.isBaby ? null : draft.preferredChannel, sortOrder: selectedIsland.participants.length };
+    const islandId = selectedIsland.clientId;
+    try {
+      await locked(() => persistChange((current) => current.map((island) => island.clientId === islandId
+        ? { ...island, participants: [...island.participants, created] } : island)));
+      setParticipant(emptyParticipant);
+      participantDialogRef.current?.close();
+    } catch (error) {
+      setDialogError(error instanceof Error ? error.message : "No se pudo añadir la persona.");
+    }
   }
 
-  function replaceParticipant(updated: Participant) {
-    setIslands((current) => current.map((island) => ({
-      ...island,
-      participants: island.participants.map((item) => item.clientId === updated.clientId ? updated : item)
-    })));
+  function updatePerson(current: Island[], clientId: string, update: (person: Participant) => Participant) {
+    return current.map((island) => ({ ...island, participants: island.participants.map((person) => person.clientId === clientId ? update(person) : person) }));
   }
 
   async function saveName(kind: "island" | "participant", target: Island | Participant, name: string) {
-    if (busy) throw new Error("Espera a que termine la operación actual.");
-    const rename = (current: Island[]) => current.map((island) => ({
-      ...island,
-      name: kind === "island" && island.clientId === target.clientId ? name : island.name,
-      participants: kind === "participant"
-        ? island.participants.map((person) => person.clientId === target.clientId ? { ...person, name } : person)
-        : island.participants
+    await locked(() => persistChange((current) => kind === "island"
+      ? current.map((island) => island.clientId === target.clientId ? { ...island, name } : island)
+      : updatePerson(current, target.clientId, (person) => ({ ...person, name }))));
+  }
+
+  async function saveContact(person: Participant, field: "email" | "phone", value: string, toggle: boolean) {
+    await persistChange((current) => updatePerson(current, person.clientId, (saved) => {
+      if (saved.isBaby) throw new Error("Los bebés no tienen contacto propio.");
+      const email = field === "email" ? value : saved.email;
+      const phone = field === "phone" ? value : saved.phone;
+      let preferredChannel = compatibleChannel(saved.preferredChannel, email, phone);
+      if (toggle) {
+        const usesEmail = preferredChannel === "email" || preferredChannel === "both";
+        const usesWhatsapp = preferredChannel === "whatsapp" || preferredChannel === "both";
+        const nextEmail = field === "email" ? !usesEmail : usesEmail;
+        const nextWhatsapp = field === "phone" ? !usesWhatsapp : usesWhatsapp;
+        preferredChannel = nextEmail ? (nextWhatsapp ? "both" : "email") : (nextWhatsapp ? "whatsapp" : null);
+      }
+      return { ...saved, email, phone, preferredChannel };
     }));
-    // New entries remain part of the explicitly saved family draft.
-    if (!target.id) {
-      setIslands(rename);
-      setMessage("Nombre actualizado en el borrador. Pulsa Guardar familia para confirmarlo.");
-      return;
-    }
-    setBusy(true);
+  }
+
+  async function toggleBaby(person: Participant) {
     try {
-      const updated = await api<{ name: string; revision: string }>(`/api/admin/families/${familyId}/name`, "PATCH", {
-        revision, kind, id: target.id, name
-      });
-      setIslands(rename);
-      setSavedIslands(rename);
-      setRevision(updated.revision);
-      setMessage("Nombre guardado.");
-    } finally {
-      setBusy(false);
-    }
-  }
-
-  function changeChannel(person: Participant, channel: "email" | "whatsapp") {
-    if (person.isBaby || busy) return;
-    if (channel === "email" ? !participantEmailIsValid(person.email) : !participantPhoneIsValid(person.phone)) return;
-    const usesEmail = person.preferredChannel === "email" || person.preferredChannel === "both";
-    const usesWhatsapp = person.preferredChannel === "whatsapp" || person.preferredChannel === "both";
-    const nextEmail = channel === "email" ? !usesEmail : usesEmail;
-    const nextWhatsapp = channel === "whatsapp" ? !usesWhatsapp : usesWhatsapp;
-    const preferredChannel = nextEmail ? (nextWhatsapp ? "both" : "email") : (nextWhatsapp ? "whatsapp" : null);
-    replaceParticipant({ ...person, preferredChannel });
-    setMessage("Canal actualizado en el borrador.");
-  }
-
-  function changeContact(person: Participant, field: "email" | "phone", value: string) {
-    const email = field === "email" ? value : person.email;
-    const phone = field === "phone" ? value : person.phone;
-    replaceParticipant({
-      ...person,
-      [field]: value,
-      preferredChannel: compatibleChannel(person.preferredChannel, email, phone)
-    });
-    setMessage("Contacto actualizado en el borrador.");
-  }
-
-  function toggleBaby(person: Participant) {
-    replaceParticipant({
-      ...person,
-      isBaby: !person.isBaby,
-      email: person.isBaby ? person.email : "",
-      phone: person.isBaby ? person.phone : "",
-      preferredChannel: null
-    });
-    setMessage(!person.isBaby
-      ? `${person.name} se marcará como bebé al guardar la familia.`
-      : `${person.name} se marcará como adulto al guardar la familia.`);
+      await locked(() => persistChange((current) => updatePerson(current, person.clientId, (saved) => ({
+        ...saved, isBaby: !saved.isBaby, email: "", phone: "", preferredChannel: null
+      }))));
+    } catch (error) { showError(error); }
   }
 
   async function deletePerson(person: Participant) {
-    if (!person.id) {
-      if (!window.confirm(`¿Quitar a ${person.name} del borrador?`)) return;
-    } else {
-      setBusy(true);
-      try {
-        const impact = await api<{ editions: number; draws: number; assignments: number; notifications: number; opened: number }>(`/api/admin/participants/${person.id}/deletion-impact`, "GET");
-        const warning = `Al guardar se eliminarán ${impact.draws} repartos completos, ${impact.assignments} asignaciones, ${impact.notifications} logs y ${impact.opened} aperturas. Escribe ELIMINAR PERSONA para continuar.`;
-        if (window.prompt(warning) !== "ELIMINAR PERSONA") {
-          setMessage("Borrado cancelado. Puedes desactivarla dentro de cada edición.");
-          return;
-        }
-        setConfirmedParticipantDeletionIds((current) => [...new Set([...current, person.id!])]);
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "No se pudo comprobar el impacto.");
-        return;
-      } finally {
-        setBusy(false);
-      }
-    }
-    setIslands((current) => current.map((island) => ({
-      ...island,
-      participants: island.participants.filter((item) => item.clientId !== person.clientId)
-    })));
-    setMessage("Persona eliminada del borrador. El cambio se aplicará al guardar.");
+    try {
+      await locked(async () => {
+        const impact = await api<{ draws: number; assignments: number; notifications: number; opened: number }>(`/api/admin/participants/${person.id}/deletion-impact`, "GET");
+        const warning = `Se eliminarán ${impact.draws} repartos completos, ${impact.assignments} asignaciones, ${impact.notifications} logs y ${impact.opened} aperturas. Escribe ELIMINAR PERSONA para continuar.`;
+        if (window.prompt(warning) !== "ELIMINAR PERSONA") return;
+        await persistChange((current) => current.map((island) => ({ ...island,
+          participants: island.participants.filter(({ clientId }) => clientId !== person.clientId)
+        })), { participants: person.id ? [person.id] : [] });
+      });
+    } catch (error) { showError(error); }
   }
 
   async function deleteIsland(island: Island) {
-    let impact = { participants: 0, draws: 0, notifications: 0, opened: 0 };
-    if (island.id) {
-      setBusy(true);
-      try {
-        impact = await api<typeof impact>(`/api/admin/islands/${island.id}/deletion-impact`, "GET");
-      } catch (error) {
-        setMessage(error instanceof Error ? error.message : "No se pudo comprobar el impacto.");
-        return;
-      } finally {
-        setBusy(false);
-      }
-    }
-
-    const alternatives = islands.filter((item) => item.clientId !== island.clientId);
-    if (island.participants.length && alternatives.length) {
-      const answer = window.prompt(`La unidad contiene ${island.participants.length} personas. Escribe MOVER para trasladarlas o ELIMINAR UNIDAD para borrarlas con ${impact.draws} repartos afectados.`);
-      if (answer === "MOVER") {
-        const destinationName = window.prompt(`Destino: ${alternatives.map((item) => item.name).join(", ")}`);
-        const target = alternatives.find((item) => item.name.toLowerCase() === destinationName?.trim().toLowerCase());
-        if (!target) {
-          setMessage("No se ha encontrado la unidad de destino.");
-          return;
-        }
-        setIslands((current) => current
-          .filter((item) => item.clientId !== island.clientId)
-          .map((item) => item.clientId === target.clientId
-            ? { ...item, participants: [...item.participants, ...island.participants] }
-            : item));
-      } else if (answer === "ELIMINAR UNIDAD") {
-        setConfirmedParticipantDeletionIds((current) => [...new Set([
-          ...current,
-          ...island.participants.flatMap(({ id }) => id ? [id] : [])
-        ])]);
-        setIslands((current) => current.filter((item) => item.clientId !== island.clientId));
-      } else {
-        setMessage("Borrado cancelado.");
-        return;
-      }
-    } else if (island.participants.length) {
-      if (window.prompt("Escribe ELIMINAR UNIDAD para borrar también a sus integrantes al guardar.") !== "ELIMINAR UNIDAD") {
-        setMessage("Borrado cancelado.");
-        return;
-      }
-      setConfirmedParticipantDeletionIds((current) => [...new Set([
-        ...current,
-        ...island.participants.flatMap(({ id }) => id ? [id] : [])
-      ])]);
-      setIslands((current) => current.filter((item) => item.clientId !== island.clientId));
-    } else {
-      if (!window.confirm(`¿Quitar la unidad ${island.name}${island.id ? " al guardar" : " del borrador"}?`)) return;
-      setIslands((current) => current.filter((item) => item.clientId !== island.clientId));
-    }
-
-    if (island.id) setConfirmedIslandDeletionIds((current) => [...new Set([...current, island.id!])]);
-    setSelectedIslandId(alternatives[0]?.clientId ?? "");
-    setMessage("Unidad eliminada del borrador. El cambio se aplicará al guardar.");
+    try {
+      await locked(async () => {
+        const impact = await api<{ draws: number }>(`/api/admin/islands/${island.id}/deletion-impact`, "GET");
+        const alternatives = savedIslandsRef.current.filter(({ clientId }) => clientId !== island.clientId);
+        let targetId: string | undefined;
+        if (island.participants.length && alternatives.length) {
+          const answer = window.prompt(`La unidad contiene ${island.participants.length} personas. Escribe MOVER para trasladarlas o ELIMINAR UNIDAD para borrarlas con ${impact.draws} repartos afectados.`);
+          if (answer === "MOVER") {
+            const destination = window.prompt(`Destino: ${alternatives.map(({ name }) => name).join(", ")}`);
+            targetId = alternatives.find(({ name }) => name.toLowerCase() === destination?.trim().toLowerCase())?.clientId;
+            if (!targetId) throw new Error("No se ha encontrado la unidad de destino.");
+          } else if (answer !== "ELIMINAR UNIDAD") return;
+        } else if (island.participants.length) {
+          if (window.prompt("Escribe ELIMINAR UNIDAD para borrar también a sus integrantes.") !== "ELIMINAR UNIDAD") return;
+        } else if (!window.confirm(`¿Eliminar la unidad ${island.name}?`)) return;
+        await persistChange((current) => {
+          const source = current.find(({ clientId }) => clientId === island.clientId)!;
+          return current.filter(({ clientId }) => clientId !== island.clientId).map((item) => item.clientId === targetId
+            ? { ...item, participants: [...item.participants, ...source.participants] } : item);
+        }, { islands: island.id ? [island.id] : [], participants: targetId ? [] : island.participants.flatMap(({ id }) => id ? [id] : []) });
+      });
+    } catch (error) { showError(error); }
   }
 
   function reorderIsland(sourceId: string, targetId: string) {
@@ -653,6 +604,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
       const next = [...current];
       const [source] = next.splice(sourceIndex, 1);
       next.splice(targetIndex, 0, source);
+      savedIslandsRef.current = next;
       return next;
     });
     setMessage("Orden visual actualizado. Este orden no se guarda en la base de datos.");
@@ -726,86 +678,25 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
       return;
     }
 
+    let next = islands;
     if (overData.type === "participant") {
-      setIslands((current) => {
-        const target = findParticipantLocation(current, overData.participantId);
-        return target
-          ? moveParticipantInIslands(current, activeData.participantId, target.island.clientId, target.participantIndex)
-          : current;
-      });
+      const target = findParticipantLocation(islands, overData.participantId);
+      if (target) next = moveParticipantInIslands(islands, activeData.participantId, target.island.clientId, target.participantIndex);
     } else {
-      setIslands((current) => {
-        const target = current.find(({ clientId }) => clientId === overData.islandId);
-        return target
-          ? moveParticipantInIslands(current, activeData.participantId, target.clientId, target.participants.length)
-          : current;
-      });
+      const target = islands.find(({ clientId }) => clientId === overData.islandId);
+      if (target) next = moveParticipantInIslands(islands, activeData.participantId, target.clientId, target.participants.length);
     }
-    setMessage("Cambio pendiente. Pulsa Guardar familia para confirmarlo.");
+    setIslands(next);
     finishDrag();
+    void locked(() => persistChange(() => next)).catch((error) => {
+      setIslands(savedIslandsRef.current);
+      showError(error);
+    });
   }
 
   function handleDragCancel(_event: DragCancelEvent) {
     restoreDragSnapshot();
     setMessage("Movimiento cancelado.");
-  }
-
-  async function saveFamily() {
-    const invalidPerson = islands.flatMap((island) => island.participants.map((person) => ({ island, person })))
-      .find(({ island, person }) => !participantDraftIsValid({
-        name: person.name,
-        email: person.email,
-        phone: person.phone,
-        preferredChannel: person.preferredChannel,
-        isBaby: person.isBaby
-      }, island.clientId, formIslands));
-    if (invalidPerson) {
-      setMessage(`Revisa los datos de contacto de ${invalidPerson.person.name} antes de guardar.`);
-      return;
-    }
-
-    setBusy(true);
-    try {
-      const payload = {
-        revision,
-        islands: islands.map((island) => ({
-          clientId: island.clientId,
-          id: island.id,
-          name: island.name,
-          color: island.color
-        })),
-        participants: islands.flatMap((island) => island.participants.map((person, sortOrder) => ({
-          clientId: person.clientId,
-          id: person.id,
-          familyIslandClientId: island.clientId,
-          name: person.name,
-          email: person.isBaby ? "" : person.email,
-          phone: person.isBaby ? "" : person.phone,
-          preferredChannel: person.isBaby ? null : person.preferredChannel,
-          isBaby: person.isBaby,
-          sortOrder
-        }))),
-        confirmedParticipantDeletionIds,
-        confirmedIslandDeletionIds
-      };
-      const updated = await api<{ revision: string; islands: Array<Island & { id: string }> }>(`/api/admin/families/${familyId}/layout`, "PATCH", payload);
-      const next: Island[] = updated.islands.map((island) => ({
-        ...island,
-        id: island.id,
-        participants: island.participants.map((person) => ({ ...person, id: person.id }))
-      }));
-      setIslands(next);
-      setSavedIslands(next);
-      setRevision(updated.revision);
-      setConfirmedParticipantDeletionIds([]);
-      setConfirmedIslandDeletionIds([]);
-      setSelectedIslandId((current) => next.some(({ clientId }) => clientId === current) ? current : next[0]?.clientId ?? "");
-      setMessage("Familia guardada.");
-    } catch (error) {
-      setMessage(error instanceof Error ? error.message : "No se pudo guardar la familia.");
-    } finally {
-      setBusy(false);
-    }
   }
 
   return <div className="family-editor">
@@ -818,8 +709,8 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     </div>
 
     <div className="family-editor__create-actions" aria-label="Añadir a la familia">
-      <Button size="icon-lg" onClick={showIslandDialog} disabled={busy} aria-label="Añadir unidad" title="Añadir unidad"><HousePlus /></Button>
-      <Button size="icon-lg" variant="secondary" onClick={() => showParticipantDialog()} disabled={busy || !islands.length} aria-label="Añadir persona" title={islands.length ? "Añadir persona" : "Crea una unidad primero"}><UserPlus /></Button>
+      <Button size="icon-lg" onClick={showIslandDialog} disabled={editingDisabled} aria-label="Añadir unidad" title="Añadir unidad"><HousePlus /></Button>
+      <Button size="icon-lg" variant="secondary" onClick={() => showParticipantDialog()} disabled={editingDisabled || !islands.length} aria-label="Añadir persona" title={islands.length ? "Añadir persona" : "Crea una unidad primero"}><UserPlus /></Button>
     </div>
 
     <DndContext
@@ -834,25 +725,25 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     >
       <section className="family-editor__board" aria-label="Unidades familiares">
         <SortableContext items={islands.map(({ clientId }) => islandDndId(clientId))} strategy={verticalListSortingStrategy}>
-          {islands.map((island) => <SortableIsland island={island} disabled={busy} key={island.clientId}>
+          {islands.map((island) => <SortableIsland island={island} disabled={busy || dirty} saving={busy || pendingCount > 0} key={island.clientId}>
             {({ attributes, listeners, setActivatorNodeRef }) => <>
               <header className="family-editor__island-header">
                 <button
                   ref={setActivatorNodeRef}
                   className="family-editor__drag-edge"
                   type="button"
-                  disabled={busy}
+                  disabled={busy || dirty}
                   {...attributes}
                   {...listeners}
                   aria-label={`Mover la unidad ${island.name}`}
                 />
                 <span className="family-editor__island-color" style={{ background: island.color }} />
                 <div>
-                  <InlineName heading name={island.name} label="Nombre de la unidad" disabled={busy} onSave={(name) => saveName("island", island, name)} />
+                  <InlineName heading name={island.name} label="Nombre de la unidad" disabled={editingDisabled} onSave={(name) => saveName("island", island, name)} />
                   <p>{island.participants.length} {island.participants.length === 1 ? "persona" : "personas"}</p>
                 </div>
                 <div className="family-editor__island-actions">
-                  <Button variant="ghost" size="icon" disabled={busy} onClick={() => deleteIsland(island)} aria-label={`Eliminar ${island.name}`}><Trash2 /></Button>
+                  <Button variant="ghost" size="icon" disabled={editingDisabled} onClick={() => deleteIsland(island)} aria-label={`Eliminar ${island.name}`}><Trash2 /></Button>
                 </div>
               </header>
 
@@ -864,7 +755,8 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                   {island.participants.map((person) => <SortableParticipant
                     island={island}
                     person={person}
-                    disabled={busy}
+                    disabled={busy || dirty}
+                    saving={busy || pendingCount > 0}
                     key={person.clientId}
                   >
                     {({ attributes: participantAttributes, listeners: participantListeners, setActivatorNodeRef: setParticipantActivatorNodeRef }) => <>
@@ -872,39 +764,41 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                         ref={setParticipantActivatorNodeRef}
                         className="family-editor__drag-edge"
                         type="button"
-                        disabled={busy}
+                        disabled={busy || dirty}
                         {...participantAttributes}
                         {...participantListeners}
                         aria-label={`Mover a ${person.name}`}
                       />
                       <div className="family-editor__baby-cell">
-                        <BabyToggle person={person} disabled={busy} onConfirm={() => toggleBaby(person)} />
+                        <BabyToggle person={person} disabled={editingDisabled} onConfirm={() => toggleBaby(person)} />
                       </div>
                       <div className="family-editor__identity">
-                        <InlineName name={person.name} label="Nombre del familiar" disabled={busy} onSave={(name) => saveName("participant", person, name)} />
+                        <InlineName name={person.name} label="Nombre del familiar" disabled={editingDisabled} onSave={(name) => saveName("participant", person, name)} />
                       </div>
-                      {!person.isBaby && <div className="family-editor__contact-fields">
-                        <ContactPreferenceInput
-                          channel="email"
-                          name={person.name}
-                          value={person.email}
-                          selected={person.preferredChannel === "email" || person.preferredChannel === "both"}
-                          disabled={busy}
-                          onChange={(value) => changeContact(person, "email", value)}
-                          onToggle={() => changeChannel(person, "email")}
-                        />
-                        <ContactPreferenceInput
-                          channel="whatsapp"
-                          name={person.name}
-                          value={person.phone}
-                          selected={person.preferredChannel === "whatsapp" || person.preferredChannel === "both"}
-                          disabled={busy}
-                          onChange={(value) => changeContact(person, "phone", value)}
-                          onToggle={() => changeChannel(person, "whatsapp")}
-                        />
-                      </div>}
+                      <div className="family-editor__contact-fields" aria-hidden={person.isBaby || undefined}>
+                        {!person.isBaby && <>
+                          <ContactPreferenceInput
+                            channel="email"
+                            name={person.name}
+                            value={person.email}
+                            selected={person.preferredChannel === "email" || person.preferredChannel === "both"}
+                            disabled={editingDisabled}
+                            onCommit={(value, toggle) => saveContact(person, "email", value, toggle)}
+                            onDirtyChange={(changed) => setContactDirty(`${person.clientId}:email`, changed)}
+                          />
+                          <ContactPreferenceInput
+                            channel="whatsapp"
+                            name={person.name}
+                            value={person.phone}
+                            selected={person.preferredChannel === "whatsapp" || person.preferredChannel === "both"}
+                            disabled={editingDisabled}
+                            onCommit={(value, toggle) => saveContact(person, "phone", value, toggle)}
+                            onDirtyChange={(changed) => setContactDirty(`${person.clientId}:phone`, changed)}
+                          />
+                        </>}
+                      </div>
                       <div className="family-editor__row-actions">
-                        <Button variant="destructive" size="icon" disabled={busy} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
+                        <Button variant="destructive" size="icon" disabled={editingDisabled} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`}><Trash2 /></Button>
                       </div>
                     </>}
                   </SortableParticipant>)}
@@ -933,23 +827,17 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
       </DragOverlay>
     </DndContext>
 
-    <footer className="family-editor__save">
-      <div>
-        <strong>{dirty ? "Hay cambios sin guardar" : "La familia está al día"}</strong>
-        <p>{dirty ? "Altas, ediciones, borrados y movimientos se aplicarán juntos." : "El orden visual de las unidades solo dura durante esta visita."}</p>
-      </div>
-      <Button size="lg" onClick={saveFamily} disabled={busy || !dirty}><Save />{busy ? "Guardando…" : "Guardar familia"}</Button>
-    </footer>
-    <p className="family-editor__status" role="status" aria-live="polite">{message}</p>
+    <p className="family-editor__status" role="status" aria-live="polite">{pendingCount > 0 ? "Guardando cambios…" : message}</p>
 
     <CreateDialog ref={islandDialogRef} title="Añadir unidad" description="Crea un hogar o núcleo familiar.">
       <form className="create-dialog__form" onSubmit={(event) => { event.preventDefault(); addIsland(); }}>
         <label className="form-field">
           Nombre de la unidad
-          <Input autoFocus value={newIslandName} onChange={(event) => setNewIslandName(event.target.value)} placeholder="Ej. Casa de Juan" required maxLength={180} />
+          <Input autoFocus disabled={editingDisabled} value={newIslandName} onChange={(event) => setNewIslandName(event.target.value)} placeholder="Ej. Casa de Juan" required maxLength={180} />
         </label>
-        <Button className="min-h-10 w-full" size="lg" type="submit" disabled={!newIslandName.trim()}>Añadir unidad</Button>
+        <Button className="min-h-10 w-full" size="lg" type="submit" disabled={editingDisabled || !newIslandName.trim()}>Añadir unidad</Button>
       </form>
+      {dialogError && <p role="alert">{dialogError}</p>}
     </CreateDialog>
 
     <CreateDialog ref={participantDialogRef} title="Añadir persona" description="Completa sus datos y elige una unidad.">
@@ -957,11 +845,12 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
         value={participant}
         islandId={selectedIsland?.clientId ?? ""}
         islands={formIslands}
-        disabled={busy}
+        disabled={editingDisabled}
         onChange={setParticipant}
         onIslandChange={setSelectedIslandId}
         onSubmit={addParticipant}
       />
+      {dialogError && <p role="alert">{dialogError}</p>}
     </CreateDialog>
   </div>;
 }

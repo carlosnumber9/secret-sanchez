@@ -31,7 +31,8 @@ Prioridad máxima para código de dominio:
 - `validateDraw`.
 - `generateDraw`.
 - Hash y construcción de URLs.
-- Selección de canales de notificación.
+- Selección de canales de notificación y normalización de teléfonos internacionales sin inferir país.
+- Cola serial de guardado: encadenamiento de revisiones y recuperación tras errores.
 - Asignación de bebés a unidades distintas y no repetidas.
 - Progresión monotónica de estados de WhatsApp.
 - Contrato de renombrado individual: validación de entradas, nombres normalizados y propagación de errores de propiedad o revisión.

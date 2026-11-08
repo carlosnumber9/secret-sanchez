@@ -1,12 +1,12 @@
 # Roadmap
 
-Revisado el 7 de noviembre de 2026. Estado de código separado de operación real.
+Revisado el 8 de noviembre de 2026. Estado de código separado de operación real.
 
 ## Completado en código
 
 - [x] Dependencias compatibles, Node 22 y CI reproducible.
 - [x] Login, logout, propiedad por recurso y transacciones coordinadas.
-- [x] Familia permanente, borradores con revisión y persistencia en lotes.
+- [x] Familia permanente, guardado inmediato serializado y revisión de concurrencia.
 - [x] Ediciones, roles, bebés, representantes, reglas y exclusiones desde UI.
 - [x] Emparejamiento acotado, validación, snapshots, revocación y contador durable de intentos.
 - [x] Tokens cifrados, revelación atómica y recuperación de fallos temporales.
