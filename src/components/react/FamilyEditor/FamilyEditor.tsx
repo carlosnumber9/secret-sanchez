@@ -45,7 +45,6 @@ import ParticipantForm, {
 } from "../ParticipantForm/ParticipantForm";
 import InlineName from "./InlineName";
 import ContactPreferenceInput from "./ContactPreferenceInput";
-import MoveMenu from "./MoveMenu";
 import "./FamilyEditor.css";
 
 type PreferredChannel = "email" | "whatsapp" | "both" | null;
@@ -615,24 +614,6 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     setMessage("Orden visual actualizado. Este orden no se guarda en la base de datos.");
   }
 
-  async function movePerson(personId: string, direction: -1 | 1, destinationId?: string) {
-    await locked(() => persistChange((current) => {
-      const source = findParticipantLocation(current, personId);
-      if (!source) throw new Error("La persona ya no está disponible.");
-      const target = destinationId ? current.find(({ clientId }) => clientId === destinationId) : source.island;
-      if (!target) throw new Error("La unidad de destino ya no está disponible.");
-      const index = destinationId ? target.participants.length : source.participantIndex + direction;
-      return moveParticipantInIslands(current, personId, target.clientId, index);
-    }));
-  }
-
-  async function moveUnit(islandId: string, direction: -1 | 1) {
-    if (busyRef.current) return;
-    const index = islands.findIndex(({ clientId }) => clientId === islandId);
-    const target = islands[index + direction];
-    if (target) reorderIsland(islandId, target.clientId);
-  }
-
   function finishDrag() {
     setActiveDrag(null);
     dragStartSnapshotRef.current = null;
@@ -726,7 +707,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     <div className="family-editor__hint">
       <GripVertical aria-hidden="true" />
       <div>
-        <p>Mueve personas y unidades desde sus opciones o arrastrando el borde izquierdo.</p>
+        <p>Arrastra el borde izquierdo para ordenar o cambiar de unidad. Con teclado, usa espacio, flechas y Escape.</p>
         <p>El sobre y el bocadillo eligen canales preferidos; no envían mensajes. El teléfono necesita prefijo internacional, por ejemplo +34.</p>
       </div>
     </div>
@@ -755,7 +736,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     >
       <section className="family-editor__board" aria-label="Unidades familiares">
         <SortableContext items={islands.map(({ clientId }) => islandDndId(clientId))} strategy={verticalListSortingStrategy}>
-          {islands.map((island, islandIndex) => <SortableIsland island={island} disabled={busy || dirty} saving={busy || pendingCount > 0} key={island.clientId}>
+          {islands.map((island) => <SortableIsland island={island} disabled={busy || dirty} saving={busy || pendingCount > 0} key={island.clientId}>
             {({ attributes, listeners, setActivatorNodeRef }) => <>
               <header className="family-editor__island-header">
                 <button
@@ -774,14 +755,6 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                   <p>{island.participants.length} {island.participants.length === 1 ? "persona" : "personas"}</p>
                 </div>
                 <div className="family-editor__island-actions">
-                  <MoveMenu
-                    name={island.name}
-                    unit
-                    disabled={editingDisabled || dirty}
-                    canMoveUp={islandIndex > 0}
-                    canMoveDown={islandIndex < islands.length - 1}
-                    onMove={(direction) => moveUnit(island.clientId, direction)}
-                  />
                   <button type="button" className="family-editor__action family-editor__action--delete" disabled={editingDisabled} onClick={() => deleteIsland(island)} aria-label={`Eliminar ${island.name}`} title={`Eliminar la unidad ${island.name}`}><Trash2 aria-hidden="true" /><span className="family-editor__desktop-label">Eliminar</span></button>
                 </div>
               </header>
@@ -791,7 +764,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                   items={island.participants.map(({ clientId }) => participantDndId(clientId))}
                   strategy={verticalListSortingStrategy}
                 >
-                  {island.participants.map((person, personIndex) => <SortableParticipant
+                  {island.participants.map((person) => <SortableParticipant
                     island={island}
                     person={person}
                     disabled={busy || dirty}
@@ -838,15 +811,6 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
                         </>}
                       </div>
                       <div className="family-editor__row-actions">
-                        <MoveMenu
-                          name={person.name}
-                          disabled={editingDisabled || dirty}
-                          canMoveUp={personIndex > 0}
-                          canMoveDown={personIndex < island.participants.length - 1}
-                          onMove={(direction) => movePerson(person.clientId, direction)}
-                          destinations={islands.filter(({ clientId }) => clientId !== island.clientId).map(({ clientId, name }) => ({ id: clientId, name }))}
-                          onMoveTo={(destination) => movePerson(person.clientId, 1, destination)}
-                        />
                         <button type="button" className="family-editor__action family-editor__action--delete" disabled={editingDisabled} onClick={() => deletePerson(person)} aria-label={`Eliminar ${person.name}`} title={`Eliminar a ${person.name}`}><Trash2 aria-hidden="true" /><span className="family-editor__desktop-label">Eliminar</span></button>
                       </div>
                     </>}
