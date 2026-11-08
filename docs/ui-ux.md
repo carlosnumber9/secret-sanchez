@@ -47,6 +47,7 @@ Todas las páginas comparten un footer sencillo con el tema oscuro y el texto «
 ### Familia
 
 - Permitir crear la familia cuando todavía no existe el censo permanente.
+- Mostrar encima de la primera unidad los totales de unidades, personas y bebés de toda la familia. El total de personas incluye bebés; los recuentos se actualizan tras las altas, borrados y cambios de bebé guardados, y muestran cero cuando la familia está vacía.
 - Visualizar cada unidad con filas adaptables sin desplazamiento horizontal. Bebé, nombre, contactos y eliminación se distribuyen con espacio alrededor y se centran en vertical en escritorio y móvil. Email y teléfono ocupan una columna independiente a la derecha del nombre, siempre uno encima del otro. Las filas de bebés muestran solo icono, nombre y eliminación, sin textos sobre roles o contacto.
 - Abrir las altas de unidad y participante desde dos botones de icono y formularios en el mismo componente de diálogo reutilizado por el alta de ediciones.
 - Exigir una unidad existente y seleccionada para dar de alta una persona; el formulario permite omitir el contacto y solo se habilita cuando el nombre y cualquier dato introducido son válidos.

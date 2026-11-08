@@ -342,6 +342,10 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
     () => islands.find((island) => island.clientId === selectedIslandId) ?? islands[0],
     [islands, selectedIslandId]
   );
+  const totals = useMemo(() => {
+    const people = islands.flatMap(({ participants }) => participants);
+    return { units: islands.length, people: people.length, babies: people.filter(({ isBaby }) => isBaby).length };
+  }, [islands]);
   const dirty = pendingCount > 0 || dirtyContacts.size > 0;
   const editingDisabled = busy || activeDrag !== null;
   const setContactDirty = useCallback((key: string, changed: boolean) => {
@@ -708,9 +712,16 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
       </div>
     </div>
 
-    <div className="family-editor__create-actions" aria-label="Añadir a la familia">
-      <Button size="icon-lg" onClick={showIslandDialog} disabled={editingDisabled} aria-label="Añadir unidad" title="Añadir unidad"><HousePlus /></Button>
-      <Button size="icon-lg" variant="secondary" onClick={() => showParticipantDialog()} disabled={editingDisabled || !islands.length} aria-label="Añadir persona" title={islands.length ? "Añadir persona" : "Crea una unidad primero"}><UserPlus /></Button>
+    <div className="family-editor__toolbar">
+      <dl className="family-editor__totals" aria-label="Resumen de la familia" aria-live="polite" aria-atomic="true">
+        <div><dt>{totals.units === 1 ? "Unidad" : "Unidades"}</dt><dd>{totals.units}</dd></div>
+        <div><dt>{totals.people === 1 ? "Persona" : "Personas"}</dt><dd>{totals.people}</dd></div>
+        <div><dt>{totals.babies === 1 ? "Bebé" : "Bebés"}</dt><dd>{totals.babies}</dd></div>
+      </dl>
+      <div className="family-editor__create-actions" aria-label="Añadir a la familia">
+        <Button size="icon-lg" onClick={showIslandDialog} disabled={editingDisabled} aria-label="Añadir unidad" title="Añadir unidad"><HousePlus /></Button>
+        <Button size="icon-lg" variant="secondary" onClick={() => showParticipantDialog()} disabled={editingDisabled || !islands.length} aria-label="Añadir persona" title={islands.length ? "Añadir persona" : "Crea una unidad primero"}><UserPlus /></Button>
+      </div>
     </div>
 
     <DndContext

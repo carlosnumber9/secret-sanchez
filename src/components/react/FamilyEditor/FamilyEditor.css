@@ -33,8 +33,42 @@
   gap: var(--space-lg);
 }
 
+.family-editor__toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.family-editor__totals {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.25rem;
+  margin: 0;
+}
+
+.family-editor__totals > div {
+  display: flex;
+  gap: 0.375rem;
+  align-items: baseline;
+}
+
+.family-editor__totals dt {
+  color: var(--muted-foreground);
+  font-size: 0.875rem;
+}
+
+.family-editor__totals dd {
+  order: -1;
+  margin: 0;
+  font-size: 1.125rem;
+  font-weight: 650;
+}
+
 .family-editor__create-actions {
   display: flex;
+  margin-inline-start: auto;
   gap: var(--space-sm);
   justify-content: flex-end;
 }
