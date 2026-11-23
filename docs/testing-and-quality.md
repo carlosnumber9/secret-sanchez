@@ -103,3 +103,11 @@ Pendiente: herramienta end-to-end, lint/formateador, umbral de cobertura y regre
 ## Pruebas operativas locales
 
 Después del build, `npm run test:ssr` comprueba el handler Vercel compilado y los hashes CSP con configuración sintética. `npm run test:recovery` crea y elimina bases efímeras locales con fixtures, sin archivos de copia. Requiere herramientas PostgreSQL compatibles y permisos locales de creación de bases/roles. Véase [procedimiento](./release-recovery.md). Ninguno certifica el entorno remoto.
+
+## Trazabilidad del servidor
+
+`tests/observability.test.ts` verifica contexto concurrente por petición/trabajo, cabeceras y estados, correlación y
+deduplicación de diagnósticos, commit/rollback, presupuestos y redacción. `tests/provider-logging.test.ts` usa
+fetch simulado para comprobar aceptación, rechazo, rate limit y resultados desconocidos sin datos privados. Las
+pruebas de integración cubren la identidad verificada antes del logout y conservan las invariantes de entregas y
+webhooks. El procedimiento manual de Preview está en [observabilidad](./observability.md).
