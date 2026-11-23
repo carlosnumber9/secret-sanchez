@@ -55,7 +55,7 @@ proveedores.
 `src/actions` representa casos de uso como mantener la familia, crear una edición, generar un intento o enviar notificaciones. Es el punto
 adecuado para coordinar dominio, persistencia y proveedores.
 
-Los casos de uso administrativos incorporan propiedad, bloqueos y transacciones. No se exponen escrituras directas de queries como acciones sin autorización.
+Los casos de uso administrativos comprueban el registro del administrador e incorporan bloqueos y transacciones. No se exponen escrituras directas de queries como acciones sin autorización.
 
 ### Dominio
 
@@ -124,4 +124,4 @@ La preparación pública obtiene únicamente identidad del regalador y apertura 
 
 ## Casos de uso autorizados
 
-Las rutas administrativas llaman a `adminData`, `familyNames`, `editionData`, `editionRules`, `drawLifecycle` o `notifications`; no existen wrappers de escritura sin propietario ni un envío masivo alternativo sin reserva de intentos. `editionData` conserva las reexportaciones del ciclo de sorteo para compatibilidad interna. Las escrituras de censo adquieren primero el bloqueo de familia, antes de consultar o bloquear hijos; generación, revocación y reglas usan el mismo orden. Las consultas públicas de revelación proyectan únicamente la preparación o realizan la apertura atómica. La política de canales y formato de teléfono se comparte entre servidor y formularios en `src/lib/contact.ts`.
+Las rutas administrativas llaman a `adminData`, `familyNames`, `editionData`, `editionRules`, `drawLifecycle` o `notifications`; no existen wrappers de escritura sin autorización ni un envío masivo alternativo sin reserva de intentos. `editionData` conserva las reexportaciones del ciclo de sorteo para compatibilidad interna. Las escrituras de censo adquieren primero el bloqueo de familia, antes de consultar o bloquear hijos; generación, revocación y reglas usan el mismo orden. Las consultas públicas de revelación proyectan únicamente la preparación o realizan la apertura atómica. La política de canales y formato de teléfono se comparte entre servidor y formularios en `src/lib/contact.ts`.

@@ -5,7 +5,7 @@
 ## Implementado en código
 
 - Astro 7 SSR, React Islands y Node 22.23.4; dependencias acotadas y lockfile reproducible.
-- Login y logout de Supabase SSR; autorización por UUID y propiedad de familia.
+- Login y logout de Supabase SSR; autorización por UUID y registro en `admin_users`. Una única familia y sus ediciones son comunes a todos los administradores; el creador histórico no restringe el acceso.
 - Historial de ediciones en `/`, censo permanente en `/familia` y configuración, reparto y envíos por edición.
 - Guardado inmediato del censo familiar por acción, con contactos al perder foco y nombres mediante tick. Peticiones serializadas, revisión de concurrencia y actualización transaccional exclusiva de diferencias; sin botón de guardado global.
 - Adultos con roles por edición; bebés receptores sin contacto y representantes de núcleos.
@@ -23,7 +23,7 @@
 
 ## Preparado, pendiente de activación
 
-Los SQL se versionan y se prueban únicamente en PostgreSQL local con datos sintéticos. Por instrucción del propietario, esta actualización **no aplica migraciones ni crea copias de datos reales**.
+Los SQL se versionan y se prueban únicamente en PostgreSQL local con datos sintéticos. La actualización de mantenimiento anterior no aplicó migraciones ni creó copias de datos reales. La consolidación de familias autorizada posteriormente es una operación de datos independiente, con copia cifrada y restauración verificada; no aplica estos SQL pendientes.
 
 - `0008`: RLS y revocación de acceso público a tablas de aplicación.
 - `0009`: índices administrativos.
@@ -40,7 +40,7 @@ Los SQL se versionan y se prueban únicamente en PostgreSQL local con datos sint
 - Las pruebas aisladas no prueban la configuración real de Auth, dominio de email o plantilla de WhatsApp.
 - Un envío aceptado puede rebotar después; el panel refleja el fallo y el estado `sent` conserva el hito histórico.
 - El organizador puede obtener cualquier enlace autorizado. Revocar no borra información ya vista.
-- Falta acordar retención de auditoría, expiración de enlaces y permisos colaborativos.
+- Falta acordar retención de auditoría y expiración de enlaces. Todos los administradores autorizados tienen los mismos permisos sobre los datos compartidos.
 - El aislamiento de datos de desarrollo/Preview requiere configuración independiente; ver [operación](./operations.md).
 
 ## Observabilidad del servidor (23 de noviembre de 2026)

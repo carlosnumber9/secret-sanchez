@@ -1,3 +1,4 @@
+import { registeredAdmin } from "@/db/admin-access";
 import { observe } from "@/lib/logger";
 import { availableDeliveryChannel, participantPhoneIsValid } from "@/lib/contact";
 import { lockOwnedFamily, withEditableEdition } from "@/db/locks";
@@ -22,7 +23,7 @@ export type EditionKind = "test" | "final";
 async function getOwnedEdition(editionId: string, adminId: string) {
   const [row] = await db.select({ edition: drawEditions, family: families }).from(drawEditions)
     .innerJoin(families, eq(drawEditions.familyId, families.id))
-    .where(and(eq(drawEditions.id, editionId), eq(families.ownerAdminId, adminId))).limit(1);
+    .where(and(eq(drawEditions.id, editionId), registeredAdmin(adminId))).limit(1);
   return row ?? null;
 }
 
@@ -30,7 +31,7 @@ export async function listOwnedEditions(adminId: string) {
   return observe("edition.list", {}, async () => {
     return db.select({ edition: drawEditions, family: families }).from(drawEditions)
       .innerJoin(families, eq(drawEditions.familyId, families.id))
-      .where(eq(families.ownerAdminId, adminId))
+      .where(registeredAdmin(adminId))
       .orderBy(desc(drawEditions.year), desc(drawEditions.createdAt));
 
   }, r => ({ editionCount: r.length }));

@@ -5,7 +5,7 @@ Revisado el 8 de noviembre de 2026. Estado de código separado de operación rea
 ## Completado en código
 
 - [x] Dependencias compatibles, Node 22 y CI reproducible.
-- [x] Login, logout, propiedad por recurso y transacciones coordinadas.
+- [x] Login, logout, acceso común de administradores registrados y transacciones coordinadas.
 - [x] Familia permanente, guardado inmediato serializado y revisión de concurrencia.
 - [x] Ediciones, roles, bebés, representantes, reglas y exclusiones desde UI.
 - [x] Emparejamiento acotado, validación, snapshots, revocación y contador durable de intentos.
@@ -31,7 +31,7 @@ Esta sesión solo autoriza código: no exportar datos, migrar ni activar servici
 
 - End-to-end, regresión visual, lint/formato y cobertura mínima.
 - Retención de auditoría y expiración de enlaces.
-- Varios organizadores con permisos compartidos.
+- Roles diferenciados entre organizadores, solo si se requiere en el futuro; hoy todos los administradores autorizados comparten familia, ediciones y permisos.
 - Archivo/restauración de ediciones desde UI.
 
 Personalización, listas de deseos y recordatorios quedan fuera del compromiso actual.

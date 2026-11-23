@@ -9,7 +9,7 @@
 | Runtime | Node 22.23.4 o un parche compatible de la rama 22; adapter de Vercel. |
 | Datos | Supabase Auth y Postgres; Drizzle como autoridad de schema, sin migraciones en build. |
 | Auth | Contraseña, allowlist por UUID, fallback solo para filas legacy sin UUID, logout local. |
-| Autorización | Propietario de familia comprobado en servidor y bloqueado antes de sus hijos al escribir. |
+| Autorización | Una única familia y sus ediciones compartidas por todos los administradores registrados; cuenta verificada en servidor y familia bloqueada antes de sus hijos al escribir. |
 | Tokens | Aleatorios; hash para búsqueda y AES-256-GCM para entrega autorizada. Revelación pública sin cuenta. |
 | Reparto | Dos emparejamientos independientes; adultos equilibrados y bebés asignados a otro núcleo sin repetirlo. |
 | Regeneración | Revocar primero; un intento vigente, numeración monotónica y secretos nuevos. |
@@ -23,7 +23,6 @@
 
 ## Abiertas
 
-- Permisos para varios administradores de una familia.
 - Expiración automática de enlaces y política de retención de auditoría.
 - Provisionamiento y comprobación de proyectos independientes por entorno.
 - Framework end-to-end, regresión visual y umbral de cobertura.

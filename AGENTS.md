@@ -123,6 +123,13 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 - Las APIs protegidas responden `401` cuando no hay sesión y `403` cuando la cuenta no está autorizada como admin.
 - La sesion de Supabase se crea en servidor mediante `src/pages/api/auth/login.ts`.
 
+## Datos Compartidos
+
+- Todos los administradores autorizados comparten una única familia y todas sus ediciones.
+- `families.owner_admin_id` conserva el creador histórico; no debe usarse como filtro de autorización.
+- Mantener la comprobación de pertenencia a `admin_users` en servidor y la identidad real del actor en auditoría.
+- La creación inicial se serializa y rechaza familias adicionales; consolidar datos históricos solo mediante operación explícita con recuperación verificada.
+
 ## Modelo De Datos
 
 El schema actual incluye:
@@ -200,4 +207,4 @@ Estas decisiones no estan fijadas en el repo. No asumirlas sin confirmacion o si
 - Herramienta end-to-end y regresión visual; unitarias e integración usan Node test y tsx.
 - Politica de lint/format mas alla de `astro check` dentro de `npm run build`.
 - Criterios finales de UI/design system.
-- Politica de permisos para multiples administradores.
+- Roles diferenciados entre administradores, si se requieren en el futuro. Todos los administradores autorizados comparten actualmente una única familia y sus ediciones.

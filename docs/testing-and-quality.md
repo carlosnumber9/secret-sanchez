@@ -35,14 +35,14 @@ Prioridad máxima para código de dominio:
 - Cola serial de guardado: encadenamiento de revisiones y recuperación tras errores.
 - Asignación de bebés a unidades distintas y no repetidas.
 - Progresión monotónica de estados de WhatsApp.
-- Contrato de renombrado individual: validación de entradas, nombres normalizados y propagación de errores de propiedad o revisión.
+- Contrato de renombrado individual: validación de entradas, nombres normalizados y propagación de errores de autorización o revisión.
 
 Las pruebas del sorteo deben repetir generaciones y validar invariantes, no afirmar una asignación aleatoria exacta.
 
 ### Integración
 
 - Queries contra una base aislada.
-- Renombrado individual bajo bloqueo de familia, revisión obsoleta, propiedad y compatibilidad con el guardado del borrador.
+- Renombrado individual bajo bloqueo de familia, revisión obsoleta, autorización y compatibilidad con el guardado del borrador.
 - Creación atómica de sorteo y asignaciones.
 - Restricciones e índices.
 - Login por contraseña y cookies de Supabase con dobles controlados.

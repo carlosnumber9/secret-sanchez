@@ -6,7 +6,7 @@ Drizzle define el esquema operativo en `src/db/schema.ts`. `0003` introdujo edic
 
 ### `families`
 
-Censo permanente propiedad de un administrador. Conserva nombre, slug y personalización; ya no representa un año ni un sorteo.
+Censo permanente único y compartido por todos los administradores autorizados. Conserva nombre, slug y personalización; ya no representa un año ni un sorteo. `owner_admin_id` identifica al creador histórico y no restringe el acceso. La creación inicial se serializa y rechaza nuevas familias cuando ya existe una.
 
 ### `family_islands`
 

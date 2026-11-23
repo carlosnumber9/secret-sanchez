@@ -35,15 +35,13 @@ Todo nuevo endpoint administrativo debe vivir bajo `/api/admin` o aplicar una pr
 
 ## Autorización
 
-Autenticación responde “quién es”; autorización responde “qué grupo puede modificar”.
+Todos los administradores autorizados comparten una única familia y todas sus ediciones. La cuenta identifica al actor de cada operación; no delimita un espacio de datos privado.
 
-Cada mutación obtiene el administrador desde la sesión y comprueba la propiedad en servidor:
+Cada operación administrativa obtiene el administrador desde la sesión, nunca desde el payload, y comprueba en servidor que sigue registrado en `admin_users`. Lecturas, censo, configuración de ediciones, generación, revocación, envíos y recuperación de enlaces usan el mismo criterio. Las cuentas sin autorización siguen recibiendo `401` o `403` desde el middleware; los casos de uso tampoco aceptan UUID ajenos a `admin_users`.
 
-1. Obtener el administrador desde la sesión, nunca desde el payload.
-2. Cargar el grupo solicitado.
-3. Confirmar `owner_admin_id`.
-4. Rechazar con `403` o `404` de recurso no accesible si no corresponde.
-5. Registrar el administrador generador en el sorteo.
+`families.owner_admin_id` se conserva como referencia histórica del creador, no como permiso exclusivo. Los campos de creación, generación, revocación y auditoría conservan al administrador que ejecutó cada operación. Los bloqueos de familia y edición y la revisión del censo siguen coordinando cambios concurrentes entre cuentas.
+
+La creación inicial de familia bloquea la tabla durante su comprobación e inserción y rechaza una segunda creación con `FAMILY_ALREADY_EXISTS`, incluso si la petición concurrente viene de otro administrador. Las instalaciones históricas con varias familias requieren una consolidación operativa explícita; el despliegue no elimina datos automáticamente.
 
 El UUID es la identidad estable. El fallback por email solo puede reclamar filas cuyo `auth_user_id` sea nulo; una
 coincidencia de email nunca sustituye un UUID ya enlazado. Un índice único impide enlazar el mismo UUID a dos
@@ -108,7 +106,7 @@ El cliente SSR utiliza `getAll` y `setAll`, conserva cookies segmentadas y aplic
 
 ## Riesgos y operación pendiente
 
-El cierre de sesión local vive en `POST /api/auth/logout`. Los errores de credenciales no enumeran usuarios. Los enlaces se invalidan por revocación o eliminación del intento; no existe aún expiración automática. Retención de auditoría y colaboración multiadministrador siguen por definir. RLS, límites distribuidos y auditoría requieren las migraciones descritas más abajo; no se afirma que estén activados en el servicio real.
+El cierre de sesión local vive en `POST /api/auth/logout`. Los errores de credenciales no enumeran usuarios. Los enlaces se invalidan por revocación o eliminación del intento; no existe aún expiración automática. Retención de auditoría sigue por definir. RLS, límites distribuidos y auditoría requieren las migraciones descritas más abajo; no se afirma que estén activados en el servicio real.
 
 ## Diagnósticos de errores
 

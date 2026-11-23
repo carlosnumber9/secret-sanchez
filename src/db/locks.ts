@@ -1,3 +1,4 @@
+import { registeredAdmin } from "@/db/admin-access";
 import { observe } from "@/lib/logger";
 import { and, eq, ne } from "drizzle-orm";
 import { db, tracedTransaction } from "@/db/client";
@@ -12,7 +13,7 @@ export async function lockOwnedEdition(tx: Transaction, adminId: string, edition
       .where(eq(drawEditions.id, editionId)).limit(1);
     if (!reference) throw new AppError(404, "EDITION_NOT_FOUND", "No se ha encontrado la edición.");
     const [family] = await tx.select().from(families)
-      .where(and(eq(families.id, reference.familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+      .where(and(eq(families.id, reference.familyId), registeredAdmin(adminId))).for("update").limit(1);
     if (!family) throw new AppError(404, "EDITION_NOT_FOUND", "No se ha encontrado la edición.");
     const [edition] = await tx.select().from(drawEditions)
       .where(and(eq(drawEditions.id, editionId), eq(drawEditions.familyId, family.id))).for("update").limit(1);
@@ -38,7 +39,7 @@ export async function withEditableEdition<T>(adminId: string, editionId: string,
 export async function lockOwnedFamily(tx: Transaction, adminId: string, familyId: string) {
   return observe("db.lock.family", { familyId }, async () => {
     const [family] = await tx.select().from(families)
-      .where(and(eq(families.id, familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+      .where(and(eq(families.id, familyId), registeredAdmin(adminId))).for("update").limit(1);
     if (!family) throw new AppError(404, "FAMILY_NOT_FOUND", "No se ha encontrado la familia.");
     return family;
 

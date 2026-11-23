@@ -1,3 +1,4 @@
+import { registeredAdmin } from "@/db/admin-access";
 import { observe } from "@/lib/logger";
 import { and, eq, ne, sql } from "drizzle-orm";
 import { db } from "@/db/client";
@@ -25,7 +26,7 @@ export async function getOwnedAssignment(assignmentId: string, adminId: string) 
       .innerJoin(families, eq(drawEditions.familyId, families.id))
       .leftJoin(drawParticipants, eq(assignments.giverId, drawParticipants.id))
       .leftJoin(drawIslands, eq(assignments.giverIslandId, drawIslands.id))
-      .where(and(eq(assignments.id, assignmentId), eq(families.ownerAdminId, adminId)))
+      .where(and(eq(assignments.id, assignmentId), registeredAdmin(adminId)))
       .limit(1);
     return row ?? null;
 

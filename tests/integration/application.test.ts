@@ -4,12 +4,12 @@ import test, { after } from "node:test";
 import { eq, sql } from "drizzle-orm";
 import { db } from "../../src/db/client";
 import * as s from "../../src/db/schema";
-import { createOwnedEdition, generateEditionDraw, updateOwnedEdition, revokeEditionDraw } from "../../src/actions/editionData";
-import { getAdminAppState, saveOwnedFamilyDraft, deleteOwnedParticipant } from "../../src/actions/adminData";
+import { createOwnedEdition, generateEditionDraw, updateOwnedEdition, revokeEditionDraw, getEditionAppState, listOwnedEditions, updateEditionParticipant } from "../../src/actions/editionData";
+import { createOwnedGroup, getAdminAppState, saveOwnedFamilyDraft, deleteOwnedParticipant, updateOwnedParticipant, updateOwnedIsland } from "../../src/actions/adminData";
 import { renameOwnedFamilyMember } from "../../src/actions/familyNames";
 import { sendAdminNotifications } from "../../src/actions/notifications";
 import { claimNotificationAttempt, applyWhatsappEvent, updateNotificationLog } from "../../src/db/queries/notifications";
-import { getRevealPreparation } from "../../src/db/queries/assignments";
+import { getOwnedAssignment, getRevealPreparation } from "../../src/db/queries/assignments";
 import { decryptRevealToken } from "../../src/lib/tokens";
 import { POST as resolve } from "../../src/pages/api/reveal/resolve";
 import { POST as open } from "../../src/pages/api/reveal/open";
@@ -38,6 +38,70 @@ async function seed() {
 }
 
 const generation = (data: Awaited<ReturnType<typeof seed>>) => generateEditionDraw({ editionId: data.edition.id, generatedByAdminId: data.admin.id });
+
+test("registered administrators share the census, editions, mutations and delivery access", async () => fixture(async (data) => {
+  const [other] = await db.insert(s.adminUsers).values({ email: `${crypto.randomUUID()}@example.invalid`, name: "Second administrator" }).returning();
+  try {
+    assert.deepEqual(await getAdminAppState(other.id), await getAdminAppState(data.admin.id));
+    assert.equal((await listOwnedEditions(other.id))[0].edition.id, data.edition.id);
+    assert.equal((await getEditionAppState(other.id, data.edition.id)).family.id, data.family.id);
+    await assert.rejects(createOwnedGroup(other.id, { name: "Duplicate" }), { code: "FAMILY_ALREADY_EXISTS" });
+    await updateOwnedParticipant(other.id, data.people[0].id, { email: "shared@example.invalid" });
+    await updateOwnedIsland(other.id, data.islands[0].id, { name: "Shared household" });
+    const beforeRename = await getAdminAppState(data.admin.id);
+    await renameOwnedFamilyMember(other.id, data.family.id, { revision: beforeRename.revision!, kind: "participant", id: data.people[0].id, name: "Shared person" });
+    const shared = await getAdminAppState(data.admin.id);
+    assert.equal(shared.participants.find(p => p.id === data.people[0].id)?.email, "shared@example.invalid");
+    assert.equal(shared.participants.find(p => p.id === data.people[0].id)?.name, "Shared person");
+    assert.equal(shared.islands.find(i => i.id === data.islands[0].id)?.name, "Shared household");
+    await updateOwnedEdition(other.id, data.edition.id, { name: "Shared edition" });
+    await updateEditionParticipant(other.id, data.edition.id, data.people[0].id, { enabled: true, canGive: true, canReceive: true, preferredChannel: "email" });
+    const { draw } = await generateEditionDraw({ editionId: data.edition.id, generatedByAdminId: other.id });
+    assert.equal(draw.generatedByAdminId, other.id);
+    assert.equal((await getEditionAppState(data.admin.id, data.edition.id, "deliveries")).deliveries.length, data.people.length);
+    const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
+    assert.ok(await getOwnedAssignment(assignment.id, data.admin.id));
+    assert.ok(await getOwnedAssignment(assignment.id, other.id));
+    assert.equal(await getOwnedAssignment(assignment.id, crypto.randomUUID()), null);
+    const sent = await sendAdminNotifications({ admin: other, editionId: data.edition.id, mode: "pending", scope: "all", idempotencyKey: crypto.randomUUID() }, {
+      email: async () => ({ ok: true, providerMessageId: crypto.randomUUID() }),
+      whatsapp: async () => { throw new Error("Unexpected WhatsApp call"); }
+    });
+    assert.equal(sent.sent, data.people.length);
+    await revokeEditionDraw({ adminId: data.admin.id, editionId: data.edition.id, drawId: draw.id, confirmation: "ANULAR REPARTO" });
+    await deleteOwnedParticipant(other.id, data.people[0].id, "ELIMINAR PERSONA");
+    assert.equal((await getAdminAppState(data.admin.id)).participants.length, data.people.length - 1);
+  } finally {
+    // Historical actor references must be removed before deleting this account.
+    await db.delete(s.families).where(eq(s.families.id, data.family.id));
+    await db.delete(s.adminUsers).where(eq(s.adminUsers.id, other.id));
+  }
+}));
+
+test("unregistered identities cannot read or mutate shared data", async () => fixture(async (data) => {
+  const unknown = crypto.randomUUID();
+  assert.equal((await getAdminAppState(unknown)).family, null);
+  assert.deepEqual(await listOwnedEditions(unknown), []);
+  await assert.rejects(getEditionAppState(unknown, data.edition.id), { code: "EDITION_NOT_FOUND" });
+  await assert.rejects(createOwnedGroup(unknown, { name: "Forbidden" }), { code: "ADMIN_FORBIDDEN" });
+  await assert.rejects(createOwnedEdition(unknown, { familyId: data.family.id, name: "Forbidden", year: 2091, kind: "test" }), { code: "FAMILY_NOT_FOUND" });
+  await assert.rejects(sendAdminNotifications({ admin: { id: unknown, email: "unknown@example.invalid" }, editionId: data.edition.id, mode: "pending", scope: "all", idempotencyKey: crypto.randomUUID() }), { code: "DRAW_NOT_FOUND" });
+}));
+
+test("concurrent first-time setup creates only one shared family", async () => {
+  const admins = await db.insert(s.adminUsers).values([1, 2].map(i => ({ email: `${crypto.randomUUID()}@example.invalid`, name: `Setup ${i}` }))).returning();
+  try {
+    const results = await Promise.allSettled(admins.map(a => createOwnedGroup(a.id, { name: "Shared family" })));
+    assert.equal(results.filter(r => r.status === "fulfilled").length, 1);
+    const failure = results.find(r => r.status === "rejected") as PromiseRejectedResult;
+    assert.equal(failure.reason.code, "FAMILY_ALREADY_EXISTS");
+    assert.equal((await db.select().from(s.families)).length, 1);
+    assert.deepEqual(await getAdminAppState(admins[0].id), await getAdminAppState(admins[1].id));
+  } finally {
+    await db.delete(s.families);
+    for (const a of admins) await db.delete(s.adminUsers).where(eq(s.adminUsers.id, a.id));
+  }
+});
 
 function requestContext(token: string) {
   return { request: new Request("https://app.example.invalid/api/reveal", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }) }) } as Parameters<APIRoute>[0];
@@ -390,7 +454,7 @@ test("edition rules are owned, atomic, enforced and preserve internal counters",
   assert.equal(next.draw.attemptNumber, 2);
 }));
 
-test("legacy census mutations serialize positions and reject foreign owners", async () => fixture(async (data) => {
+test("legacy census mutations serialize positions and reject unregistered identities", async () => fixture(async (data) => {
   const { createOwnedParticipant, updateOwnedParticipant, updateOwnedIsland } = await import("../../src/actions/adminData");
   const created = await Promise.all(["First", "Second"].map((name) => createOwnedParticipant(data.admin.id, { familyId: data.family.id, familyIslandId: data.islands[0].id, name, isBaby: false })));
   assert.deepEqual(created.map((p) => p.sortOrder).sort(), [1, 2]);

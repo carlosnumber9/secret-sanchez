@@ -1,3 +1,4 @@
+import { registeredAdmin } from "@/db/admin-access";
 import { observe, logger, addLogFields } from "@/lib/logger";
 import { recordAuditEvent } from "@/services/audit/recordEvent";
 import { and, eq, ne } from "drizzle-orm";
@@ -36,7 +37,7 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
       .from(drawEditions)
       .innerJoin(families, eq(drawEditions.familyId, families.id))
       .innerJoin(draws, and(eq(draws.editionId, drawEditions.id), ne(draws.status, "revoked")))
-      .where(and(eq(drawEditions.id, input.editionId), eq(families.ownerAdminId, input.admin.id))).limit(1);
+      .where(and(eq(drawEditions.id, input.editionId), registeredAdmin(input.admin.id))).limit(1);
     if (!owned) throw new AppError(404, "DRAW_NOT_FOUND", "No hay un reparto vigente para esta edición.");
     addLogFields({ drawId: owned.draw.id, testMode: owned.edition.kind === "test" });
     if (input.drawId && input.drawId !== owned.draw.id) throw new AppError(409, "DRAW_CHANGED", "El reparto cambió. Recarga el panel antes de enviar.");

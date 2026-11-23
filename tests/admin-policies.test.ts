@@ -2,14 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import {
   buildNotificationAttemptKey,
-  isActiveDrawStatus,
-  isOwnedByAdmin
+  isActiveDrawStatus
 } from "../src/services/admin/policies";
-
-test("ownership only allows the matching administrator", () => {
-  assert.equal(isOwnedByAdmin("admin-a", "admin-a"), true);
-  assert.equal(isOwnedByAdmin("admin-a", "admin-b"), false);
-});
 
 test("active draw states block a second draw", () => {
   assert.equal(isActiveDrawStatus("locked"), true);

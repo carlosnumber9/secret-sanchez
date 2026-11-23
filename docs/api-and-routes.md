@@ -23,11 +23,11 @@
 - Intentos: `POST /api/admin/editions/[id]/draws/generate` y `POST /api/admin/editions/[id]/draws/[drawId]/revoke`.
 - Entrega: `POST /api/admin/editions/[id]/notifications/send` y `POST /api/admin/notifications/manual`.
 
-Todas requieren sesión y autorización mediante la familia propietaria. Las respuestas mantienen `{ ok, data?, message?, code?, errorId? }`.
+Todas requieren sesión y pertenecer a `admin_users`; todos los administradores comparten familia y ediciones. Las respuestas mantienen `{ ok, data?, message?, code?, errorId? }`.
 
 `PATCH /api/admin/families/[id]/layout` recibe el borrador completo de unidades y personas, incluidas altas, campos editados, unidad, posición, condición de bebé e identificadores de borrados ya confirmados. Valida que el censo no haya cambiado y aplica la familia completa en una sola transacción. La interfaz usa este contrato para guardar cada acción automáticamente y serializa las peticiones con la revisión de la respuesta anterior. Los campos de contacto en edición permanecen fuera del censo enviado hasta su confirmación por pérdida de foco o por su botón de preferencia. El orden de las unidades no forma parte del contrato.
 
-`PATCH /api/admin/families/[id]/name` recibe `{ revision, kind: "island" | "participant", id, name }`. Guarda únicamente el nombre de una entidad existente de esa familia y devuelve `{ name, revision }`. Comprueba propiedad y revisión bajo el mismo bloqueo de familia que el guardado completo; rechaza censos obsoletos con `409 FAMILY_DRAFT_STALE`. Este endpoint permanece disponible; la interfaz de familia utiliza actualmente el guardado serializado de `/layout` también para los nombres.
+`PATCH /api/admin/families/[id]/name` recibe `{ revision, kind: "island" | "participant", id, name }`. Guarda únicamente el nombre de una entidad existente de esa familia y devuelve `{ name, revision }`. Comprueba autorización y revisión bajo el mismo bloqueo de familia que el guardado completo; rechaza censos obsoletos con `409 FAMILY_DRAFT_STALE`. Este endpoint permanece disponible; la interfaz de familia utiliza actualmente el guardado serializado de `/layout` también para los nombres.
 
 ## APIs públicas
 
