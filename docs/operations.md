@@ -12,7 +12,7 @@ La configuración histórica del repositorio está vinculada al proyecto Vercel 
 
 ## Entornos
 
-La configuración histórica compartía Supabase. El código exige ahora proyectos independientes para desarrollo y Preview y rechaza las conexiones compartidas. El aislamiento real queda pendiente de provisionamiento y configuración por el propietario. No se han exportado datos ni modificado secretos remotos.
+La configuración histórica compartía Supabase. El código exige ahora proyectos independientes para desarrollo y Preview y rechaza las conexiones compartidas. El aislamiento real queda pendiente de provisionamiento y configuración por el propietario. Durante aquella actualización no se exportaron datos ni se modificaron secretos remotos. La consolidación posterior autorizada se describe al final de este documento.
 
 ## Configuración de Vercel
 
@@ -167,8 +167,22 @@ repetir mediante el flujo transaccional.
 
 ## Alcance de esta actualización
 
-Por instrucción del propietario: solo código, sin copias de datos reales ni migraciones en Supabase compartido. Los SQL `0008`–`0011` se han verificado en PostgreSQL local con fixtures; no se ha certificado su aplicación remota. Sin las tablas opcionales, los límites son locales a la instancia y la auditoría persistente no está activa. No considerar completa una release operativa hasta resolver estas dependencias y verificar proveedores con destinatarios seguros.
+Durante la actualización de mantenimiento anterior, por instrucción del propietario: solo código, sin copias de datos reales ni migraciones en Supabase compartido. La consolidación posterior tuvo autorización independiente y no aplicó migraciones. Los SQL `0008`–`0011` se han verificado en PostgreSQL local con fixtures; no se ha certificado su aplicación remota. Sin las tablas opcionales, los límites son locales a la instancia y la auditoría persistente no está activa. No considerar completa una release operativa hasta resolver estas dependencias y verificar proveedores con destinatarios seguros.
 
 ## Cambio de topología pendiente
 
 Provisionar proyectos vacíos para desarrollo y Preview, aplicar el schema revisado exclusivamente en esos proyectos autorizados y crear identidades/datos ficticios. No clonar el censo ni los usuarios de Production. Configurar las referencias públicas de Production permite que las guardas rechacen errores de destino; no facilita sus claves privadas a Preview. Los builds no ejecutan migraciones. Los envíos no productivos solo admiten ediciones de prueba con destinatarios explícitos de prueba. Mientras falte configuración, local/Preview fallan de forma cerrada antes de abrir la conexión de la app.
+
+## Consolidación de la familia compartida
+
+Todos los administradores autorizados comparten una única familia y sus ediciones. `owner_admin_id` conserva el creador histórico, sin limitar permisos. El código no borra familias al desplegarse ni cambia cuentas de Supabase.
+
+La herramienta `scripts/consolidate-family.ts` requiere autorización operativa explícita y tres fases separadas. No usa el migrador ni aplica SQL pendiente. Los identificadores y destinos reales se proporcionan por terminal y nunca se guardan en el repositorio.
+
+1. `--mode backup`: indicar `--keep-family-id`, `--remove-family-ids` (lista separada por comas), `--expected-project-ref`, `--expected-app-origin` y `--recovery-dir`. Comprueba que Auth, Postgres y el origen coinciden con el destino autorizado y que la selección incluye exactamente las familias existentes. Bloquea brevemente escrituras durante la copia, exporta los esquemas `public` y `drizzle` con `pg_dump` y guarda dump y snapshot de datos cifrados con AES-256-GCM. Genera una clave de recuperación independiente, con permisos privados. No modifica filas.
+2. `--mode verify --recovery-dir ...`: definir `RESTORE_DATABASE_URL` con una base local vacía terminada en `_test`. Restaura la copia con `pg_restore`, compara todas las filas públicas con el snapshot y marca la copia como verificada. Solo escribe en esa base local. `PG_BIN` permite indicar el directorio de herramientas PostgreSQL compatibles con la versión del servidor.
+3. `--mode apply`: repetir exactamente la selección, destino y directorio de la primera fase. Requiere la copia restaurada y comprueba que cuentas y datos familiares no han cambiado desde ella. Borra únicamente las familias descartadas y sus dependencias mediante las claves foráneas existentes, dentro de una transacción. Compara el resultado con el grafo esperado: preserva byte a byte los valores del censo, edición, snapshots, asignaciones, tokens y logs de la familia elegida, además de las cuentas. Ante cualquier diferencia hace rollback. Los contadores y eventos de auditoría independientes no se eliminan.
+
+Ejecutar con `node --import tsx scripts/consolidate-family.ts ...`. No colocar claves, copias ni dumps en carpetas versionadas; `.recovery/` está ignorado por Git. Conservar `database.enc` y `recovery.key` de forma privada hasta acordar su retirada. La copia cubre datos y schema de aplicación; no exporta `auth`, Storage ni credenciales de proveedores. La clave de revelación original sigue siendo necesaria para descifrar enlaces restaurados.
+
+Para recuperación, descifrar la copia en memoria y restaurarla primero en una base local vacía. No restaurar sobre Production sin revisar los cambios posteriores a la copia. Después de consolidar y desplegar, comprobar `/`, `/familia` y las vistas de edición con dos administradores. La comprobación no debe enviar notificaciones, revelar receptores ni regenerar intentos.

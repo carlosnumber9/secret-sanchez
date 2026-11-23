@@ -48,3 +48,9 @@ Los SQL se versionan y se prueban únicamente en PostgreSQL local con datos sint
 Implementados contexto por petición, identidad verificada, operaciones/etapas y diagnóstico seguro con logs JSON.
 Inventario y límites en [observabilidad](./observability.md). Sin telemetría de navegador ni histórico externo.
 La comprobación manual en Vercel Preview continúa pendiente; esta actualización no certifica la configuración remota.
+
+## Familia compartida (23 de noviembre de 2026)
+
+Todos los administradores registrados tienen acceso al mismo censo y las mismas ediciones, con su propia identidad en las operaciones. La creación inicial impide abrir espacios separados por cuenta. La consolidación operativa autorizada conservó íntegramente el censo seleccionado y su edición, contactos, reparto y logs; eliminó la familia alternativa y sus dependencias, manteniendo las cuentas de acceso.
+
+La copia de los esquemas de aplicación se cifró y se restauró en PostgreSQL local antes del borrado. Se compararon todas las filas públicas con fechas normalizadas a UTC; la transacción de limpieza comprobó los valores completos del grafo conservado y de las cuentas antes de confirmar. No se aplicaron migraciones ni se enviaron notificaciones. Procedimiento en [operación](./operations.md#consolidación-de-la-familia-compartida).
