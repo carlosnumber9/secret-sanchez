@@ -1,10 +1,11 @@
 import { AppError } from "./errors";
-import { logger } from "./logger";
+import { logger, type LogFields } from "./logger";
+import type { LogEvent } from "./log-contract";
 import { ZodError } from "zod";
 
-export function handleApiError(event: string, error: unknown, fields: Record<string, string | number | boolean> = {}) {
+export function handleApiError(event: LogEvent, error: unknown, fields: LogFields = {}) {
   if (error instanceof ZodError) {
-    logger.warn(event, { ...fields, status: 400, reason: "invalid_input" });
+    logger.warn(event, { ...fields, status: 400, reason: "invalid_input", changedFields: error.issues.flatMap((issue) => issue.path.filter((part): part is string => typeof part === "string")) });
     return Response.json({ ok: false, message: "Los datos enviados no son válidos." }, { status: 400 });
   }
 

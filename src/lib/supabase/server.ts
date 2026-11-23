@@ -22,11 +22,20 @@ function getRequestCookies(request: Request) {
   });
 }
 
-export function createSupabaseServerClient({ cookies, request }: SupabaseServerContext) {
+export function createSupabaseServerClient({ cookies, request }: SupabaseServerContext, options: { signal?: AbortSignal } = {}) {
   const env = getEnv();
   let requestCookies = getRequestCookies(request);
+  const signal = options.signal;
 
   return createServerClient(env.publicSupabaseUrl, env.publicSupabaseAnonKey, {
+    ...(signal ? {
+      global: {
+        fetch: (input: Parameters<typeof fetch>[0], init?: Parameters<typeof fetch>[1]) => globalThis.fetch(input, {
+          ...init,
+          signal: init?.signal ? AbortSignal.any([signal, init.signal]) : signal
+        })
+      }
+    } : {}),
     cookies: {
       getAll() {
         return requestCookies;

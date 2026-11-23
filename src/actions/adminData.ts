@@ -1,9 +1,10 @@
+import { observe, logCommitted } from "@/lib/logger";
 import { lockOwnedFamily, type Transaction } from "@/db/locks";
 import { getDeletionImpact } from "@/db/queries/deletionImpact";
 import { updateIslandsInBatch, updatePeopleInBatch } from "@/db/bulk-family";
 import { familyRevision } from "@/lib/family-revision";
 import { and, desc, eq, inArray, ne, notExists, sql } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, tracedTransaction } from "@/db/client";
 import {
   drawEditions,
   drawParticipants,
@@ -32,52 +33,64 @@ async function lockIslandFamily(tx: Transaction, adminId: string, islandId: stri
 }
 
 export async function getAdminAppState(adminId: string, include: { census?: boolean; editions?: boolean } = {}) {
-  const family = await getActiveFamilyGroupForAdmin(adminId);
-  if (!family) return { family: null, group: null, islands: [], participants: [], editions: [], revision: null };
+  return observe("admin.state", { view: include.census === false ? "history" : "census" }, async () => {
+    const family = await getActiveFamilyGroupForAdmin(adminId);
+    if (!family) return { family: null, group: null, islands: [], participants: [], editions: [], revision: null };
 
-  const [islands, people, editions] = await Promise.all([
-    include.census === false ? Promise.resolve([]) : listFamilyIslands(family.id),
-    include.census === false ? Promise.resolve([]) : listParticipants(family.id),
-    include.editions === false ? Promise.resolve([]) : db.select().from(drawEditions).where(eq(drawEditions.familyId, family.id))
-      .orderBy(desc(drawEditions.year), desc(drawEditions.createdAt))
-  ]);
-  return { family, group: family, islands, participants: people, editions, revision: include.census === false ? null : familyRevision(islands, people) };
+    const [islands, people, editions] = await Promise.all([
+      include.census === false ? Promise.resolve([]) : listFamilyIslands(family.id),
+      include.census === false ? Promise.resolve([]) : listParticipants(family.id),
+      include.editions === false ? Promise.resolve([]) : db.select().from(drawEditions).where(eq(drawEditions.familyId, family.id))
+        .orderBy(desc(drawEditions.year), desc(drawEditions.createdAt))
+    ]);
+    return { family, group: family, islands, participants: people, editions, revision: include.census === false ? null : familyRevision(islands, people) };
+
+  }, r => ({ familyId: r.family?.id, islandCount: r.islands.length, participantCount: r.participants.length, editionCount: r.editions.length }));
 }
 
 export async function createOwnedGroup(adminId: string, input: { name: string }) {
-  const slugBase = input.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
-    .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
-  const [family] = await db.insert(families).values({
-    name: input.name,
-    slug: `${slugBase || "familia"}-${crypto.randomUUID().slice(0, 6)}`,
-    ownerAdminId: adminId
-  }).returning();
-  return family;
+  return observe("family.create", { changedFields: ["name"] }, async () => {
+    const slugBase = input.name.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+      .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    const [family] = await db.insert(families).values({
+      name: input.name,
+      slug: `${slugBase || "familia"}-${crypto.randomUUID().slice(0, 6)}`,
+      ownerAdminId: adminId
+    }).returning();
+    return family;
+
+  }, r => ({ familyId: r.id }));
 }
 
 export async function createOwnedIsland(adminId: string, input: { familyId: string; name: string; color?: string; description?: string }) {
-  return db.transaction(async (tx) => {
-    const family = await lockOwnedFamily(tx, adminId, input.familyId);
-    const [island] = await tx.insert(familyIslands).values(input).returning();
-    const editions = await tx.select({ id: drawEditions.id }).from(drawEditions).where(eq(drawEditions.familyId, family.id));
-    if (editions.length) {
-      await tx.insert(editionIslandConfigs).values(editions.map(({ id }) => ({ editionId: id, familyIslandId: island.id, enabled: true })));
-    }
-    return island;
-  });
+  return observe("island.create", { familyId: input.familyId, changedFields: Object.keys(input) }, async () => {
+    return tracedTransaction(async (tx) => {
+      const family = await lockOwnedFamily(tx, adminId, input.familyId);
+      const [island] = await tx.insert(familyIslands).values(input).returning();
+      const editions = await tx.select({ id: drawEditions.id }).from(drawEditions).where(eq(drawEditions.familyId, family.id));
+      if (editions.length) {
+        await tx.insert(editionIslandConfigs).values(editions.map(({ id }) => ({ editionId: id, familyIslandId: island.id, enabled: true })));
+      }
+      return island;
+    });
+
+  }, r => ({ islandId: r.id }));
 }
 
 export async function updateOwnedIsland(adminId: string, islandId: string, input: { name?: string; color?: string; description?: string }) {
-  return db.transaction(async (tx) => {
-    await lockIslandFamily(tx, adminId, islandId);
-    const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
-      .innerJoin(families, eq(familyIslands.familyId, families.id))
-      .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).limit(1);
-    if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
-    const [island] = await tx.update(familyIslands).set({ ...input, updatedAt: new Date() })
-      .where(eq(familyIslands.id, islandId)).returning();
-    return island;
-  });
+  return observe("island.update", { islandId, changedFields: Object.keys(input) }, async () => {
+    return tracedTransaction(async (tx) => {
+      await lockIslandFamily(tx, adminId, islandId);
+      const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
+        .innerJoin(families, eq(familyIslands.familyId, families.id))
+        .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).limit(1);
+      if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
+      const [island] = await tx.update(familyIslands).set({ ...input, updatedAt: new Date() })
+        .where(eq(familyIslands.id, islandId)).returning();
+      return island;
+    });
+
+  }, r => ({ familyId: r.familyId }));
 }
 
 export async function createOwnedParticipant(adminId: string, input: {
@@ -89,36 +102,39 @@ export async function createOwnedParticipant(adminId: string, input: {
   preferredChannel?: "email" | "whatsapp" | "both" | null;
   isBaby: boolean;
 }) {
-  return db.transaction(async (tx) => {
-    await lockOwnedFamily(tx, adminId, input.familyId);
-    const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
-      .innerJoin(families, eq(familyIslands.familyId, families.id))
-      .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, input.familyId), eq(families.ownerAdminId, adminId))).limit(1);
-    if (!owned) throw new AppError(403, "ISLAND_FORBIDDEN", "No puedes añadir personas a este núcleo.");
+  return observe("participant.create", { familyId: input.familyId, islandId: input.familyIslandId, isBaby: input.isBaby }, async () => {
+    return tracedTransaction(async (tx) => {
+      await lockOwnedFamily(tx, adminId, input.familyId);
+      const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
+        .innerJoin(families, eq(familyIslands.familyId, families.id))
+        .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, input.familyId), eq(families.ownerAdminId, adminId))).limit(1);
+      if (!owned) throw new AppError(403, "ISLAND_FORBIDDEN", "No puedes añadir personas a este núcleo.");
 
-    const [lastPosition] = await tx.select({ value: sql<number>`coalesce(max(${participants.sortOrder}), -1)::int` })
-      .from(participants).where(eq(participants.familyIslandId, input.familyIslandId));
-    const [participant] = await tx.insert(participants).values({
-      ...input,
-      email: input.isBaby ? null : input.email || null,
-      phone: input.isBaby ? null : input.phone || null,
-      preferredChannel: input.isBaby ? null : input.preferredChannel ?? "email",
-      sortOrder: lastPosition.value + 1
-    }).returning();
-    const editions = await tx.select({ id: drawEditions.id }).from(drawEditions).where(eq(drawEditions.familyId, input.familyId));
-    if (editions.length) {
-      await tx.insert(editionParticipants).values(editions.map(({ id }) => ({
-        editionId: id,
-        participantId: participant.id,
-        enabled: false,
-        canGive: !participant.isBaby,
-        canReceive: true,
-        isBaby: participant.isBaby,
-        preferredChannel: participant.isBaby ? null : participant.preferredChannel
-      })));
-    }
-    return participant;
-  });
+      const [lastPosition] = await tx.select({ value: sql<number>`coalesce(max(${participants.sortOrder}), -1)::int` })
+        .from(participants).where(eq(participants.familyIslandId, input.familyIslandId));
+      const [participant] = await tx.insert(participants).values({
+        ...input,
+        email: input.isBaby ? null : input.email || null,
+        phone: input.isBaby ? null : input.phone || null,
+        preferredChannel: input.isBaby ? null : input.preferredChannel ?? "email",
+        sortOrder: lastPosition.value + 1
+      }).returning();
+      const editions = await tx.select({ id: drawEditions.id }).from(drawEditions).where(eq(drawEditions.familyId, input.familyId));
+      if (editions.length) {
+        await tx.insert(editionParticipants).values(editions.map(({ id }) => ({
+          editionId: id,
+          participantId: participant.id,
+          enabled: false,
+          canGive: !participant.isBaby,
+          canReceive: true,
+          isBaby: participant.isBaby,
+          preferredChannel: participant.isBaby ? null : participant.preferredChannel
+        })));
+      }
+      return participant;
+    });
+
+  }, r => ({ participantId: r.id }));
 }
 
 export async function updateOwnedFamilyLayout(adminId: string, familyId: string, layout: Array<{
@@ -127,67 +143,70 @@ export async function updateOwnedFamilyLayout(adminId: string, familyId: string,
   sortOrder: number;
   isBaby: boolean;
 }>) {
-  return db.transaction(async (tx) => {
-    const [family] = await tx.select({ id: families.id }).from(families)
-      .where(and(eq(families.id, familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
-    if (!family) throw new AppError(404, "FAMILY_NOT_FOUND", "No se ha encontrado la familia.");
+  return observe("family.layout", { familyId, participantCount: layout.length, changedFields: ["layout"] }, async () => {
+    return tracedTransaction(async (tx) => {
+      const [family] = await tx.select({ id: families.id }).from(families)
+        .where(and(eq(families.id, familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+      if (!family) throw new AppError(404, "FAMILY_NOT_FOUND", "No se ha encontrado la familia.");
 
-    const islandRows = await tx.select({ id: familyIslands.id }).from(familyIslands)
-      .where(eq(familyIslands.familyId, familyId));
-    const participantRows = await tx.select().from(participants)
-      .where(eq(participants.familyId, familyId)).for("update");
-    const islandIds = new Set(islandRows.map(({ id }) => id));
-    const currentById = new Map(participantRows.map((participant) => [participant.id, participant]));
-    if (layout.length !== participantRows.length || layout.some((item) => !currentById.has(item.id))) {
-      throw new AppError(409, "FAMILY_LAYOUT_STALE", "La familia ha cambiado. Recarga la página antes de guardar.");
-    }
-    if (layout.some((item) => !islandIds.has(item.familyIslandId))) {
-      throw new AppError(422, "ISLAND_MISMATCH", "Una de las unidades ya no pertenece a esta familia.");
-    }
+      const islandRows = await tx.select({ id: familyIslands.id }).from(familyIslands)
+        .where(eq(familyIslands.familyId, familyId));
+      const participantRows = await tx.select().from(participants)
+        .where(eq(participants.familyId, familyId)).for("update");
+      const islandIds = new Set(islandRows.map(({ id }) => id));
+      const currentById = new Map(participantRows.map((participant) => [participant.id, participant]));
+      if (layout.length !== participantRows.length || layout.some((item) => !currentById.has(item.id))) {
+        throw new AppError(409, "FAMILY_LAYOUT_STALE", "La familia ha cambiado. Recarga la página antes de guardar.");
+      }
+      if (layout.some((item) => !islandIds.has(item.familyIslandId))) {
+        throw new AppError(422, "ISLAND_MISMATCH", "Una de las unidades ya no pertenece a esta familia.");
+      }
 
-    const changedBabyIds: string[] = [];
-    const updated = [];
-    for (const item of layout) {
-      const current = currentById.get(item.id)!;
-      if (current.isBaby !== item.isBaby) changedBabyIds.push(item.id);
-      const babyValues = item.isBaby ? { email: null, phone: null, preferredChannel: null } : {};
-      const [participant] = await tx.update(participants).set({
-        familyIslandId: item.familyIslandId,
-        sortOrder: item.sortOrder,
-        isBaby: item.isBaby,
-        ...babyValues,
-        updatedAt: new Date()
-      }).where(and(eq(participants.id, item.id), eq(participants.familyId, familyId))).returning();
-      updated.push(participant);
-    }
+      const changedBabyIds: string[] = [];
+      const updated = [];
+      for (const item of layout) {
+        const current = currentById.get(item.id)!;
+        if (current.isBaby !== item.isBaby) changedBabyIds.push(item.id);
+        const babyValues = item.isBaby ? { email: null, phone: null, preferredChannel: null } : {};
+        const [participant] = await tx.update(participants).set({
+          familyIslandId: item.familyIslandId,
+          sortOrder: item.sortOrder,
+          isBaby: item.isBaby,
+          ...babyValues,
+          updatedAt: new Date()
+        }).where(and(eq(participants.id, item.id), eq(participants.familyId, familyId))).returning();
+        updated.push(participant);
+      }
 
-    if (changedBabyIds.length) {
-      const activeDrawEditions = await tx.select({ editionId: draws.editionId }).from(draws)
-        .innerJoin(drawEditions, eq(draws.editionId, drawEditions.id))
-        .where(and(eq(drawEditions.familyId, familyId), ne(draws.status, "revoked")));
-      const lockedEditionIds = new Set(activeDrawEditions.map(({ editionId }) => editionId));
-      const editionRows = await tx.select({ id: drawEditions.id }).from(drawEditions)
-        .where(eq(drawEditions.familyId, familyId));
-      for (const participantId of changedBabyIds) {
-        const participant = updated.find(({ id }) => id === participantId)!;
-        for (const edition of editionRows) {
-          if (lockedEditionIds.has(edition.id)) continue;
-          await tx.update(editionParticipants).set({
-            isBaby: participant.isBaby,
-            canGive: !participant.isBaby,
-            canReceive: true,
-            preferredChannel: participant.isBaby ? null : participant.preferredChannel,
-            updatedAt: new Date()
-          }).where(and(
-            eq(editionParticipants.editionId, edition.id),
-            eq(editionParticipants.participantId, participantId)
-          ));
+      if (changedBabyIds.length) {
+        const activeDrawEditions = await tx.select({ editionId: draws.editionId }).from(draws)
+          .innerJoin(drawEditions, eq(draws.editionId, drawEditions.id))
+          .where(and(eq(drawEditions.familyId, familyId), ne(draws.status, "revoked")));
+        const lockedEditionIds = new Set(activeDrawEditions.map(({ editionId }) => editionId));
+        const editionRows = await tx.select({ id: drawEditions.id }).from(drawEditions)
+          .where(eq(drawEditions.familyId, familyId));
+        for (const participantId of changedBabyIds) {
+          const participant = updated.find(({ id }) => id === participantId)!;
+          for (const edition of editionRows) {
+            if (lockedEditionIds.has(edition.id)) continue;
+            await tx.update(editionParticipants).set({
+              isBaby: participant.isBaby,
+              canGive: !participant.isBaby,
+              canReceive: true,
+              preferredChannel: participant.isBaby ? null : participant.preferredChannel,
+              updatedAt: new Date()
+            }).where(and(
+              eq(editionParticipants.editionId, edition.id),
+              eq(editionParticipants.participantId, participantId)
+            ));
+          }
         }
       }
-    }
 
-    return updated;
-  });
+      return updated;
+    });
+
+  }, r => ({ updatedCount: r.length }));
 }
 
 type FamilyDraftInput = {
@@ -218,115 +237,120 @@ function sameIds(actual: string[], expected: string[]) {
 }
 
 export async function saveOwnedFamilyDraft(adminId: string, familyId: string, draft: FamilyDraftInput) {
-  return db.transaction(async (tx) => {
-    const [family] = await tx.select({ id: families.id }).from(families)
-      .where(and(eq(families.id, familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
-    if (!family) throw new AppError(404, "FAMILY_NOT_FOUND", "No se ha encontrado la familia.");
+  return observe("family.draft", { familyId, participantCount: draft.participants.length, islandCount: draft.islands.length, deletedCount: draft.confirmedParticipantDeletionIds.length + draft.confirmedIslandDeletionIds.length }, async () => {
+    return tracedTransaction(async (tx) => {
+      const [family] = await tx.select({ id: families.id }).from(families)
+        .where(and(eq(families.id, familyId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+      if (!family) throw new AppError(404, "FAMILY_NOT_FOUND", "No se ha encontrado la familia.");
 
-    const currentIslands = await tx.select().from(familyIslands)
-      .where(eq(familyIslands.familyId, familyId)).for("update");
-    const currentParticipants = await tx.select().from(participants)
-      .where(eq(participants.familyId, familyId)).for("update");
-    if (draft.revision !== familyRevision(currentIslands, currentParticipants)) {
-      throw new AppError(409, "FAMILY_DRAFT_STALE", "La familia cambió en otra operación. Conserva tus cambios y recarga antes de guardar.");
-    }
-    const currentIslandIds = new Set(currentIslands.map(({ id }) => id));
-    const currentParticipantIds = new Set(currentParticipants.map(({ id }) => id));
-    const keptIslandIds = draft.islands.flatMap(({ id }) => id ? [id] : []);
-    const keptParticipantIds = draft.participants.flatMap(({ id }) => id ? [id] : []);
+      const currentIslands = await tx.select().from(familyIslands)
+        .where(eq(familyIslands.familyId, familyId)).for("update");
+      const currentParticipants = await tx.select().from(participants)
+        .where(eq(participants.familyId, familyId)).for("update");
+      if (draft.revision !== familyRevision(currentIslands, currentParticipants)) {
+        throw new AppError(409, "FAMILY_DRAFT_STALE", "La familia cambió en otra operación. Conserva tus cambios y recarga antes de guardar.");
+      }
+      const currentIslandIds = new Set(currentIslands.map(({ id }) => id));
+      const currentParticipantIds = new Set(currentParticipants.map(({ id }) => id));
+      const keptIslandIds = draft.islands.flatMap(({ id }) => id ? [id] : []);
+      const keptParticipantIds = draft.participants.flatMap(({ id }) => id ? [id] : []);
 
-    if (keptIslandIds.some((id) => !currentIslandIds.has(id)) || keptParticipantIds.some((id) => !currentParticipantIds.has(id))) {
-      throw new AppError(409, "FAMILY_DRAFT_STALE", "La familia ha cambiado. Recarga la página antes de guardar.");
-    }
+      if (keptIslandIds.some((id) => !currentIslandIds.has(id)) || keptParticipantIds.some((id) => !currentParticipantIds.has(id))) {
+        throw new AppError(409, "FAMILY_DRAFT_STALE", "La familia ha cambiado. Recarga la página antes de guardar.");
+      }
 
-    const removedIslandIds = currentIslands.map(({ id }) => id).filter((id) => !keptIslandIds.includes(id));
-    const removedParticipantIds = currentParticipants.map(({ id }) => id).filter((id) => !keptParticipantIds.includes(id));
-    if (!sameIds(removedIslandIds, draft.confirmedIslandDeletionIds)
-      || !sameIds(removedParticipantIds, draft.confirmedParticipantDeletionIds)) {
-      throw new AppError(409, "FAMILY_DELETION_NOT_CONFIRMED", "Confirma de nuevo los elementos que quieres eliminar.");
-    }
+      const removedIslandIds = currentIslands.map(({ id }) => id).filter((id) => !keptIslandIds.includes(id));
+      const removedParticipantIds = currentParticipants.map(({ id }) => id).filter((id) => !keptParticipantIds.includes(id));
+      if (!sameIds(removedIslandIds, draft.confirmedIslandDeletionIds)
+        || !sameIds(removedParticipantIds, draft.confirmedParticipantDeletionIds)) {
+        throw new AppError(409, "FAMILY_DELETION_NOT_CONFIRMED", "Confirma de nuevo los elementos que quieres eliminar.");
+      }
 
-    const editions = await tx.select({ id: drawEditions.id }).from(drawEditions)
-      .where(eq(drawEditions.familyId, familyId));
-    const currentIslandById = new Map(currentIslands.map((island) => [island.id, island]));
-    const preparedIslands = draft.islands.map((item) => ({ ...item, id: item.id ?? crypto.randomUUID(), isNew: !item.id }));
-    const islandIdByClientId = new Map(preparedIslands.map((item) => [item.clientId, item.id]));
-    const newIslands = preparedIslands.filter((item) => item.isNew);
-    const insertedIslands = newIslands.length ? await tx.insert(familyIslands).values(newIslands.map((item) => ({ id: item.id, familyId, name: item.name, color: item.color }))).returning() : [];
-    const changedIslands = preparedIslands.filter((item) => !item.isNew && (currentIslandById.get(item.id)!.name !== item.name || currentIslandById.get(item.id)!.color !== item.color));
-    const updatedIslands = await updateIslandsInBatch(tx, familyId, changedIslands);
-    const savedIslandById = new Map([...currentIslands, ...insertedIslands, ...updatedIslands].map((item) => [item.id, item]));
-    const savedIslands = preparedIslands.map((item) => ({ ...savedIslandById.get(item.id)!, clientId: item.clientId }));
-    const islandConfigs = newIslands.flatMap((island) => editions.map((edition) => ({ editionId: edition.id, familyIslandId: island.id, enabled: true })));
-    for (let offset = 0; offset < islandConfigs.length; offset += 500) await tx.insert(editionIslandConfigs).values(islandConfigs.slice(offset, offset + 500));
+      const editions = await tx.select({ id: drawEditions.id }).from(drawEditions)
+        .where(eq(drawEditions.familyId, familyId));
+      const currentIslandById = new Map(currentIslands.map((island) => [island.id, island]));
+      const preparedIslands = draft.islands.map((item) => ({ ...item, id: item.id ?? crypto.randomUUID(), isNew: !item.id }));
+      const islandIdByClientId = new Map(preparedIslands.map((item) => [item.clientId, item.id]));
+      const newIslands = preparedIslands.filter((item) => item.isNew);
+      const insertedIslands = newIslands.length ? await tx.insert(familyIslands).values(newIslands.map((item) => ({ id: item.id, familyId, name: item.name, color: item.color }))).returning() : [];
+      const changedIslands = preparedIslands.filter((item) => !item.isNew && (currentIslandById.get(item.id)!.name !== item.name || currentIslandById.get(item.id)!.color !== item.color));
+      const updatedIslands = await updateIslandsInBatch(tx, familyId, changedIslands);
+      const savedIslandById = new Map([...currentIslands, ...insertedIslands, ...updatedIslands].map((item) => [item.id, item]));
+      const savedIslands = preparedIslands.map((item) => ({ ...savedIslandById.get(item.id)!, clientId: item.clientId }));
+      const islandConfigs = newIslands.flatMap((island) => editions.map((edition) => ({ editionId: edition.id, familyIslandId: island.id, enabled: true })));
+      for (let offset = 0; offset < islandConfigs.length; offset += 500) await tx.insert(editionIslandConfigs).values(islandConfigs.slice(offset, offset + 500));
 
-    if (removedParticipantIds.length) {
-      await lockFamilyEditions(tx, familyId);
-      await deleteDrawsForParticipants(tx, removedParticipantIds);
-      await tx.delete(participants).where(inArray(participants.id, removedParticipantIds));
-    }
+      if (removedParticipantIds.length) {
+        await lockFamilyEditions(tx, familyId);
+        await deleteDrawsForParticipants(tx, removedParticipantIds);
+        await tx.delete(participants).where(inArray(participants.id, removedParticipantIds));
+      }
 
-    const currentById = new Map(currentParticipants.map((participant) => [participant.id, participant]));
-    const preparedPeople = draft.participants.map((item) => {
-      const familyIslandId = islandIdByClientId.get(item.familyIslandClientId);
-      if (!familyIslandId) throw new AppError(422, "ISLAND_MISMATCH", "Una persona apunta a una unidad inexistente.");
-      return { item, values: {
-        id: item.id ?? crypto.randomUUID(), familyId, familyIslandId, name: item.name,
-        email: item.isBaby ? null : item.email || null, phone: item.isBaby ? null : item.phone || null,
-        preferredChannel: item.isBaby ? null : item.preferredChannel, isBaby: item.isBaby, sortOrder: item.sortOrder
-      } };
+      const currentById = new Map(currentParticipants.map((participant) => [participant.id, participant]));
+      const preparedPeople = draft.participants.map((item) => {
+        const familyIslandId = islandIdByClientId.get(item.familyIslandClientId);
+        if (!familyIslandId) throw new AppError(422, "ISLAND_MISMATCH", "Una persona apunta a una unidad inexistente.");
+        return { item, values: {
+          id: item.id ?? crypto.randomUUID(), familyId, familyIslandId, name: item.name,
+          email: item.isBaby ? null : item.email || null, phone: item.isBaby ? null : item.phone || null,
+          preferredChannel: item.isBaby ? null : item.preferredChannel, isBaby: item.isBaby, sortOrder: item.sortOrder
+        } };
+      });
+      const editable = ["familyIslandId", "name", "email", "phone", "preferredChannel", "isBaby", "sortOrder"] as const;
+      const changedPeople = preparedPeople.filter(({ item, values }) => item.id && editable.some((key) => currentById.get(item.id!)![key] !== values[key]));
+      const newPeople = preparedPeople.filter(({ item }) => !item.id);
+      const updatedPeople = await updatePeopleInBatch(tx, familyId, changedPeople.map(({ values }) => values));
+      const insertedPeople = newPeople.length ? await tx.insert(participants).values(newPeople.map(({ values }) => values)).returning() : [];
+      const savedPersonById = new Map([...currentParticipants, ...insertedPeople, ...updatedPeople].map((person) => [person.id, person]));
+      const savedParticipants = preparedPeople.map(({ item, values }) => ({ ...savedPersonById.get(values.id)!, clientId: item.clientId, familyIslandClientId: item.familyIslandClientId }));
+      const personConfigs = insertedPeople.flatMap((person) => editions.map((edition) => ({
+        editionId: edition.id, participantId: person.id, enabled: false, canGive: !person.isBaby,
+        canReceive: true, isBaby: person.isBaby, preferredChannel: person.preferredChannel
+      })));
+      for (let offset = 0; offset < personConfigs.length; offset += 500) await tx.insert(editionParticipants).values(personConfigs.slice(offset, offset + 500));
+      const changedBabyIds = changedPeople.filter(({ item, values }) => currentById.get(item.id!)!.isBaby !== values.isBaby).map(({ values }) => values.id);
+      if (changedBabyIds.length && editions.length) {
+        await tx.update(editionParticipants).set({
+          isBaby: participants.isBaby, canGive: sql`not ${participants.isBaby}`, canReceive: true,
+          preferredChannel: sql`case when ${participants.isBaby} or ${participants.preferredChannel} = 'manual' then null else ${participants.preferredChannel} end`, updatedAt: new Date()
+        }).from(participants).where(and(
+          eq(editionParticipants.participantId, participants.id), inArray(participants.id, changedBabyIds),
+          inArray(editionParticipants.editionId, editions.map(({ id }) => id)),
+          notExists(tx.select({ id: draws.id }).from(draws).where(and(eq(draws.editionId, editionParticipants.editionId), ne(draws.status, "revoked"))))
+        ));
+      }
+
+      if (removedIslandIds.length) {
+        await tx.delete(familyIslands).where(inArray(familyIslands.id, removedIslandIds));
+      }
+
+      logCommitted("family.draft_changes", { familyId, createdCount: newIslands.length + newPeople.length, updatedCount: changedIslands.length + changedPeople.length, deletedCount: removedIslandIds.length + removedParticipantIds.length, affectedEditions: editions.length });
+
+      return {
+        revision: familyRevision(savedIslands, savedParticipants),
+        islands: savedIslands.map((island) => ({
+          id: island.id,
+          clientId: island.clientId,
+          name: island.name,
+          color: island.color ?? "#d6a84f",
+          participants: savedParticipants
+            .filter(({ familyIslandId }) => familyIslandId === island.id)
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map((participant) => ({
+              id: participant.id,
+              clientId: participant.clientId,
+              name: participant.name,
+              email: participant.email ?? "",
+              phone: participant.phone ?? "",
+              preferredChannel: participant.preferredChannel === "manual" ? null : participant.preferredChannel,
+              isBaby: participant.isBaby,
+              sortOrder: participant.sortOrder
+            }))
+        }))
+      };
     });
-    const editable = ["familyIslandId", "name", "email", "phone", "preferredChannel", "isBaby", "sortOrder"] as const;
-    const changedPeople = preparedPeople.filter(({ item, values }) => item.id && editable.some((key) => currentById.get(item.id!)![key] !== values[key]));
-    const newPeople = preparedPeople.filter(({ item }) => !item.id);
-    const updatedPeople = await updatePeopleInBatch(tx, familyId, changedPeople.map(({ values }) => values));
-    const insertedPeople = newPeople.length ? await tx.insert(participants).values(newPeople.map(({ values }) => values)).returning() : [];
-    const savedPersonById = new Map([...currentParticipants, ...insertedPeople, ...updatedPeople].map((person) => [person.id, person]));
-    const savedParticipants = preparedPeople.map(({ item, values }) => ({ ...savedPersonById.get(values.id)!, clientId: item.clientId, familyIslandClientId: item.familyIslandClientId }));
-    const personConfigs = insertedPeople.flatMap((person) => editions.map((edition) => ({
-      editionId: edition.id, participantId: person.id, enabled: false, canGive: !person.isBaby,
-      canReceive: true, isBaby: person.isBaby, preferredChannel: person.preferredChannel
-    })));
-    for (let offset = 0; offset < personConfigs.length; offset += 500) await tx.insert(editionParticipants).values(personConfigs.slice(offset, offset + 500));
-    const changedBabyIds = changedPeople.filter(({ item, values }) => currentById.get(item.id!)!.isBaby !== values.isBaby).map(({ values }) => values.id);
-    if (changedBabyIds.length && editions.length) {
-      await tx.update(editionParticipants).set({
-        isBaby: participants.isBaby, canGive: sql`not ${participants.isBaby}`, canReceive: true,
-        preferredChannel: sql`case when ${participants.isBaby} or ${participants.preferredChannel} = 'manual' then null else ${participants.preferredChannel} end`, updatedAt: new Date()
-      }).from(participants).where(and(
-        eq(editionParticipants.participantId, participants.id), inArray(participants.id, changedBabyIds),
-        inArray(editionParticipants.editionId, editions.map(({ id }) => id)),
-        notExists(tx.select({ id: draws.id }).from(draws).where(and(eq(draws.editionId, editionParticipants.editionId), ne(draws.status, "revoked"))))
-      ));
-    }
 
-    if (removedIslandIds.length) {
-      await tx.delete(familyIslands).where(inArray(familyIslands.id, removedIslandIds));
-    }
-
-    return {
-      revision: familyRevision(savedIslands, savedParticipants),
-      islands: savedIslands.map((island) => ({
-        id: island.id,
-        clientId: island.clientId,
-        name: island.name,
-        color: island.color ?? "#d6a84f",
-        participants: savedParticipants
-          .filter(({ familyIslandId }) => familyIslandId === island.id)
-          .sort((a, b) => a.sortOrder - b.sortOrder)
-          .map((participant) => ({
-            id: participant.id,
-            clientId: participant.clientId,
-            name: participant.name,
-            email: participant.email ?? "",
-            phone: participant.phone ?? "",
-            preferredChannel: participant.preferredChannel === "manual" ? null : participant.preferredChannel,
-            isBaby: participant.isBaby,
-            sortOrder: participant.sortOrder
-          }))
-      }))
-    };
-  });
+  }, r => ({ islandCount: r.islands.length, participantCount: r.islands.reduce((n,i) => n + i.participants.length, 0) }));
 }
 
 export async function updateOwnedParticipant(adminId: string, participantId: string, input: Partial<{
@@ -337,53 +361,59 @@ export async function updateOwnedParticipant(adminId: string, participantId: str
   preferredChannel: "email" | "whatsapp" | "both" | null;
   isBaby: boolean;
 }>) {
-  return db.transaction(async (tx) => {
-    await lockParticipantFamily(tx, adminId, participantId);
-    const [owned] = await tx.select({ participant: participants }).from(participants)
-      .innerJoin(families, eq(participants.familyId, families.id))
-      .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).limit(1);
-    if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
-    if (input.familyIslandId) {
-      const [target] = await tx.select({ id: familyIslands.id }).from(familyIslands)
-        .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, owned.participant.familyId))).limit(1);
-      if (!target) throw new AppError(422, "ISLAND_MISMATCH", "El núcleo no pertenece a esta familia.");
-    }
-    const effectiveBaby = input.isBaby ?? owned.participant.isBaby;
-    const values = effectiveBaby
-      ? { ...input, email: null, phone: null, preferredChannel: null, updatedAt: new Date() }
-      : { ...input, updatedAt: new Date() };
-    const [participant] = await tx.update(participants).set(values)
-      .where(eq(participants.id, participantId)).returning();
-
-    if (input.isBaby !== undefined) {
-      const editionRows = await tx.select({ id: drawEditions.id }).from(drawEditions)
-        .where(eq(drawEditions.familyId, participant.familyId));
-      const currentDrawRows = await tx.select({ editionId: draws.editionId }).from(draws)
-        .where(ne(draws.status, "revoked"));
-      const lockedEditionIds = new Set(currentDrawRows.map(({ editionId }) => editionId));
-      for (const edition of editionRows) {
-        if (lockedEditionIds.has(edition.id)) continue;
-        await tx.update(editionParticipants).set({
-          isBaby: participant.isBaby,
-          canGive: participant.isBaby ? false : true,
-          canReceive: true,
-          preferredChannel: participant.isBaby ? null : participant.preferredChannel,
-          updatedAt: new Date()
-        }).where(and(eq(editionParticipants.editionId, edition.id), eq(editionParticipants.participantId, participant.id)));
+  return observe("participant.update", { participantId, changedFields: Object.keys(input) }, async () => {
+    return tracedTransaction(async (tx) => {
+      await lockParticipantFamily(tx, adminId, participantId);
+      const [owned] = await tx.select({ participant: participants }).from(participants)
+        .innerJoin(families, eq(participants.familyId, families.id))
+        .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).limit(1);
+      if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
+      if (input.familyIslandId) {
+        const [target] = await tx.select({ id: familyIslands.id }).from(familyIslands)
+          .where(and(eq(familyIslands.id, input.familyIslandId), eq(familyIslands.familyId, owned.participant.familyId))).limit(1);
+        if (!target) throw new AppError(422, "ISLAND_MISMATCH", "El núcleo no pertenece a esta familia.");
       }
-    }
-    return participant;
-  });
+      const effectiveBaby = input.isBaby ?? owned.participant.isBaby;
+      const values = effectiveBaby
+        ? { ...input, email: null, phone: null, preferredChannel: null, updatedAt: new Date() }
+        : { ...input, updatedAt: new Date() };
+      const [participant] = await tx.update(participants).set(values)
+        .where(eq(participants.id, participantId)).returning();
+
+      if (input.isBaby !== undefined) {
+        const editionRows = await tx.select({ id: drawEditions.id }).from(drawEditions)
+          .where(eq(drawEditions.familyId, participant.familyId));
+        const currentDrawRows = await tx.select({ editionId: draws.editionId }).from(draws)
+          .where(ne(draws.status, "revoked"));
+        const lockedEditionIds = new Set(currentDrawRows.map(({ editionId }) => editionId));
+        for (const edition of editionRows) {
+          if (lockedEditionIds.has(edition.id)) continue;
+          await tx.update(editionParticipants).set({
+            isBaby: participant.isBaby,
+            canGive: participant.isBaby ? false : true,
+            canReceive: true,
+            preferredChannel: participant.isBaby ? null : participant.preferredChannel,
+            updatedAt: new Date()
+          }).where(and(eq(editionParticipants.editionId, edition.id), eq(editionParticipants.participantId, participant.id)));
+        }
+      }
+      return participant;
+    });
+
+  }, r => ({ familyId: r.familyId, islandId: r.familyIslandId }));
 }
 
 export async function getParticipantDeletionImpact(adminId: string, participantId: string) {
-  const [owned] = await db.select({ participant: participants }).from(participants)
-    .innerJoin(families, eq(participants.familyId, families.id))
-    .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).limit(1);
-  if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
+  return observe("participant.deletion_impact", { participantId }, async () => {
+    const [owned] = await db.select({ participant: participants }).from(participants)
+      .innerJoin(families, eq(participants.familyId, families.id))
+      .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).limit(1);
+    if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
 
-  const stats = await getDeletionImpact([participantId]);
-  return { participant: owned.participant, ...stats };
+    const stats = await getDeletionImpact([participantId]);
+    return { participant: owned.participant, ...stats };
+
+  }, r => ({ affectedEditions: r.editions, affectedDraws: r.draws, affectedAssignments: r.assignments, affectedNotifications: r.notifications, openedCount: r.opened }));
 }
 
 async function deleteDrawsForParticipants(tx: Parameters<Parameters<typeof db.transaction>[0]>[0], participantIds: string[]) {
@@ -394,6 +424,7 @@ async function deleteDrawsForParticipants(tx: Parameters<Parameters<typeof db.tr
   const drawIds = impacted.map(({ drawId }) => drawId);
   if (drawIds.length) await tx.delete(draws).where(inArray(draws.id, drawIds));
   const editionIds = [...new Set(impacted.map(({ editionId }) => editionId))];
+  logCommitted("family.history_deleted", { affectedDraws: drawIds.length, affectedEditions: editionIds.length });
   for (const editionId of editionIds) {
     const [current] = await tx.select({ status: draws.status }).from(draws)
       .where(and(eq(draws.editionId, editionId), ne(draws.status, "revoked"))).limit(1);
@@ -411,30 +442,36 @@ async function lockFamilyEditions(tx: Parameters<Parameters<typeof db.transactio
 }
 
 export async function deleteOwnedParticipant(adminId: string, participantId: string, confirmation: string) {
-  if (confirmation !== "ELIMINAR PERSONA") throw new AppError(400, "CONFIRMATION_REQUIRED", "Escribe ELIMINAR PERSONA para confirmar.");
-  return db.transaction(async (tx) => {
-    await lockParticipantFamily(tx, adminId, participantId);
-    const [owned] = await tx.select({ participant: participants }).from(participants)
-      .innerJoin(families, eq(participants.familyId, families.id))
-      .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
-    if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
-    await lockFamilyEditions(tx, owned.participant.familyId);
-    const affectedEditionIds = await deleteDrawsForParticipants(tx, [participantId]);
-    await tx.delete(participants).where(eq(participants.id, participantId));
-    return { deletedParticipantId: participantId, affectedEditionIds };
-  });
+  return observe("participant.delete", { participantId }, async () => {
+    if (confirmation !== "ELIMINAR PERSONA") throw new AppError(400, "CONFIRMATION_REQUIRED", "Escribe ELIMINAR PERSONA para confirmar.");
+    return tracedTransaction(async (tx) => {
+      await lockParticipantFamily(tx, adminId, participantId);
+      const [owned] = await tx.select({ participant: participants }).from(participants)
+        .innerJoin(families, eq(participants.familyId, families.id))
+        .where(and(eq(participants.id, participantId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+      if (!owned) throw new AppError(404, "PARTICIPANT_NOT_FOUND", "No se ha encontrado la persona.");
+      await lockFamilyEditions(tx, owned.participant.familyId);
+      const affectedEditionIds = await deleteDrawsForParticipants(tx, [participantId]);
+      await tx.delete(participants).where(eq(participants.id, participantId));
+      return { deletedParticipantId: participantId, affectedEditionIds };
+    });
+
+  }, r => ({ affectedEditions: r.affectedEditionIds.length }));
 }
 
 export async function getIslandDeletionImpact(adminId: string, islandId: string) {
-  const [owned] = await db.select({ island: familyIslands }).from(familyIslands)
-    .innerJoin(families, eq(familyIslands.familyId, families.id))
-    .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).limit(1);
-  if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
-  const people = await db.select({ id: participants.id }).from(participants).where(eq(participants.familyIslandId, islandId));
-  const participantIds = people.map(({ id }) => id);
-  if (!participantIds.length) return { island: owned.island, participants: 0, draws: 0, notifications: 0, opened: 0 };
-  const stats = await getDeletionImpact(participantIds);
-  return { island: owned.island, participants: participantIds.length, ...stats };
+  return observe("island.deletion_impact", { islandId }, async () => {
+    const [owned] = await db.select({ island: familyIslands }).from(familyIslands)
+      .innerJoin(families, eq(familyIslands.familyId, families.id))
+      .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).limit(1);
+    if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
+    const people = await db.select({ id: participants.id }).from(participants).where(eq(participants.familyIslandId, islandId));
+    const participantIds = people.map(({ id }) => id);
+    if (!participantIds.length) return { island: owned.island, participants: 0, draws: 0, notifications: 0, opened: 0 };
+    const stats = await getDeletionImpact(participantIds);
+    return { island: owned.island, participants: participantIds.length, ...stats };
+
+  }, r => ({ affectedParticipants: r.participants, affectedDraws: r.draws, affectedNotifications: r.notifications, openedCount: r.opened }));
 }
 
 export async function deleteOwnedIsland(adminId: string, islandId: string, input: {
@@ -442,36 +479,39 @@ export async function deleteOwnedIsland(adminId: string, islandId: string, input
   targetIslandId?: string;
   confirmation?: string;
 }) {
-  return db.transaction(async (tx) => {
-    await lockIslandFamily(tx, adminId, islandId);
-    const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
-      .innerJoin(families, eq(familyIslands.familyId, families.id))
-      .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
-    if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
-    const people = await tx.select({ id: participants.id, sortOrder: participants.sortOrder }).from(participants)
-      .where(eq(participants.familyIslandId, islandId)).orderBy(participants.sortOrder, participants.createdAt);
+  return observe("island.delete", { islandId, strategy: input.strategy, targetIslandId: input.targetIslandId }, async () => {
+    return tracedTransaction(async (tx) => {
+      await lockIslandFamily(tx, adminId, islandId);
+      const [owned] = await tx.select({ island: familyIslands }).from(familyIslands)
+        .innerJoin(families, eq(familyIslands.familyId, families.id))
+        .where(and(eq(familyIslands.id, islandId), eq(families.ownerAdminId, adminId))).for("update").limit(1);
+      if (!owned) throw new AppError(404, "ISLAND_NOT_FOUND", "No se ha encontrado el núcleo.");
+      const people = await tx.select({ id: participants.id, sortOrder: participants.sortOrder }).from(participants)
+        .where(eq(participants.familyIslandId, islandId)).orderBy(participants.sortOrder, participants.createdAt);
 
-    if (input.strategy === "move") {
-      if (!input.targetIslandId || input.targetIslandId === islandId) throw new AppError(422, "TARGET_ISLAND_REQUIRED", "Elige otro núcleo de destino.");
-      const [target] = await tx.select({ id: familyIslands.id }).from(familyIslands)
-        .where(and(eq(familyIslands.id, input.targetIslandId), eq(familyIslands.familyId, owned.island.familyId))).limit(1);
-      if (!target) throw new AppError(422, "TARGET_ISLAND_INVALID", "El núcleo de destino no pertenece a esta familia.");
-      const [lastPosition] = await tx.select({ value: sql<number>`coalesce(max(${participants.sortOrder}), -1)::int` })
-        .from(participants).where(eq(participants.familyIslandId, target.id));
-      for (const [index, person] of people.entries()) {
-        await tx.update(participants).set({
-          familyIslandId: target.id,
-          sortOrder: lastPosition.value + index + 1,
-          updatedAt: new Date()
-        }).where(eq(participants.id, person.id));
+      if (input.strategy === "move") {
+        if (!input.targetIslandId || input.targetIslandId === islandId) throw new AppError(422, "TARGET_ISLAND_REQUIRED", "Elige otro núcleo de destino.");
+        const [target] = await tx.select({ id: familyIslands.id }).from(familyIslands)
+          .where(and(eq(familyIslands.id, input.targetIslandId), eq(familyIslands.familyId, owned.island.familyId))).limit(1);
+        if (!target) throw new AppError(422, "TARGET_ISLAND_INVALID", "El núcleo de destino no pertenece a esta familia.");
+        const [lastPosition] = await tx.select({ value: sql<number>`coalesce(max(${participants.sortOrder}), -1)::int` })
+          .from(participants).where(eq(participants.familyIslandId, target.id));
+        for (const [index, person] of people.entries()) {
+          await tx.update(participants).set({
+            familyIslandId: target.id,
+            sortOrder: lastPosition.value + index + 1,
+            updatedAt: new Date()
+          }).where(eq(participants.id, person.id));
+        }
+      } else {
+        if (people.length && input.confirmation !== "ELIMINAR UNIDAD") throw new AppError(400, "CONFIRMATION_REQUIRED", "Escribe ELIMINAR UNIDAD para confirmar.");
+        await lockFamilyEditions(tx, owned.island.familyId);
+        await deleteDrawsForParticipants(tx, people.map(({ id }) => id));
+        if (people.length) await tx.delete(participants).where(inArray(participants.id, people.map(({ id }) => id)));
       }
-    } else {
-      if (people.length && input.confirmation !== "ELIMINAR UNIDAD") throw new AppError(400, "CONFIRMATION_REQUIRED", "Escribe ELIMINAR UNIDAD para confirmar.");
-      await lockFamilyEditions(tx, owned.island.familyId);
-      await deleteDrawsForParticipants(tx, people.map(({ id }) => id));
-      if (people.length) await tx.delete(participants).where(inArray(participants.id, people.map(({ id }) => id)));
-    }
-    await tx.delete(familyIslands).where(eq(familyIslands.id, islandId));
-    return { deletedIslandId: islandId, affectedParticipants: people.length };
-  });
+      await tx.delete(familyIslands).where(eq(familyIslands.id, islandId));
+      return { deletedIslandId: islandId, affectedParticipants: people.length };
+    });
+
+  }, r => ({ affectedParticipants: r.affectedParticipants }));
 }

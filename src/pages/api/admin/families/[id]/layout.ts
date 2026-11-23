@@ -70,6 +70,7 @@ export const PATCH: APIRoute = async ({ locals, params, request }) => {
     const familyId = z.uuid().parse(params.id);
     const parsed = schema.safeParse(await request.json().catch(() => null));
     if (!parsed.success) {
+      logger.warn("family.layout_failed", { reason: "invalid_input", status: 400 });
       return Response.json({ ok: false, message: "El borrador de la familia no es válido." }, { status: 400 });
     }
     const draft = await saveOwnedFamilyDraft(locals.admin.id, familyId, parsed.data);
@@ -80,6 +81,6 @@ export const PATCH: APIRoute = async ({ locals, params, request }) => {
     });
     return Response.json({ ok: true, data: draft });
   } catch (error) {
-    return handleApiError("family.layout_update_failed", error, { adminId: locals.admin.id });
+    return handleApiError("family.layout_failed", error);
   }
 };

@@ -17,6 +17,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const input = schema.parse(await request.json().catch(() => null));
     return Response.json({ ok: true, data: await createOwnedEdition(locals.admin.id, input) }, { status: 201 });
   } catch (error) {
-    return handleApiError("edition.create_failed", error, { adminId: locals.admin.id });
+    return handleApiError("edition.create_failed", error);
   }
 };

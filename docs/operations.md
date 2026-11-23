@@ -107,14 +107,15 @@ No probar esta migración contra la conexión compartida sin backup y autorizaci
 
 ## Observabilidad
 
-El servidor emite JSON estructurado para Runtime Logs de Vercel: autenticación, autorización, mutaciones, sorteo,
-notificaciones, revelación y health check. Los errores técnicos incluyen `errorId`, etapa, tipo, código y una
-cadena limitada de tipos y códigos de causas, sin mensajes arbitrarios.
+El servidor emite JSON estructurado y correlacionado para Runtime Logs de Vercel. El contrato, la identidad, el
+inventario de rutas/operaciones, los niveles y los procedimientos de investigación viven en [observabilidad](./observability.md).
 
-`assignment_link_copied` audita la obtención autorizada de un enlace sin incluir el enlace ni su receptor.
+`X-Request-Id` identifica la petición de aplicación; `errorId` identifica el diagnóstico técnico. `LOG_LEVEL=info`
+es el valor por defecto; `debug` añade detalle acotado de repositorios, bloqueos y transacciones. Los éxitos de las
+mutaciones transaccionales se registran después del commit. No se registran cuerpos, contactos, SQL, credenciales,
+tokens, enlaces secretos ni parejas del sorteo.
 
-Nunca registrar tokens, URLs de revelación completas, contraseñas, claves, cookies ni payloads de autenticación. Reducir datos
-personales en logs y aplicar retención limitada. Los mensajes arbitrarios de excepciones y SQL se omiten; los campos estructurados sensibles se filtran.
+La conservación depende del plan de Vercel. No se ha configurado archivo externo ni verificado la operación remota.
 
 ## Backups y recuperación
 

@@ -112,7 +112,9 @@ El cierre de sesión local vive en `POST /api/auth/logout`. Los errores de crede
 
 ## Diagnósticos de errores
 
-Los logs técnicos conservan evento, identificadores, tipos de error conocidos y códigos de sistema permitidos. No serializan `message`, SQL, parámetros ni mensajes de causas: una expresión de redacción no puede garantizar la eliminación de nombres, teléfonos o contraseñas arbitrarias.
+Los logs técnicos conservan evento, identificadores, tipos de error conocidos y códigos de sistema permitidos. No serializan mensajes arbitrarios de excepciones, SQL, parámetros ni mensajes de causas: una expresión de redacción no puede garantizar la eliminación de nombres, teléfonos o contraseñas arbitrarias. El campo raíz `message` contiene únicamente el nombre controlado del evento.
+
+El contrato de identidad, campos permitidos y correlación está en [observabilidad](./observability.md). El UUID se obtiene de Supabase verificado; las cookies, contactos y cabeceras del cliente no se usan como prueba de identidad. Antes de cerrar sesión se intenta verificar ese UUID con una consulta acotada a 750 ms y un cliente independiente, para que su bloqueo interno no retrase el logout si la identificación queda pendiente.
 
 ## Acceso directo a tablas
 

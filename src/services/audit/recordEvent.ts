@@ -1,8 +1,8 @@
+import { observe, logger, logCommitted } from "@/lib/logger";
 import { db } from "@/db/client";
 import { auditEvents } from "@/db/schema";
 import { hasOptionalTable } from "@/db/capabilities";
 import type { Transaction } from "@/db/locks";
-import { logger } from "@/lib/logger";
 
 type AuditInput = {
   event: "draw.generated" | "draw.revoked" | "assignment.link_copied" | "notifications.requested";
@@ -13,9 +13,13 @@ type AuditInput = {
 };
 
 export async function recordAuditEvent(input: AuditInput, connection: typeof db | Transaction = db) {
-  if (await hasOptionalTable("audit_events", connection)) {
-    await connection.insert(auditEvents).values(input);
-  } else {
-    logger.warn("audit.persistence_unavailable", { ...input, persisted: false });
-  }
+  return observe("audit.record", { editionId: input.editionId, drawId: input.drawId, assignmentId: input.assignmentId }, async () => {
+    if (await hasOptionalTable("audit_events", connection)) {
+      await connection.insert(auditEvents).values(input);
+      logCommitted("audit.persisted", { auditEvent: input.event, editionId: input.editionId, drawId: input.drawId, assignmentId: input.assignmentId, persisted: true });
+    } else {
+      logger.warn("audit.persistence_unavailable", { auditEvent: input.event, editionId: input.editionId, drawId: input.drawId, assignmentId: input.assignmentId, persisted: false });
+    }
+
+  }, undefined, { debug: true });
 }

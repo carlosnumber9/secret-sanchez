@@ -1,5 +1,7 @@
 import assert from "node:assert/strict";
 import test from "node:test";
+import { randomUUID } from "node:crypto";
+import { traceRequest } from "../src/lib/logger";
 import type { APIRoute } from "astro";
 import { createPasswordLoginHandler } from "../src/pages/api/auth/login";
 
@@ -60,18 +62,22 @@ test("password login preserves provider rate limiting", async (t) => {
 });
 
 test("password login passes the SSR cookie context and returns success", async (t) => {
-  t.mock.method(console, "log", () => undefined);
+  const logs: Array<Record<string, unknown>> = [];
+  t.mock.method(console, "log", (line: unknown) => logs.push(JSON.parse(String(line))));
+  const userId = randomUUID();
   const context = createContext({ email: "juan@example.com", password: "correct" });
   let receivedCookies: unknown;
   let receivedCredentials: string[] = [];
   const handler = createPasswordLoginHandler(async (loginContext, email, password) => {
     receivedCookies = loginContext.cookies;
     receivedCredentials = [email, password];
-    return { data: { session: { access_token: "not-logged" } }, error: null };
+    return { data: { session: { access_token: "not-logged" }, user: { id: userId } }, error: null };
   });
 
-  const response = (await handler(context)) as Response;
+  const response = await traceRequest({ route: "/api/auth/login", method: "POST" }, async () => await handler(context) as Response);
   assert.equal(response.status, 200);
   assert.equal(receivedCookies, context.cookies);
   assert.deepEqual(receivedCredentials, ["juan@example.com", "correct"]);
+  assert.equal(logs.find((entry) => entry.event === "auth.password_login_succeeded")?.authUserId, userId);
+  assert.doesNotMatch(JSON.stringify(logs), /juan@example.com|not-logged|correct/);
 });

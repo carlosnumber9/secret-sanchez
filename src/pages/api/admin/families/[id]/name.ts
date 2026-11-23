@@ -25,7 +25,7 @@ export function createFamilyNameHandler(rename: Rename = async (...args) => {
       logger.info("family.name_updated", { familyId, kind: input.kind, entityId: input.id });
       return Response.json({ ok: true, data: result });
     } catch (error) {
-      return handleApiError("family.name_update_failed", error, { adminId: locals.admin.id });
+      return handleApiError("family.name_update_failed", error);
     }
   };
 }

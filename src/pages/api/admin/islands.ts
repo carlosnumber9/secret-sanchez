@@ -19,6 +19,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
     logger.info("island.created", { familyId: island.familyId, islandId: island.id });
     return Response.json({ ok: true, data: island }, { status: 201 });
   } catch (error) {
-    return handleApiError("island.create_failed", error, { adminId: locals.admin.id });
+    return handleApiError("island.create_failed", error);
   }
 };

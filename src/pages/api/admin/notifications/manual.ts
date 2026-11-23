@@ -11,6 +11,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
     const result = await prepareManualDelivery({ ...input, adminId: locals.admin.id });
     return Response.json({ ok: true, data: result });
   } catch (error) {
-    return handleApiError("notification.manual_failed", error, { adminId: locals.admin.id });
+    return handleApiError("notification.manual_failed", error);
   }
 };

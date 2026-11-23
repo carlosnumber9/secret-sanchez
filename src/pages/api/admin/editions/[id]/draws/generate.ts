@@ -10,6 +10,6 @@ export const POST: APIRoute = async ({ locals, params, request }) => {
     const result = await generateEditionDraw({ editionId, generatedByAdminId: locals.admin.id });
     return Response.json({ ok: true, message: "Reparto generado.", data: result });
   } catch (error) {
-    return handleApiError("draw.generation_failed", error, { adminId: locals.admin.id });
+    return handleApiError("draw.generation_failed", error);
   }
 };

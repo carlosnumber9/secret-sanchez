@@ -1,6 +1,6 @@
 # Estado actual
 
-Última revisión documental: **8 de noviembre de 2026**.
+Última revisión documental: **23 de noviembre de 2026**.
 
 ## Implementado en código
 
@@ -42,3 +42,9 @@ Los SQL se versionan y se prueban únicamente en PostgreSQL local con datos sint
 - El organizador puede obtener cualquier enlace autorizado. Revocar no borra información ya vista.
 - Falta acordar retención de auditoría, expiración de enlaces y permisos colaborativos.
 - El aislamiento de datos de desarrollo/Preview requiere configuración independiente; ver [operación](./operations.md).
+
+## Observabilidad del servidor (23 de noviembre de 2026)
+
+Implementados contexto por petición, identidad verificada, operaciones/etapas y diagnóstico seguro con logs JSON.
+Inventario y límites en [observabilidad](./observability.md). Sin telemetría de navegador ni histórico externo.
+La comprobación manual en Vercel Preview continúa pendiente; esta actualización no certifica la configuración remota.

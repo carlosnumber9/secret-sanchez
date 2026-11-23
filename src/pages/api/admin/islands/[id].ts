@@ -18,7 +18,7 @@ export const PATCH: APIRoute = async ({ locals, params, request }) => {
     logger.info("island.updated", { familyId: island.familyId, islandId: island.id });
     return Response.json({ ok: true, data: island });
   } catch (error) {
-    return handleApiError("island.update_failed", error, { adminId: locals.admin.id });
+    return handleApiError("island.update_failed", error);
   }
 };
 
@@ -33,6 +33,6 @@ export const DELETE: APIRoute = async ({ locals, params, request }) => {
     const input = deleteSchema.parse(await request.json().catch(() => null));
     return Response.json({ ok: true, data: await deleteOwnedIsland(locals.admin.id, id, input) });
   } catch (error) {
-    return handleApiError("island.delete_failed", error, { adminId: locals.admin.id });
+    return handleApiError("island.delete_failed", error);
   }
 };

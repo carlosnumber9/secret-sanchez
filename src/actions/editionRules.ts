@@ -1,3 +1,4 @@
+import { observe } from "@/lib/logger";
 import { z } from "zod";
 import { and, eq } from "drizzle-orm";
 import { withEditableEdition } from "@/db/locks";
@@ -17,18 +18,21 @@ export const editionRulesSchema = z.object({
 });
 
 export async function updateEditionRules(adminId: string, editionId: string, value: unknown) {
-  const input = editionRulesSchema.parse(value);
-  return withEditableEdition(adminId, editionId, async (tx, owned) => {
-    const members = await tx.select({ id: participants.id, isBaby: editionParticipants.isBaby }).from(editionParticipants)
-      .innerJoin(participants, eq(editionParticipants.participantId, participants.id))
-      .where(and(eq(editionParticipants.editionId, editionId), eq(participants.familyId, owned.family.id)));
-    const adults = new Set(members.filter((p) => !p.isBaby).map((p) => p.id));
-    if (input.exclusions.some((pair) => !adults.has(pair.fromParticipantId) || !adults.has(pair.toParticipantId))) throw new AppError(422, "INVALID_EXCLUSION", "Las exclusiones deben unir dos adultos de esta edición.");
-    // Only the user-facing rule is replaced; internal counters remain untouched.
-    await tx.delete(drawRules).where(and(eq(drawRules.editionId, editionId), eq(drawRules.type, "NO_SAME_ISLAND")));
-    await tx.insert(drawRules).values({ editionId, type: "NO_SAME_ISLAND", enabled: input.noSameIsland, config: {} });
-    await tx.delete(exclusionRules).where(eq(exclusionRules.editionId, editionId));
-    if (input.exclusions.length) await tx.insert(exclusionRules).values(input.exclusions.map((pair) => ({ editionId, ...pair })));
-    return input;
-  });
+  return observe("edition.rules", { editionId, changedFields: ["noSameIsland", "exclusions"] }, async () => {
+    const input = editionRulesSchema.parse(value);
+    return withEditableEdition(adminId, editionId, async (tx, owned) => {
+      const members = await tx.select({ id: participants.id, isBaby: editionParticipants.isBaby }).from(editionParticipants)
+        .innerJoin(participants, eq(editionParticipants.participantId, participants.id))
+        .where(and(eq(editionParticipants.editionId, editionId), eq(participants.familyId, owned.family.id)));
+      const adults = new Set(members.filter((p) => !p.isBaby).map((p) => p.id));
+      if (input.exclusions.some((pair) => !adults.has(pair.fromParticipantId) || !adults.has(pair.toParticipantId))) throw new AppError(422, "INVALID_EXCLUSION", "Las exclusiones deben unir dos adultos de esta edición.");
+      // Only the user-facing rule is replaced; internal counters remain untouched.
+      await tx.delete(drawRules).where(and(eq(drawRules.editionId, editionId), eq(drawRules.type, "NO_SAME_ISLAND")));
+      await tx.insert(drawRules).values({ editionId, type: "NO_SAME_ISLAND", enabled: input.noSameIsland, config: {} });
+      await tx.delete(exclusionRules).where(eq(exclusionRules.editionId, editionId));
+      if (input.exclusions.length) await tx.insert(exclusionRules).values(input.exclusions.map((pair) => ({ editionId, ...pair })));
+      return input;
+    });
+
+  }, r => ({ noSameIsland: r.noSameIsland, exclusionCount: r.exclusions.length }));
 }

@@ -27,6 +27,6 @@ export const POST: APIRoute = async ({ locals, request }) => {
     });
     return Response.json({ ok: true, data: participant }, { status: 201 });
   } catch (error) {
-    return handleApiError("participant.create_failed", error, { adminId: locals.admin.id });
+    return handleApiError("participant.create_failed", error);
   }
 };

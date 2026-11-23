@@ -1,3 +1,5 @@
+import { logger } from "@/lib/logger";
+
 export type AuthenticatedIdentity = {
   id: string;
   email?: string;
@@ -22,7 +24,10 @@ export async function resolveAdminIdentity<Admin extends { id: string }>(
   if (!legacyAdmin) return null;
 
   const claimedAdmin = await store.linkAuthUserId(legacyAdmin.id, identity.id);
-  if (claimedAdmin) return claimedAdmin;
+  if (claimedAdmin) {
+    logger.info("auth.legacy_linked", { entityId: claimedAdmin.id });
+    return claimedAdmin;
+  }
 
   return store.findByAuthUserId(identity.id);
 }

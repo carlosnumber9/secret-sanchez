@@ -2,7 +2,7 @@ import type { APIRoute } from "astro";
 import { z } from "zod";
 import { loginWithPassword } from "@/actions/loginWithPassword";
 import { handleApiError } from "@/lib/api";
-import { logger } from "@/lib/logger";
+import { logger, observe, setLogActor } from "@/lib/logger";
 
 const schema = z.object({
   email: z.email(),
@@ -14,7 +14,7 @@ type PasswordLogin = (
   email: string,
   password: string
 ) => Promise<{
-  data: { session: unknown | null };
+  data: { session: unknown | null; user?: { id: string } | null };
   error: { status?: number } | null;
 }>;
 
@@ -32,17 +32,19 @@ export function createPasswordLoginHandler(login: PasswordLogin = loginWithPassw
         );
       }
 
-      const { data, error } = await login(
+      const { data, error } = await observe("auth.password", { provider: "supabase" }, () => login(
         { cookies, request },
         parsed.data.email,
         parsed.data.password
-      );
+      ), (result) => ({ result: result.error || !result.data.session ? "rejected" : "succeeded", httpStatus: result.error?.status }), { provider: true });
 
       if (error || !data.session) {
         const rateLimited = error?.status === 429;
         logger.warn("auth.password_login_failed", {
-          reason: rateLimited ? "rate_limited" : "invalid_credentials"
+          reason: rateLimited ? "rate_limited" : error?.status && error.status >= 500 ? "lookup_failed" : "invalid_credentials",
+          httpStatus: error?.status
         });
+        if (error?.status && error.status >= 500) logger.error("auth.password_login_exception", error, { stage: "session_lookup", httpStatus: error.status });
         return Response.json(
           {
             ok: false,
@@ -54,6 +56,8 @@ export function createPasswordLoginHandler(login: PasswordLogin = loginWithPassw
         );
       }
 
+      if (data.user) setLogActor({ actorType: "authenticated", authUserId: data.user.id });
+      else logger.warn("auth.identity_unavailable", { reason: "not_resolved" });
       logger.info("auth.password_login_succeeded");
       return Response.json({ ok: true });
     } catch (error) {

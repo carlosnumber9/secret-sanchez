@@ -26,7 +26,7 @@ export const PATCH: APIRoute = async ({ locals, params, request }) => {
     });
     return Response.json({ ok: true, data: participant });
   } catch (error) {
-    return handleApiError("participant.update_failed", error, { adminId: locals.admin.id });
+    return handleApiError("participant.update_failed", error);
   }
 };
 
@@ -39,6 +39,6 @@ export const DELETE: APIRoute = async ({ locals, params, request }) => {
     const result = await deleteOwnedParticipant(locals.admin.id, id, input.confirmation);
     return Response.json({ ok: true, data: result });
   } catch (error) {
-    return handleApiError("participant.delete_failed", error, { adminId: locals.admin.id });
+    return handleApiError("participant.delete_failed", error);
   }
 };

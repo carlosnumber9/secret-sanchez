@@ -25,6 +25,6 @@ export const POST: APIRoute = async ({ locals, params, request }) => {
       })
     });
   } catch (error) {
-    return handleApiError("notification.batch_failed", error, { adminId: locals.admin.id });
+    return handleApiError("notification.batch_failed", error);
   }
 };

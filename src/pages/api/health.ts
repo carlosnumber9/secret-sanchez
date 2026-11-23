@@ -1,12 +1,14 @@
 import type { APIRoute } from "astro";
 import { sql } from "drizzle-orm";
 import { getEnv } from "@/lib/env";
-import { logger } from "@/lib/logger";
+import { addLogFields, logger } from "@/lib/logger";
 
 export const GET: APIRoute = async () => {
   const startedAt = performance.now();
   try {
+    addLogFields({ stage: "configuration_check" });
     getEnv();
+    addLogFields({ stage: "database" });
     const { db } = await import("@/db/client");
     await db.execute(sql`select 1`);
     logger.info("health.succeeded", { durationMs: Math.round(performance.now() - startedAt) });

@@ -10,6 +10,6 @@ export const PATCH: APIRoute = async ({ locals, params, request }) => {
     const input = schema.parse(await request.json().catch(() => null));
     return Response.json({ ok: true, data: await updateOwnedEdition(locals.admin.id, id, input) });
   } catch (error) {
-    return handleApiError("edition.update_failed", error, { adminId: locals.admin.id });
+    return handleApiError("edition.update_failed", error);
   }
 };

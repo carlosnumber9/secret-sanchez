@@ -3,7 +3,7 @@ import { z } from "zod";
 import { openRevealAssignment } from "@/db/queries/assignments";
 import { handleApiError } from "@/lib/api";
 import { AppError } from "@/lib/errors";
-import { logger } from "@/lib/logger";
+import { logger, setLogActor } from "@/lib/logger";
 import { hashRevealToken } from "@/lib/tokens";
 
 const schema = z.object({ token: z.string().min(20).max(200) });
@@ -16,6 +16,7 @@ export const POST: APIRoute = async ({ request }) => {
       logger.warn("reveal.open_rejected", { reason: "invalid_token" });
       throw new AppError(404, "REVEAL_NOT_FOUND", "Este enlace no parece válido.");
     }
+    setLogActor({ actorType: "reveal_link", assignmentId: row.id });
     logger.info(row.firstOpen ? "reveal.opened" : "reveal.reopened", {
       assignmentId: row.id
     });

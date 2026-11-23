@@ -286,20 +286,25 @@ test("attempt counters survive deletion of the latest attempt", async () => fixt
 }));
 
 test("logout clears SSR session cookies and the next request requires authentication", async (t) => {
-  t.mock.method(console, "log", () => undefined);
+  const logged: Array<Record<string, unknown>> = [];
+  t.mock.method(console, "log", (line: unknown) => logged.push(JSON.parse(String(line))));
+  const userId = crypto.randomUUID();
   const sdkFetch = t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0]) => {
+    if (String(input).endsWith("/auth/v1/user")) return Response.json({ id: userId, aud: "authenticated", email: "synthetic@example.invalid" });
     assert.match(String(input), /^https:\/\/project\.example\.invalid\/auth\/v1\/logout/);
     return new Response(null, { status: 204 });
   });
   const token = `${Buffer.from('{}').toString('base64url')}.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.synthetic`;
-  const session = { access_token: token, refresh_token: "synthetic-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: { id: crypto.randomUUID(), aud: "authenticated", email: "synthetic@example.invalid" } };
+  const session = { access_token: token, refresh_token: "synthetic-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: { id: userId, aud: "authenticated", email: "synthetic@example.invalid" } };
   const cookie = `sb-project-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`;
   const writes: Array<{ name: string; value: string; options: { maxAge?: number } }> = [];
   const cookies = { set(name: string, value: string, options: { maxAge?: number }) { writes.push({ name, value, options }); } };
   const { createLogoutHandler } = await import("../../src/pages/api/auth/logout");
-  const response = await createLogoutHandler()({ cookies, request: new Request("https://app.example.invalid/api/auth/logout", { method: "POST", headers: { Cookie: cookie } }) } as unknown as Parameters<APIRoute>[0]) as Response;
+  const { traceRequest } = await import("../../src/lib/logger");
+  const response = await traceRequest({ route: "/api/auth/logout", method: "POST" }, async () => await createLogoutHandler()({ cookies, request: new Request("https://app.example.invalid/api/auth/logout", { method: "POST", headers: { Cookie: cookie } }) } as unknown as Parameters<APIRoute>[0]) as Response);
   assert.equal(response.status, 303);
-  assert.equal(sdkFetch.mock.calls.length, 1);
+  assert.equal(sdkFetch.mock.calls.length, 2);
+  assert.equal(logged.find((entry) => entry.event === "auth.logout_succeeded")?.authUserId, userId);
   assert.ok(writes.some((w) => w.name.startsWith("sb-project-auth-token") && w.value === "" && w.options.maxAge === 0));
   const { requireAdmin } = await import("../../src/lib/supabase/auth");
   const authorization = await requireAdmin({ cookies: cookies as never, request: new Request("https://app.example.invalid/") });
@@ -412,3 +417,116 @@ test("non-production deliveries require a test edition and explicit safe recipie
   await db.update(s.drawEditions).set({ kind: "final" }).where(eq(s.drawEditions.id, data.edition.id));
   await assert.rejects(sendAdminNotifications({ ...input, drawId: draw.id, idempotencyKey: crypto.randomUUID() }, transports), { code: "NON_PRODUCTION_DELIVERY" });
 }));
+
+test("notification traces retain actor and batch context across real reservations and uncertain outcomes", async (t) => fixture(async (data) => {
+  const entries: Array<Record<string, any>> = [];
+  for (const method of ["log", "warn", "error"] as const) t.mock.method(console, method, (line: unknown) => entries.push(JSON.parse(String(line))));
+  const { traceRequest, setLogActor } = await import("../../src/lib/logger");
+  const batchId = crypto.randomUUID();
+  const authUserId = crypto.randomUUID();
+  let calls = 0;
+  let sentDrawId = "";
+  const response = await traceRequest({ route: "/api/admin/editions/[id]/notifications/send", method: "POST" }, async () => {
+    setLogActor({ actorType: "admin", adminId: data.admin.id, authUserId });
+    const { draw } = await generation(data);
+    sentDrawId = draw.id;
+    const result = await sendAdminNotifications({ admin: data.admin, editionId: data.edition.id, mode: "pending", scope: "all", idempotencyKey: batchId }, {
+      email: async () => {
+        calls++;
+        if (calls === 1) return { ok: true, providerMessageId: crypto.randomUUID() };
+        if (calls === 2) return { ok: false, error: "private contact payload" };
+        throw Object.assign(new Error("private token payload"), { code: "ECONNRESET" });
+      },
+      whatsapp: async () => { throw new Error("Unexpected WhatsApp call"); }
+    });
+    assert.equal(result.sent, 1);
+    assert.equal(result.failed, 1);
+    assert.equal(result.unknown, 1);
+    return Response.json(result);
+  });
+  assert.equal(response.status, 200);
+  const deliveries = entries.filter((entry) => entry.event === "notification.delivery.started");
+  assert.equal(deliveries.length, 3);
+  assert.equal(new Set(deliveries.map((entry) => entry.operationId)).size, 3);
+  for (const entry of entries.filter((entry) => entry.batchId)) {
+    assert.equal(entry.batchId, batchId);
+    assert.equal(entry.adminId, data.admin.id);
+    assert.equal(entry.authUserId, authUserId);
+    assert.equal(entry.requestId, response.headers.get("X-Request-Id"));
+  }
+  assert.ok(entries.some((entry) => entry.event === "notification.attempt" && entry.reason === "claimed" && entry.notificationId));
+  assert.ok(entries.some((entry) => entry.event === "notification.job" && entry.result === "unknown"));
+  const generated = entries.find((entry) => entry.event === "draw.generation.succeeded");
+  assert.equal(generated?.drawId, sentDrawId);
+  assert.equal(generated?.actorType, "admin");
+  const serialized = JSON.stringify(entries);
+  assert.doesNotMatch(serialized, /private contact|private token|person\d@example\.invalid|Person [0-9]|reveal_token/);
+  const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, sentDrawId));
+  assert.equal(serialized.includes(decryptRevealToken(assignment.revealTokenCiphertext!)), false);
+}));
+
+test("signed WhatsApp callbacks log verified actors, applied transitions and ignored replays", async (t) => fixture(async (data) => {
+  const entries: Array<Record<string, any>> = [];
+  for (const method of ["log", "warn", "error"] as const) t.mock.method(console, method, (line: unknown) => entries.push(JSON.parse(String(line))));
+  const { traceRequest } = await import("../../src/lib/logger");
+  const { createHmac } = await import("node:crypto");
+  const { POST: webhook } = await import("../../src/pages/api/webhooks/kapso");
+  const { draw } = await generation(data);
+  const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
+  const messageId = `wamid.${crypto.randomUUID()}`;
+  const [notification] = await db.insert(s.notificationLogs).values({ assignmentId: assignment.id, channel: "whatsapp", recipient: "+34000000000", status: "sent", providerMessageId: messageId }).returning();
+  const previous = process.env.KAPSO_WEBHOOK_SECRET;
+  process.env.KAPSO_WEBHOOK_SECRET = "synthetic-webhook-secret";
+  const send = (status: string, valid = true, id = messageId) => {
+    const body = JSON.stringify({ message: { id, kapso: { status } }, privateField: "private contact payload" });
+    const signature = createHmac("sha256", process.env.KAPSO_WEBHOOK_SECRET!).update(body).digest("hex");
+    return traceRequest({ route: "/api/webhooks/kapso", method: "POST" }, async () => await webhook({ request: new Request("https://app.example.invalid/api/webhooks/kapso", { method: "POST", headers: { "x-webhook-signature": valid ? signature : "invalid" }, body }) } as Parameters<APIRoute>[0]) as Response);
+  };
+  try {
+    const rejected = await send("read", false);
+    assert.equal(rejected.status, 401);
+    assert.notEqual(entries.find((entry) => entry.event === "kapso.webhook_rejected")?.actorType, "provider");
+    for (const status of ["read", "read", "sent"]) assert.equal((await send(status)).status, 200);
+    const updates = entries.filter((entry) => entry.event === "kapso.delivery_updated");
+    assert.deepEqual(updates.map((entry) => entry.result), ["applied", "ignored", "ignored"]);
+    for (const entry of updates) {
+      assert.equal(entry.actorType, "provider");
+      assert.equal(entry.provider, "kapso");
+      assert.equal(entry.notificationId, notification.id);
+      assert.equal(entry.assignmentId, assignment.id);
+      assert.equal(entry.nextStatus, "read");
+    }
+    assert.equal((await send("sent", true, `wamid.${crypto.randomUUID()}`)).status, 503);
+    assert.ok(entries.some((entry) => entry.reason === "message_unknown" && entry.result === "retry"));
+    assert.doesNotMatch(JSON.stringify(entries), /private contact|34000000000|synthetic-webhook-secret/);
+  } finally { if (previous === undefined) delete process.env.KAPSO_WEBHOOK_SECRET; else process.env.KAPSO_WEBHOOK_SECRET = previous; }
+}));
+
+test("logout still clears cookies while identity enrichment remains pending", async (t) => {
+  const entries: Array<Record<string, unknown>> = [];
+  for (const method of ["log", "warn", "error"] as const) t.mock.method(console, method, (line: unknown) => entries.push(JSON.parse(String(line))));
+  const calls: string[] = [];
+  t.mock.method(globalThis, "fetch", async (input: Parameters<typeof fetch>[0], options?: RequestInit) => {
+    const url = String(input);
+    calls.push(url);
+    if (url.endsWith("/auth/v1/user")) {
+      assert.ok(options?.signal);
+      return new Promise<Response>(() => {});
+    }
+    assert.match(url, /\/auth\/v1\/logout/);
+    return new Response(null, { status: 204 });
+  });
+  const accessToken = `${Buffer.from('{}').toString('base64url')}.${Buffer.from(JSON.stringify({ exp: Math.floor(Date.now() / 1000) + 3600 })).toString('base64url')}.synthetic`;
+  const session = { access_token: accessToken, refresh_token: "synthetic-refresh", expires_at: Math.floor(Date.now() / 1000) + 3600, expires_in: 3600, token_type: "bearer", user: { id: crypto.randomUUID(), aud: "authenticated" } };
+  const cookie = `sb-project-auth-token=base64-${Buffer.from(JSON.stringify(session)).toString('base64url')}`;
+  const writes: string[] = [];
+  const cookies = { set(name: string, value: string) { if (value === "") writes.push(name); } };
+  const { traceRequest } = await import("../../src/lib/logger");
+  const { createLogoutHandler } = await import("../../src/pages/api/auth/logout");
+  const response = await traceRequest({ route: "/api/auth/logout", method: "POST" }, async () => await createLogoutHandler()({ cookies, request: new Request("https://app.example.invalid/api/auth/logout", { method: "POST", headers: { Cookie: cookie } }) } as unknown as Parameters<APIRoute>[0]) as Response);
+  assert.equal(response.status, 303);
+  assert.equal(calls.length, 2);
+  assert.ok(writes.includes("sb-project-auth-token"));
+  assert.ok(entries.some((entry) => entry.event === "auth.identity_unavailable"));
+  assert.equal(entries.find((entry) => entry.event === "auth.logout_succeeded")?.authUserId, undefined);
+});

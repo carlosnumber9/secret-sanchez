@@ -10,6 +10,6 @@ export const PATCH: APIRoute = async ({ locals, params, request }) => {
     const input = z.object({ enabled: z.boolean().optional(), representativeParticipantId: z.uuid().nullable().optional() }).parse(await request.json().catch(() => null));
     return Response.json({ ok: true, data: await updateEditionIsland(locals.admin.id, editionId, islandId, input) });
   } catch (error) {
-    return handleApiError("edition.island_update_failed", error, { adminId: locals.admin.id });
+    return handleApiError("edition.island_update_failed", error);
   }
 };

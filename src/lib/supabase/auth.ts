@@ -6,6 +6,7 @@ import {
   type AdminIdentityStore
 } from "@/services/auth/resolveAdminIdentity";
 import { createSupabaseServerClient } from "./server";
+import { logger, observe, setLogActor } from "@/lib/logger";
 
 type AuthContext = {
   cookies: Parameters<typeof createSupabaseServerClient>[0]["cookies"];
@@ -65,10 +66,17 @@ export async function getCurrentAdmin(context: AuthContext) {
   const {
     data: { user },
     error
-  } = await supabase.auth.getUser();
+  } = await observe("auth.session", { stage: "session_lookup" }, () => supabase.auth.getUser(), (result) => ({ result: result.error ? "rejected" : "succeeded", httpStatus: result.error?.status }));
 
-  if (error || !user) return null;
-  return findAdminForUser(user);
+  if (error || !user) {
+    if (error && (error.status === undefined || error.status >= 500) && error.name !== "AuthSessionMissingError") logger.error("auth.session.failed", error, { stage: "session_lookup", httpStatus: error.status });
+    setLogActor({ actorType: "anonymous", identityReason: "missing_session" });
+    return null;
+  }
+  setLogActor({ actorType: "authenticated", authUserId: user.id });
+  const admin = await observe("auth.admin", { stage: "admin_lookup" }, () => findAdminForUser(user));
+  if (admin) setLogActor({ actorType: "admin", adminId: admin.id, authUserId: user.id });
+  return admin;
 }
 
 export async function requireAdmin(context: AuthContext) {
@@ -76,7 +84,7 @@ export async function requireAdmin(context: AuthContext) {
   let error: Awaited<ReturnType<ReturnType<typeof createSupabaseServerClient>["auth"]["getUser"]>>["error"];
   try {
     const supabase = createSupabaseServerClient(context);
-    const result = await supabase.auth.getUser();
+    const result = await observe("auth.session", { stage: "session_lookup" }, () => supabase.auth.getUser(), (result) => ({ result: result.error ? "rejected" : "succeeded", httpStatus: result.error?.status }));
     user = result.data.user;
     error = result.error;
   } catch (cause) {
@@ -84,6 +92,9 @@ export async function requireAdmin(context: AuthContext) {
   }
 
   if (error || !user) {
+    if (error && (error.status === undefined || error.status >= 500) && error.name !== "AuthSessionMissingError") logger.error("auth.session.failed", error, { stage: "session_lookup", httpStatus: error.status });
+    setLogActor({ actorType: "anonymous", identityReason: "missing_session" });
+    logger.info("auth.session_missing", { reason: "missing_session" });
     return {
       admin: null,
       status: 401 as const,
@@ -92,8 +103,9 @@ export async function requireAdmin(context: AuthContext) {
   }
 
   let admin: Admin | null;
+  setLogActor({ actorType: "authenticated", authUserId: user.id });
   try {
-    admin = await findAdminForUser(user);
+    admin = await observe("auth.admin", { stage: "admin_lookup" }, () => findAdminForUser(user));
   } catch (cause) {
     throw new AuthCheckError("admin_lookup", cause);
   }
@@ -106,5 +118,6 @@ export async function requireAdmin(context: AuthContext) {
     };
   }
 
+  setLogActor({ actorType: "admin", adminId: admin.id, authUserId: user.id });
   return { admin, status: 200 as const, reason: null };
 }

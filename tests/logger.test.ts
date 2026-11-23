@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { logger } from "../src/lib/logger";
+import { logger, type LogFields } from "../src/lib/logger";
 
 test("error logs include sanitized cause diagnostics", () => {
   const credential = "abcdefghijklmnopqrstuvwxyz0123456789ABCDEFG";
@@ -20,7 +20,6 @@ test("error logs include sanitized cause diagnostics", () => {
 
   try {
     logger.error("auth.middleware_failed", error, {
-      path: "/inicio",
       authStage: "session_lookup"
     });
   } finally {
@@ -44,7 +43,7 @@ test("diagnostics never serialize arbitrary messages, names or credentials", (t)
     name: "Persona Ficticia", code: secret,
     cause: new Error("SQL parameters contain private contacts")
   });
-  logger.error("synthetic.failure", error, { password: secret, authorization: secret });
+  logger.error("health.failed", error, { password: secret, authorization: secret } as LogFields);
   const output = String(capture.mock.calls[0].arguments[0]);
   assert.doesNotMatch(output, /Persona|34000000000|short-pass|SQL parameters/);
   assert.equal(JSON.parse(output).errorType, "UnknownError");

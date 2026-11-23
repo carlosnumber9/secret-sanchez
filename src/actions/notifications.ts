@@ -1,12 +1,12 @@
+import { observe, logger, addLogFields } from "@/lib/logger";
 import { recordAuditEvent } from "@/services/audit/recordEvent";
 import { and, eq, ne } from "drizzle-orm";
-import { db } from "@/db/client";
+import { db, tracedTransaction } from "@/db/client";
 import { drawEditions, draws, families } from "@/db/schema";
 import { claimNotificationAttempt, listCurrentNotificationLogsForDraw, updateNotificationLog } from "@/db/queries/notifications";
 import { getOwnedAssignment, listAssignmentsForDraw } from "@/db/queries/assignments";
 import { AppError } from "@/lib/errors";
 import { getEnv } from "@/lib/env";
-import { logger } from "@/lib/logger";
 import { buildRevealUrl, decryptRevealToken } from "@/lib/tokens";
 import { buildNotificationAttemptKey } from "@/services/admin/policies";
 import { NotificationRateLimitError } from "@/services/notifications/retry";
@@ -31,116 +31,134 @@ type SendInput = {
 const successfulStatuses = new Set(["sent", "delivered", "read", "opened"]);
 
 export async function sendAdminNotifications(input: SendInput, transports = { email: sendEmailNotification, whatsapp: sendWhatsappNotification }) {
-  const [owned] = await db.select({ edition: drawEditions, draw: draws })
-    .from(drawEditions)
-    .innerJoin(families, eq(drawEditions.familyId, families.id))
-    .innerJoin(draws, and(eq(draws.editionId, drawEditions.id), ne(draws.status, "revoked")))
-    .where(and(eq(drawEditions.id, input.editionId), eq(families.ownerAdminId, input.admin.id))).limit(1);
-  if (!owned) throw new AppError(404, "DRAW_NOT_FOUND", "No hay un reparto vigente para esta edición.");
-  if (input.drawId && input.drawId !== owned.draw.id) throw new AppError(409, "DRAW_CHANGED", "El reparto cambió. Recarga el panel antes de enviar.");
+  return observe("notification.batch", { editionId: input.editionId, batchId: input.idempotencyKey, mode: input.mode, scope: input.scope, cursor: input.cursor ?? 0 }, async () => {
+    const [owned] = await db.select({ edition: drawEditions, draw: draws })
+      .from(drawEditions)
+      .innerJoin(families, eq(drawEditions.familyId, families.id))
+      .innerJoin(draws, and(eq(draws.editionId, drawEditions.id), ne(draws.status, "revoked")))
+      .where(and(eq(drawEditions.id, input.editionId), eq(families.ownerAdminId, input.admin.id))).limit(1);
+    if (!owned) throw new AppError(404, "DRAW_NOT_FOUND", "No hay un reparto vigente para esta edición.");
+    addLogFields({ drawId: owned.draw.id, testMode: owned.edition.kind === "test" });
+    if (input.drawId && input.drawId !== owned.draw.id) throw new AppError(409, "DRAW_CHANGED", "El reparto cambió. Recarga el panel antes de enviar.");
 
-  if (!input.cursor) await recordAuditEvent({ event: "notifications.requested", actorAdminId: input.admin.id, editionId: input.editionId, drawId: owned.draw.id });
-  const env = getEnv();
-  if (env.environment !== "production" && owned.edition.kind !== "test") throw new AppError(403, "NON_PRODUCTION_DELIVERY", "Fuera de Production solo se permiten ediciones de prueba.");
-  if (env.environment !== "production" && !env.notificationTestEmail) throw new AppError(422, "TEST_EMAIL_REQUIRED", "Configura el destinatario seguro de pruebas.");
-  const allRows = (await listAssignmentsForDraw(owned.draw.id)).sort((a, b) => a.assignment.id.localeCompare(b.assignment.id));
-  const selectedIds = new Set(input.assignmentIds ?? []);
-  const rows = input.scope === "selected" ? allRows.filter(({ assignment }) => selectedIds.has(assignment.id)) : allRows;
-  if (input.scope === "selected" && !rows.length) throw new AppError(422, "EMPTY_NOTIFICATION_SELECTION", "Selecciona al menos una entrega.");
-  const { appUrl, kapsoTestRecipientPhone } = env;
-  let sent = 0;
-  let failed = 0;
-  let skipped = 0;
-  let unknown = 0;
-  let retryAfterSeconds = 0;
-  let nextSendAt = Date.now();
-  const jobs = rows.flatMap((row) => {
-    const channel = row.giver?.preferredChannel ?? row.giverIsland?.preferredChannel;
-    const channels: Array<"email" | "whatsapp"> = channel === "both" ? ["email", "whatsapp"] : channel === "email" || channel === "whatsapp" ? [channel] : [];
-    return channels.map((deliveryChannel) => ({ row, deliveryChannel }));
-  });
-  const cursor = Math.min(input.cursor ?? 0, jobs.length);
-  const batch = jobs.slice(cursor, cursor + 4);
-  await mapConcurrent(batch, 2, async ({ row: { assignment, giver, giverIsland }, deliveryChannel }) => {
-    if (retryAfterSeconds) { skipped++; return; }
-    if (!assignment.revealTokenCiphertext) { skipped++; return; }
-    const name = giver?.name ?? giverIsland?.representativeName ?? "Familia";
-    const recipient = deliveryChannel === "email"
-      ? (owned.edition.kind === "test" ? (env.environment === "production" ? input.admin.email : env.notificationTestEmail!) : giver?.email ?? giverIsland?.representativeEmail)
-      : (owned.edition.kind === "test" ? kapsoTestRecipientPhone : giver?.phone ?? giverIsland?.representativePhone);
-    if (!recipient) { failed++; return; }
-    const attemptKey = buildNotificationAttemptKey(input.idempotencyKey, assignment.id, deliveryChannel);
-    const log = await claimNotificationAttempt({ assignmentId: assignment.id, channel: deliveryChannel, recipient, mode: input.mode, idempotencyKey: attemptKey });
-    if (!log) { skipped++; return; }
-    const slot = Math.max(Date.now(), nextSendAt);
-    nextSendAt = slot + 550;
-    await new Promise((resolve) => setTimeout(resolve, Math.max(0, slot - Date.now())));
-    const [current] = await db.select({ id: draws.id }).from(draws)
-      .where(and(eq(draws.id, owned.draw.id), ne(draws.status, "revoked"))).limit(1);
-    if (!current) {
-      await updateNotificationLog(log.id, { status: "failed", error: "draw_revoked" });
-      throw new AppError(409, "DRAW_REVOKED", "El reparto fue anulado. Se han detenido los envíos pendientes.");
-    }
-    try {
-      if (retryAfterSeconds) throw new NotificationRateLimitError(String(retryAfterSeconds));
-      const revealUrl = buildRevealUrl(appUrl, decryptRevealToken(assignment.revealTokenCiphertext));
-      const result = deliveryChannel === "email"
-        ? await transports.email({ to: log.recipient, name, revealUrl, idempotencyKey: log.idempotencyKey ?? undefined, testMode: owned.edition.kind === "test" })
-        : await transports.whatsapp({ phone: log.recipient, name, revealUrl });
-      if (!result.ok) {
-        failed++;
-        await updateNotificationLog(log.id, { status: "failed", error: "provider_rejected" });
-      } else {
-        sent++;
-        await updateNotificationLog(log.id, { status: "sent", providerMessageId: result.providerMessageId, sentAt: new Date(), error: null });
-      }
-    } catch (error) {
-      if (error instanceof NotificationRateLimitError) {
-        retryAfterSeconds = Math.max(retryAfterSeconds, error.retryAfterSeconds);
-        await updateNotificationLog(log.id, { status: "pending", error: `rate_limited:${Date.now() + retryAfterSeconds * 1000}` });
-      } else {
-        unknown++;
-        const errorId = logger.error(`notification.${deliveryChannel}_exception`, error, { assignmentId: assignment.id, drawId: owned.draw.id });
-        await updateNotificationLog(log.id, { status: "pending", error: `outcome_unknown:${errorId}` });
-      }
-    }
-  });
-
-  const currentLogs = (await listCurrentNotificationLogsForDraw(owned.draw.id)).map(({ log }) => log);
-  const coveredAssignments = new Set(currentLogs.filter((log) => log.channel !== "manual" && successfulStatuses.has(log.status)).map((log) => log.assignmentId));
-  const allCovered = allRows.length > 0 && allRows.every(({ assignment }) => coveredAssignments.has(assignment.id));
-  let finalized = false;
-  if (allCovered) {
-    finalized = await db.transaction(async (tx) => {
-      await tx.select({ id: drawEditions.id }).from(drawEditions)
-        .where(eq(drawEditions.id, input.editionId)).for("update");
-      const [current] = await tx.update(draws).set({ status: "sent" })
-        .where(and(eq(draws.id, owned.draw.id), ne(draws.status, "revoked"))).returning({ id: draws.id });
-      if (!current) return false;
-      await tx.update(drawEditions).set({ status: "sent", updatedAt: new Date() }).where(eq(drawEditions.id, input.editionId));
-      return true;
+    if (!input.cursor) await recordAuditEvent({ event: "notifications.requested", actorAdminId: input.admin.id, editionId: input.editionId, drawId: owned.draw.id });
+    const env = getEnv();
+    if (env.environment !== "production" && owned.edition.kind !== "test") throw new AppError(403, "NON_PRODUCTION_DELIVERY", "Fuera de Production solo se permiten ediciones de prueba.");
+    if (env.environment !== "production" && !env.notificationTestEmail) throw new AppError(422, "TEST_EMAIL_REQUIRED", "Configura el destinatario seguro de pruebas.");
+    const allRows = (await listAssignmentsForDraw(owned.draw.id)).sort((a, b) => a.assignment.id.localeCompare(b.assignment.id));
+    const selectedIds = new Set(input.assignmentIds ?? []);
+    const rows = input.scope === "selected" ? allRows.filter(({ assignment }) => selectedIds.has(assignment.id)) : allRows;
+    if (input.scope === "selected" && !rows.length) throw new AppError(422, "EMPTY_NOTIFICATION_SELECTION", "Selecciona al menos una entrega.");
+    const { appUrl, kapsoTestRecipientPhone } = env;
+    let sent = 0;
+    let failed = 0;
+    let skipped = 0;
+    let unknown = 0;
+    let retryAfterSeconds = 0;
+    let nextSendAt = Date.now();
+    const jobs = rows.flatMap((row) => {
+      const channel = row.giver?.preferredChannel ?? row.giverIsland?.preferredChannel;
+      const channels: Array<"email" | "whatsapp"> = channel === "both" ? ["email", "whatsapp"] : channel === "email" || channel === "whatsapp" ? [channel] : [];
+      return channels.map((deliveryChannel) => ({ row, deliveryChannel }));
     });
-  }
-  const end = cursor + batch.length;
-  return { drawId: owned.draw.id, sent, failed, skipped, unknown, retryAfterSeconds, nextCursor: retryAfterSeconds ? cursor : end < jobs.length ? end : null, processed: end, total: jobs.length, redirected: owned.edition.kind === "test", allCovered: finalized };
+    const cursor = Math.min(input.cursor ?? 0, jobs.length);
+    const batch = jobs.slice(cursor, cursor + 4);
+    await mapConcurrent(batch, 2, async ({ row: { assignment, giver, giverIsland }, deliveryChannel }) => observe("notification.delivery", { assignmentId: assignment.id, channel: deliveryChannel }, async () => {
+      if (retryAfterSeconds) { skipped++; logger.info("notification.job", { result: "skipped", reason: "cooldown" }); return; }
+      if (!assignment.revealTokenCiphertext) { skipped++; logger.info("notification.job", { result: "skipped", reason: "missing_ciphertext" }); return; }
+      const name = giver?.name ?? giverIsland?.representativeName ?? "Familia";
+      const recipient = deliveryChannel === "email"
+        ? (owned.edition.kind === "test" ? (env.environment === "production" ? input.admin.email : env.notificationTestEmail!) : giver?.email ?? giverIsland?.representativeEmail)
+        : (owned.edition.kind === "test" ? kapsoTestRecipientPhone : giver?.phone ?? giverIsland?.representativePhone);
+      if (!recipient) { failed++; logger.warn("notification.job", { result: "rejected", reason: "missing_contact" }); return; }
+      const attemptKey = buildNotificationAttemptKey(input.idempotencyKey, assignment.id, deliveryChannel);
+      const log = await claimNotificationAttempt({ assignmentId: assignment.id, channel: deliveryChannel, recipient, mode: input.mode, idempotencyKey: attemptKey });
+      if (!log) { skipped++; return; }
+      addLogFields({ notificationId: log.id });
+      const slot = Math.max(Date.now(), nextSendAt);
+      nextSendAt = slot + 550;
+      await new Promise((resolve) => setTimeout(resolve, Math.max(0, slot - Date.now())));
+      const [current] = await db.select({ id: draws.id }).from(draws)
+        .where(and(eq(draws.id, owned.draw.id), ne(draws.status, "revoked"))).limit(1);
+      if (!current) {
+        await updateNotificationLog(log.id, { status: "failed", error: "draw_revoked" });
+        throw new AppError(409, "DRAW_REVOKED", "El reparto fue anulado. Se han detenido los envíos pendientes.");
+      }
+      try {
+        if (retryAfterSeconds) throw new NotificationRateLimitError(String(retryAfterSeconds));
+        addLogFields({ stage: "decrypt" });
+        const revealUrl = buildRevealUrl(appUrl, decryptRevealToken(assignment.revealTokenCiphertext));
+        addLogFields({ stage: "provider" });
+        const result = deliveryChannel === "email"
+          ? await transports.email({ to: log.recipient, name, revealUrl, idempotencyKey: log.idempotencyKey ?? undefined, testMode: owned.edition.kind === "test" })
+          : await transports.whatsapp({ phone: log.recipient, name, revealUrl });
+        if (!result.ok) {
+          logger.warn("notification.job", { result: "rejected", reason: "provider_rejected" });
+          failed++;
+          addLogFields({ stage: "persistence" });
+          await updateNotificationLog(log.id, { status: "failed", error: "provider_rejected" });
+        } else {
+          logger.info("notification.job", { result: "accepted", providerMessageId: result.providerMessageId });
+          sent++;
+          addLogFields({ stage: "persistence", providerMessageId: result.providerMessageId });
+          const saved = await updateNotificationLog(log.id, { status: "sent", providerMessageId: result.providerMessageId, sentAt: new Date(), error: null });
+          logger.info("notification.persisted", { result: saved ? "applied" : "ignored", nextStatus: saved?.status, reason: saved ? "applied" : "unchanged" });
+        }
+      } catch (error) {
+        if (error instanceof NotificationRateLimitError) {
+          retryAfterSeconds = Math.max(retryAfterSeconds, error.retryAfterSeconds);
+          logger.warn("notification.job", { result: "retry", reason: "rate_limited", retryAfterSeconds });
+          await updateNotificationLog(log.id, { status: "pending", error: `rate_limited:${Date.now() + retryAfterSeconds * 1000}` });
+        } else {
+          unknown++;
+          logger.warn("notification.job", { result: "unknown", reason: "outcome_unknown" });
+          const errorId = logger.error(`notification.${deliveryChannel}_exception`, error, { assignmentId: assignment.id, drawId: owned.draw.id });
+          await updateNotificationLog(log.id, { status: "pending", error: `outcome_unknown:${errorId}` });
+        }
+      }
+    }, undefined, { provider: true }));
+
+    const currentLogs = (await listCurrentNotificationLogsForDraw(owned.draw.id)).map(({ log }) => log);
+    const coveredAssignments = new Set(currentLogs.filter((log) => log.channel !== "manual" && successfulStatuses.has(log.status)).map((log) => log.assignmentId));
+    const allCovered = allRows.length > 0 && allRows.every(({ assignment }) => coveredAssignments.has(assignment.id));
+    let finalized = false;
+    if (allCovered) {
+      addLogFields({ stage: "finalization" });
+      finalized = await tracedTransaction(async (tx) => {
+        await tx.select({ id: drawEditions.id }).from(drawEditions)
+          .where(eq(drawEditions.id, input.editionId)).for("update");
+        const [current] = await tx.update(draws).set({ status: "sent" })
+          .where(and(eq(draws.id, owned.draw.id), ne(draws.status, "revoked"))).returning({ id: draws.id });
+        if (!current) return false;
+        await tx.update(drawEditions).set({ status: "sent", updatedAt: new Date() }).where(eq(drawEditions.id, input.editionId));
+        return true;
+      });
+    }
+    const end = cursor + batch.length;
+    return { drawId: owned.draw.id, sent, failed, skipped, unknown, retryAfterSeconds, nextCursor: retryAfterSeconds ? cursor : end < jobs.length ? end : null, processed: end, total: jobs.length, redirected: owned.edition.kind === "test", allCovered: finalized };
+
+  }, r => ({ drawId: r.drawId, sent: r.sent, failed: r.failed, skipped: r.skipped, unknown: r.unknown, retryAfterSeconds: r.retryAfterSeconds, nextCursor: r.nextCursor ?? undefined, processed: r.processed, total: r.total, redirected: r.redirected, allCovered: r.allCovered }), { provider: true });
 }
 
 export async function prepareManualDelivery(input: { adminId: string; assignmentId: string }) {
-  const row = await getOwnedAssignment(input.assignmentId, input.adminId);
-  if (!row) throw new AppError(404, "ASSIGNMENT_NOT_FOUND", "No se ha encontrado la entrega.");
-  if (row.draw.status === "revoked") throw new AppError(409, "DRAW_REVOKED", "Este reparto está anulado.");
-  if (!row.assignment.revealTokenCiphertext) throw new AppError(409, "LEGACY_TOKEN", "Este enlace antiguo no se puede recuperar.");
-  await recordAuditEvent({ event: "assignment.link_copied", actorAdminId: input.adminId, editionId: row.edition.id, drawId: row.draw.id, assignmentId: row.assignment.id });
-  const token = decryptRevealToken(row.assignment.revealTokenCiphertext);
-  logger.info("assignment_link_copied", {
-    adminUserId: input.adminId,
-    editionId: row.edition.id,
-    drawId: row.draw.id,
-    assignmentId: row.assignment.id,
-    assignmentType: row.giver ? "participant" : "familyIsland",
-    participantId: row.giver?.sourceParticipantId,
-    islandId: row.giverIsland?.sourceFamilyIslandId,
-    representativeParticipantId: row.giverIsland?.representativeSourceParticipantId
-  });
-  return { revealUrl: buildRevealUrl(getEnv().appUrl, token), testMode: row.edition.kind === "test" };
+  return observe("notification.manual", { assignmentId: input.assignmentId }, async () => {
+    const row = await getOwnedAssignment(input.assignmentId, input.adminId);
+    if (!row) throw new AppError(404, "ASSIGNMENT_NOT_FOUND", "No se ha encontrado la entrega.");
+    if (row.draw.status === "revoked") throw new AppError(409, "DRAW_REVOKED", "Este reparto está anulado.");
+    if (!row.assignment.revealTokenCiphertext) throw new AppError(409, "LEGACY_TOKEN", "Este enlace antiguo no se puede recuperar.");
+    await recordAuditEvent({ event: "assignment.link_copied", actorAdminId: input.adminId, editionId: row.edition.id, drawId: row.draw.id, assignmentId: row.assignment.id });
+    addLogFields({ editionId: row.edition.id, drawId: row.draw.id, stage: "decrypt" });
+    const token = decryptRevealToken(row.assignment.revealTokenCiphertext);
+    logger.info("assignment_link_copied", {
+      editionId: row.edition.id,
+      drawId: row.draw.id,
+      assignmentId: row.assignment.id,
+      assignmentType: row.giver ? "participant" : "familyIsland",
+      participantId: row.giver?.sourceParticipantId,
+      islandId: row.giverIsland?.sourceFamilyIslandId,
+      representativeParticipantId: row.giverIsland?.representativeSourceParticipantId
+    });
+    return { revealUrl: buildRevealUrl(getEnv().appUrl, token), testMode: row.edition.kind === "test" };
+
+  }, undefined);
 }
