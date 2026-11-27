@@ -113,3 +113,7 @@ deduplicación de diagnósticos, commit/rollback, presupuestos y redacción. `te
 fetch simulado para comprobar aceptación, rechazo, rate limit y resultados desconocidos sin datos privados. Las
 pruebas de integración cubren la identidad verificada antes del logout y conservan las invariantes de entregas y
 webhooks. El procedimiento manual de Preview está en [observabilidad](./observability.md).
+
+## Comprobador de tipos en el build
+
+`npm run build` comprueba primero que `@astrojs/check` y TypeScript puedan cargarse. Si una dependencia transitiva está ausente, detiene el build con código de salida distinto de cero antes de que Astro ofrezca una instalación interactiva. Una compilación solo se considera validada cuando el comprobador realmente se ha ejecutado. El runtime WASM `@emnapi/runtime` se declara explícitamente como dependencia de desarrollo porque el comprobador lo necesita y la instalación con `legacy-peer-deps` puede omitirlo si solo figura como peer transitivo. La guarda tiene pruebas aisladas de carga correcta y fallo de importación.
