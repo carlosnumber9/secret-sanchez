@@ -72,7 +72,9 @@ El token funciona como credencial: quien posee la URL puede ver la asignación. 
 
 - `DATABASE_URL`
 - `REVEAL_TOKEN_ENCRYPTION_KEY`
-- `RESEND_API_KEY`
+- `GMAIL_USER`
+- `GMAIL_APP_PASSWORD`
+- `RESEND_WEBHOOK_SECRET` (solo callbacks históricos)
 - `KAPSO_API_KEY`
 - `KAPSO_PHONE_NUMBER_ID`
 - `KAPSO_TEMPLATE_NAME`

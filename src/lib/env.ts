@@ -7,7 +7,8 @@ export type AppEnv = {
   databaseUrl: string;
   appUrl: string;
   revealTokenEncryptionKey: string;
-  resendApiKey?: string;
+  gmailUser?: string;
+  gmailAppPassword?: string;
   resendWebhookSecret?: string;
   kapsoApiKey?: string;
   kapsoPhoneNumberId?: string;
@@ -34,7 +35,8 @@ function defaultSource(): EnvSource {
     REVEAL_TOKEN_ENCRYPTION_KEY:
       process.env.REVEAL_TOKEN_ENCRYPTION_KEY ?? import.meta.env?.REVEAL_TOKEN_ENCRYPTION_KEY,
     RESEND_WEBHOOK_SECRET: process.env.RESEND_WEBHOOK_SECRET ?? import.meta.env?.RESEND_WEBHOOK_SECRET,
-    RESEND_API_KEY: process.env.RESEND_API_KEY ?? import.meta.env?.RESEND_API_KEY,
+    GMAIL_USER: process.env.GMAIL_USER ?? import.meta.env?.GMAIL_USER,
+    GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD ?? import.meta.env?.GMAIL_APP_PASSWORD,
     KAPSO_API_KEY: process.env.KAPSO_API_KEY ?? import.meta.env?.KAPSO_API_KEY,
     KAPSO_PHONE_NUMBER_ID: process.env.KAPSO_PHONE_NUMBER_ID ?? import.meta.env?.KAPSO_PHONE_NUMBER_ID,
     KAPSO_TEMPLATE_NAME: process.env.KAPSO_TEMPLATE_NAME ?? import.meta.env?.KAPSO_TEMPLATE_NAME,
@@ -79,7 +81,8 @@ export function readEnv(source: EnvSource): AppEnv {
     databaseUrl: required(source, "DATABASE_URL"),
     appUrl,
     revealTokenEncryptionKey,
-    resendApiKey: source.RESEND_API_KEY?.trim() || undefined,
+    gmailUser: source.GMAIL_USER?.trim() || undefined,
+    gmailAppPassword: source.GMAIL_APP_PASSWORD?.replace(/\s+/g, "") || undefined,
     resendWebhookSecret: source.RESEND_WEBHOOK_SECRET?.trim() || undefined,
     kapsoApiKey: source.KAPSO_API_KEY?.trim() || undefined,
     kapsoPhoneNumberId: source.KAPSO_PHONE_NUMBER_ID?.trim() || undefined,

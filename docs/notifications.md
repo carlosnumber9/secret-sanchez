@@ -11,9 +11,15 @@ Cada entrega usa `email`, `whatsapp` o `both`, configurado en la edición. `manu
 
 ## Email y WhatsApp
 
-Resend entrega email. Kapso recibe una plantilla aprobada con dos parámetros posicionales: nombre del destinatario y URL de revelación. El proveedor debe configurarse con `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_TEMPLATE_NAME` y `KAPSO_TEMPLATE_LANGUAGE`.
+Gmail entrega email mediante SMTP (`smtp.gmail.com:465`, TLS) con `GMAIL_USER` y `GMAIL_APP_PASSWORD`. Nodemailer conecta, autentica y completa el envío antes de responder. El remitente usa la cuenta configurada con nombre visible «Secret Sánchez»; no se necesita dominio propio. Kapso recibe una plantilla aprobada con dos parámetros posicionales: nombre del destinatario y URL de revelación. El proveedor debe configurarse con `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_TEMPLATE_NAME` y `KAPSO_TEMPLATE_LANGUAGE`.
 
 El webhook `/api/webhooks/kapso` verifica `X-Webhook-Signature` con HMAC SHA-256 sobre el body crudo. Actualiza `sent`, `delivered`, `read` y `failed` por `provider_message_id`. Los estados son monotónicos: un fallo tardío no degrada `delivered` o `read`, mientras una entrega posterior puede recuperar un fallo.
+
+## Plantilla de email integrada
+
+`emails/reveal-resend.html` y `emails/reveal-resend.txt` son las plantillas activas de Gmail. Conservan su nombre histórico, pero no requieren Resend ni un ID de plantilla. El adapter de Vercel incluye ambos archivos en la función; `renderEmail` los carga, escapa las variables HTML y conserva el enlace completo con su fragmento.
+
+Las variables son `PARTICIPANT_NAME` (regalador o representante, nunca receptor), `REVEAL_URL` y `DELIVERY_NOTE`. Las pruebas añaden `[PRUEBA]` al asunto y al texto y muestran un aviso visible de redirección al administrador. La plantilla conserva crema, rojo, dorado y el icono público de la app, con versión de texto y enlace alternativo al botón. No incluye píxeles ni redirecciones de seguimiento.
 
 ## Lotes, reenvíos y estado global
 
@@ -40,7 +46,11 @@ La operación registra `assignment.link_copied` si existe `audit_events` y emite
 
 ## Idempotencia y resultados inciertos
 
-La reserva de intentos se serializa por asignación dentro de una transacción. Las peticiones repetidas conservan la clave en la interfaz y la misma clave se envía a Resend. Los intentos pendientes recientes se omiten durante 60 segundos. Los emails pendientes se pueden recuperar con la clave original durante 23 horas, dentro de la ventana de deduplicación del proveedor. Un timeout o un fallo de transporte conserva `pending` con `outcome_unknown`; no se afirma que el proveedor rechazara el mensaje. WhatsApp y los emails fuera de esa ventana necesitan comprobación en proveedor y reenvío explícito seleccionado; no se reintentan automáticamente porque podrían duplicarse. Ambos transportes tienen un timeout de 20 segundos.
+La reserva de intentos se serializa por asignación dentro de una transacción. Las peticiones repetidas conservan su clave en la interfaz y la base impide reservar dos veces la misma operación. Esta deduplicación es local: SMTP no ofrece la clave de idempotencia de Resend.
+
+Los intentos pendientes recientes se omiten durante 60 segundos. Después, un resultado incierto sigue bloqueado para `pending`, `failed` y la misma clave, incluso si es antiguo. El panel lo presenta como «Resultado incierto». Tras revisar el estado en el proveedor, `force` sobre una selección explícita con una clave nueva permite un nuevo intento y advierte del posible duplicado. No se afirma que un timeout o una desconexión equivalgan a rechazo.
+
+Un rechazo SMTP explícito `4xx` conserva el intento pendiente con una espera de 60 segundos y permite recuperarlo al vencerla, porque el servidor no aceptó ese mensaje. Un `5xx` lo deja fallido. El envío Gmail se cancela a los 20 segundos con `AbortSignal`, cerrando la conexión; ambos transportes esperan su resultado antes de responder. No se reintentan automáticamente mensajes con resultado desconocido.
 
 ## Concurrencia del webhook
 
@@ -50,12 +60,16 @@ El panel y la cobertura consultan el último intento por asignación y canal med
 
 ## Lotes reanudables
 
-Cada petición procesa como máximo cuatro mensajes con concurrencia dos y separación mínima de 550 ms entre inicios. El panel continúa mediante un cursor estable y conserva la clave del lote si falla la conexión; no hay trabajo crítico desligado de la respuesta. Los `429` conservan el intento pendiente y el mismo cursor, respetando `Retry-After` entre 1 y 60 segundos. El panel hace hasta tres esperas automáticas antes de ofrecer reintento. Los resultados inciertos se muestran separados de los rechazos confirmados. El adapter permite 60 segundos por función; cada transporte tiene timeout de 20 segundos.
+Cada petición procesa como máximo cuatro mensajes con concurrencia dos y separación mínima de 550 ms entre inicios. El panel continúa mediante un cursor estable y conserva la clave del lote si falla la conexión; no hay trabajo crítico desligado de la respuesta. Los límites HTTP de WhatsApp y los rechazos SMTP temporales conservan el intento pendiente y el mismo cursor, con espera entre 1 y 60 segundos. El panel hace hasta tres esperas automáticas antes de ofrecer reintento. Los resultados inciertos se muestran separados de los rechazos confirmados. El adapter permite 60 segundos por función; cada transporte tiene timeout de 20 segundos.
 
 ## Estados de email
+
+Para Gmail, `sent` significa aceptación SMTP; no confirma entrega al buzón ni lectura del correo. `assignments.opened_at` sigue registrando la apertura de la revelación en la app. La cuenta remitente recibe los avisos de devolución que correspondan, sin sincronización automática al panel.
+
+### Compatibilidad histórica de Resend
 
 `POST /api/webhooks/resend` verifica el cuerpo original y los headers `svix-*` con el SDK de Resend y `RESEND_WEBHOOK_SECRET`. La firma y su ventana temporal se validan antes de interpretar el evento. Sin secreto responde `503`; firma inválida, `401`. Un ID aún desconocido devuelve `503` para reintento. Los eventos repetidos son idempotentes y los eventos atrasados no degradan una entrega confirmada.
 
 Se procesan `email.sent`, `email.delivered`, `email.delivery_delayed`, `email.failed`, `email.bounced`, `email.complained` y `email.suppressed`. Los tres últimos quedan como fallo terminal del intento y bloquean reenvíos al mismo destinatario en esa asignación, incluso con `force`. Debe corregirse el contacto y regenerarse el reparto o usarse un canal alternativo. Un retraso conserva `sent` con código de diagnóstico; el proveedor sigue intentando la entrega. No se guardan direcciones ni motivos libres procedentes del webhook, ni se procesan aperturas o clics de email.
 
-`sent` en reparto/edición conserva el hito histórico de aceptación de todos los mensajes. Un rebote posterior aparece en la cobertura actual y en el panel, sin cambiar ese hito ni reactivar un reparto anulado. El endpoint y secreto quedan preparados en código; configurar la suscripción en Resend sigue pendiente. Referencias: [verificación oficial](https://resend.com/docs/webhooks/verify-webhooks-requests) y [eventos oficiales](https://resend.com/docs/webhooks/event-types).
+`sent` en reparto/edición conserva el hito histórico de aceptación de todos los mensajes. Un rebote posterior aparece en la cobertura actual y en el panel, sin cambiar ese hito ni reactivar un reparto anulado. El endpoint y secreto se conservan para el histórico; no se necesitan para los nuevos envíos Gmail. Referencias: [verificación oficial](https://resend.com/docs/webhooks/verify-webhooks-requests) y [eventos oficiales](https://resend.com/docs/webhooks/event-types).

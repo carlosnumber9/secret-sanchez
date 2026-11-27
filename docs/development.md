@@ -22,7 +22,7 @@ Variables obligatorias:
 - `APP_URL`, con el origen canónico del entorno actual
 - `REVEAL_TOKEN_ENCRYPTION_KEY`, Base64 de 32 bytes
 
-Opcionales para email: `RESEND_API_KEY`. Para WhatsApp deben configurarse conjuntamente `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_TEMPLATE_NAME`, `KAPSO_TEMPLATE_LANGUAGE`, `KAPSO_WEBHOOK_SECRET` y `KAPSO_TEST_RECIPIENT_PHONE`. Usar una clave de cifrado distinta por entorno; conservar la misma dentro de cada entorno. No copiar datos reales a los proyectos de desarrollo o Preview.
+Para habilitar email: `GMAIL_USER` y `GMAIL_APP_PASSWORD`. Los tests usan transportes simulados o SMTP local; nunca credenciales reales. `RESEND_WEBHOOK_SECRET` solo sirve para callbacks históricos. Para WhatsApp deben configurarse conjuntamente `KAPSO_API_KEY`, `KAPSO_PHONE_NUMBER_ID`, `KAPSO_TEMPLATE_NAME`, `KAPSO_TEMPLATE_LANGUAGE`, `KAPSO_WEBHOOK_SECRET` y `KAPSO_TEST_RECIPIENT_PHONE`. Usar una clave de cifrado distinta por entorno; conservar la misma dentro de cada entorno. No copiar datos reales a los proyectos de desarrollo o Preview.
 
 ## Comandos
 

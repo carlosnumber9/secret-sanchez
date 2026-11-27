@@ -42,6 +42,8 @@ Las pruebas del sorteo deben repetir generaciones y validar invariantes, no afir
 ### Integración
 
 - Queries contra una base aislada.
+- Gmail: remitente configurado, plantilla HTML/texto, redirección de pruebas y destinatarios definitivos con transportes controlados.
+- SMTP local: aceptación, rechazos temporales/permanentes, cancelación del socket antes de confirmación y ausencia de recuperación automática de resultados inciertos.
 - Renombrado individual bajo bloqueo de familia, revisión obsoleta, autorización y compatibilidad con el guardado del borrador.
 - Creación atómica de sorteo y asignaciones.
 - Restricciones e índices.

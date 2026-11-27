@@ -13,7 +13,7 @@ flowchart LR
   reveal --> astro
   astro --> auth["Supabase Auth"]
   astro --> db["Supabase Postgres<br>Drizzle ORM"]
-  astro --> email["Resend"]
+  astro --> email["Gmail SMTP"]
   astro --> whatsapp["Kapso / WhatsApp"]
   astro --> vercel["Runtime Vercel"]
 ```
@@ -30,7 +30,7 @@ flowchart LR
 - **Supabase Auth:** email, contraseña y sesión.
 - **Supabase Postgres:** persistencia relacional.
 - **Drizzle ORM:** schema y acceso tipado a la base.
-- **Resend:** email transaccional.
+- **Gmail SMTP:** email transaccional mediante Nodemailer, con cuenta remitente y contraseña de aplicación.
 - **Kapso:** plantillas de WhatsApp y webhooks firmados de estado.
 - **Vercel:** adapter y despliegue serverless objetivo.
 - **Zod:** validación de payloads de API.
@@ -75,7 +75,7 @@ pruebas.
 
 ### Infraestructura
 
-`src/lib` contiene entorno, hashing, tokens y clientes de Supabase, Resend y Kapso. Las claves privadas no deben
+`src/lib` contiene entorno, hashing, tokens y clientes de Supabase, Gmail y Kapso. Las claves privadas no deben
 atravesar el límite del servidor.
 
 ## Flujos principales

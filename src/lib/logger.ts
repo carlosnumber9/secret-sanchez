@@ -12,14 +12,15 @@ const number: Rule<number> = (v) => typeof v === "number" && Number.isFinite(v) 
 const boolean: Rule<boolean> = (v) => typeof v === "boolean" ? v : undefined;
 const choice = <T extends string>(values: readonly T[]): Rule<T> => (v) => typeof v === "string" && values.includes(v as T) ? v as T : undefined;
 const code: Rule<string> = (v) => choice(diagnosticCodes)(v) ?? (typeof v === "string" && /^[1-5][0-9]{2}$/.test(v) ? v : undefined);
-const providerId: Rule<string> = (v) => typeof v === "string" && /^(?:[0-9a-f-]{36}|wamid\.[A-Za-z0-9+/=_-]{1,220}|synthetic-[0-9a-f-]{36})$/i.test(v) ? v : undefined;
+const providerId: Rule<string> = (v) => typeof v === "string" && /^(?:[0-9a-f-]{36}|wamid\.[A-Za-z0-9+/=_-]{1,220}|synthetic-[0-9a-f-]{36}|<[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}@gmail\.com>)$/i.test(v) ? v : undefined;
 const statuses = ["ready", "drawn", "archived", "draft", "generated", "locked", "sent", "revoked", "pending", "delivered", "failed", "opened", "read", "manual"] as const;
 const fieldRules = {
   familyId: uuid, editionId: uuid, drawId: uuid, assignmentId: uuid, participantId: uuid, islandId: uuid,
   entityId: uuid, representativeParticipantId: uuid, notificationId: uuid, batchId: uuid, targetIslandId: uuid,
   providerMessageId: providerId, durationMs: number, status: (v: unknown) => number(v) ?? choice(statuses)(v),
   previousStatus: choice(statuses), nextStatus: choice(statuses), reason: (v: unknown) => choice(reasons)(v) ?? code(v),
-  stage: choice(stages), transactionStage: choice(["work", "commit"]), authStage: choice(stages), channel: choice(["email", "whatsapp", "manual", "both"]), provider: choice(["resend", "kapso", "supabase"]),
+  stage: choice(stages), transactionStage: choice(["work", "commit"]), authStage: choice(stages), channel: choice(["email", "whatsapp", "manual", "both"]), provider: choice(["gmail", "resend", "kapso", "supabase"]),
+  smtpStatus: number, smtpCommand: choice(["CONN", "EHLO", "HELO", "STARTTLS", "AUTH", "MAIL FROM", "RCPT TO", "DATA", "QUIT"]),
   operation: choice(operations), result: choice(["succeeded", "failed", "rejected", "skipped", "unknown", "accepted", "applied", "ignored", "retry"]),
   mode: choice(["pending", "failed", "force"]), scope: choice(["all", "selected"]), kind: choice(["test", "final", "island", "participant"]),
   view: choice(["configuration", "draw", "deliveries", "history", "census"]), strategy: choice(["move", "cascade"]),

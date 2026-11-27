@@ -4,7 +4,7 @@ import { Copy, Mail, MessageCircle, RefreshCw, Send } from "lucide-react";
 import { useRef, useState } from "react";
 import "./DeliveryStatusPanel.css";
 
-type DeliveryStatus = "sent" | "pending" | "failed" | "delivered" | "read" | "missing" | "skipped";
+type DeliveryStatus = "sent" | "pending" | "failed" | "delivered" | "read" | "missing" | "skipped" | "unknown";
 type Delivery = {
   id: string;
   name: string;
@@ -19,7 +19,7 @@ type Props = { deliveries: Delivery[]; editionId: string; testMode: boolean };
 
 const labels: Record<DeliveryStatus, string> = {
   sent: "Enviado", pending: "Pendiente", failed: "Error", delivered: "Entregado",
-  read: "Leído", missing: "Falta contacto", skipped: "No usado"
+  read: "Leído", missing: "Falta contacto", skipped: "No usado", unknown: "Resultado incierto"
 };
 
 export default function DeliveryStatusPanel({ deliveries, editionId, testMode }: Props) {
@@ -30,9 +30,11 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
 
   async function send(mode: "pending" | "failed" | "force", scope: "all" | "selected" = "all") {
     if (scope === "selected" && !selected.length) { setMessage("Selecciona al menos una entrega."); return; }
-    const warning = testMode
+    const uncertainSelection = mode === "force" && deliveries.some(delivery => selected.includes(delivery.id) && (delivery.emailStatus === "unknown" || delivery.whatsappStatus === "unknown"));
+    const warning = (testMode
       ? "Los emails de prueba se redirigirán a tu correo de acceso y los WhatsApp al teléfono de prueba. ¿Continuar?"
-      : "Esto enviará mensajes reales a la familia. ¿Quieres continuar?";
+      : "Esto enviará mensajes reales a la familia. ¿Quieres continuar?")
+      + (uncertainSelection ? "\nHay envíos con resultado incierto que podrían haber llegado. Reenviarlos puede duplicar mensajes. ¿Has comprobado su estado antes de continuar?" : "");
     if (!window.confirm(warning)) return;
     const signature = JSON.stringify({ mode, scope, selected: [...selected].sort() });
     if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID(), cursor: 0 };
@@ -87,6 +89,8 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
 
   return <section className="stack">
     {testMode && <p><strong>Modo prueba:</strong> los emails se redirigen a tu correo de acceso y los WhatsApp al teléfono de prueba configurado.</p>}
+    <p>En email, «Enviado» confirma que el correo fue aceptado para envío. La apertura del enlace se muestra por separado.</p>
+    {deliveries.some(delivery => delivery.emailStatus === "unknown" || delivery.whatsappStatus === "unknown") && <p>Los envíos con resultado incierto requieren revisión antes de usar «Reenviar seleccionados». No se reintentan automáticamente.</p>}
     <div className="cluster cluster--actions">
       <Button disabled={busy} type="button" onClick={() => send("pending")}><Send size={18} />Enviar pendientes</Button>
       <Button disabled={busy} variant="secondary" type="button" onClick={() => send("failed")}><RefreshCw size={18} />Reintentar fallidos</Button>

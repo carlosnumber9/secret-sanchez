@@ -58,7 +58,7 @@ Si se restaura una base a un punto anterior, mensajes ya entregados siguen exist
 ## Activación de proveedores pendiente
 
 - Supabase: Email/Password, signup deshabilitado, usuarios autorizados, RLS/grants efectivos y recuperación comprobada.
-- Resend: dominio, SPF/DKIM, remitente y webhook `/api/webhooks/resend`; secreto independiente y eventos de entrega/fallo. No activar aperturas ni clics por defecto.
+- Gmail: `GMAIL_USER` y `GMAIL_APP_PASSWORD` en el entorno correcto; contraseña de aplicación independiente de la contraseña principal. Probar una entrega autorizada de edición de prueba. SMTP acredita aceptación, no entrega al buzón. El webhook de Resend se conserva solo para el histórico.
 - Kapso: credenciales, número, idioma, plantilla aprobada y webhook `/api/webhooks/kapso` con firma.
 - Vercel: runtime Node 22, `npm ci`, contextos separados y `APP_URL` del entorno. No descargar variables descifradas para documentar el inventario.
 

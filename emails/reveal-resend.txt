@@ -1,0 +1,15 @@
+Secret Sánchez · Reyes en familia
+
+Hola, {{{PARTICIPANT_NAME}}}:
+
+Ya hemos preparado el reparto de Reyes.
+Abre tu enlace personal para descubrir a quién te toca regalar:
+
+{{{REVEAL_URL}}}
+
+{{{DELIVERY_NOTE}}}
+
+El secreto se descubre dentro de la app.
+No reenvíes este correo ni compartas el enlace.
+
+La ilusión empieza con un secreto.

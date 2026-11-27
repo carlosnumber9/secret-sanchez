@@ -9,7 +9,7 @@ Object.assign(process.env, {
   APP_ENV: "test", VERCEL_ENV: "", DATABASE_URL: isolatedTestDatabase(process.env.TEST_DATABASE_URL),
   PUBLIC_SUPABASE_URL: "https://project.example.invalid", PUBLIC_SUPABASE_ANON_KEY: "synthetic-smoke",
   APP_URL: "https://app.example.invalid", REVEAL_TOKEN_ENCRYPTION_KEY: Buffer.alloc(32, 1).toString("base64"),
-  RESEND_API_KEY: "", RESEND_WEBHOOK_SECRET: "", KAPSO_API_KEY: "", KAPSO_WEBHOOK_SECRET: ""
+  GMAIL_USER: "", GMAIL_APP_PASSWORD: "", RESEND_WEBHOOK_SECRET: "", KAPSO_API_KEY: "", KAPSO_WEBHOOK_SECRET: ""
 });
 const entry = pathToFileURL(path.resolve(".vercel/output/functions/_render.func/dist/server/entry.mjs"));
 const { default: app } = await import(entry.href) as { default: { fetch(request: Request): Promise<Response> } };

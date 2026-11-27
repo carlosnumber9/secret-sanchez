@@ -26,3 +26,11 @@ test("readEnv rejects missing values and invalid encryption keys", () => {
     /HTTP or HTTPS/
   );
 });
+
+
+test("Gmail credentials are normalized without requiring Resend", () => {
+  const env = readEnv({ ...valid, GMAIL_USER: " sender@example.invalid ", GMAIL_APP_PASSWORD: "abcd efgh ijkl mnop\n", RESEND_API_KEY: "unused-synthetic" });
+  assert.equal(env.gmailUser, "sender@example.invalid");
+  assert.equal(env.gmailAppPassword, "abcdefghijklmnop");
+  assert.equal("resendApiKey" in env, false);
+});

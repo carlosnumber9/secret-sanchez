@@ -330,6 +330,54 @@ test("provider rate limits preserve the cursor and resume the same attempts", as
   assert.equal(resumed.nextCursor, null);
 }));
 
+test("uncertain SMTP attempts stay pending until an explicit new selected resend", async () => fixture(async data => {
+  const { getEditionAppState } = await import("../../src/actions/editionData");
+  const { draw } = await generation(data);
+  const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));
+  let calls = 0;
+  let uncertain = true;
+  const transports = {
+    email: async () => { calls++; if (uncertain) throw new Error("Synthetic SMTP timeout"); return { ok: true, providerMessageId: crypto.randomUUID() }; },
+    whatsapp: async () => { throw new Error("Unexpected WhatsApp send"); }
+  };
+  const input = { admin: data.admin, editionId: data.edition.id, scope: "selected" as const, assignmentIds: [assignment.id], mode: "pending" as const, idempotencyKey: crypto.randomUUID() };
+  assert.equal((await sendAdminNotifications(input, transports)).unknown, 1);
+  assert.equal(calls, 1);
+  await db.update(s.notificationLogs).set({ createdAt: new Date(Date.now() - 120_000) }).where(eq(s.notificationLogs.assignmentId, assignment.id));
+  const state = await getEditionAppState(data.admin.id, data.edition.id, "deliveries");
+  assert.equal(state.deliveries.find(delivery => delivery.id === assignment.id)?.emailStatus, "unknown");
+  for (const mode of ["pending", "failed"] as const) {
+    assert.equal((await sendAdminNotifications({ ...input, mode, idempotencyKey: crypto.randomUUID() }, transports)).skipped, 1);
+  }
+  assert.equal((await sendAdminNotifications({ ...input, mode: "force" }, transports)).skipped, 1);
+  assert.equal(calls, 1);
+  uncertain = false;
+  assert.equal((await sendAdminNotifications({ ...input, mode: "force", idempotencyKey: crypto.randomUUID() }, transports)).sent, 1);
+  assert.equal(calls, 2);
+  assert.equal((await db.select().from(s.notificationLogs).where(eq(s.notificationLogs.assignmentId, assignment.id))).length, 2);
+}));
+
+test("a definitive edition sends to family snapshots while tests keep redirecting to the administrator", async () => fixture(async data => {
+  const original = process.env.APP_ENV;
+  const targets: string[] = [];
+  const transports = {
+    email: async (message: { to: string }) => { targets.push(message.to); return { ok: true, providerMessageId: crypto.randomUUID() }; },
+    whatsapp: async () => { throw new Error("Unexpected WhatsApp send"); }
+  };
+  try {
+    process.env.APP_ENV = "production";
+    await generation(data);
+    const input = { admin: data.admin, editionId: data.edition.id, mode: "pending" as const, scope: "all" as const, idempotencyKey: crypto.randomUUID() };
+    await sendAdminNotifications(input, transports);
+    assert.deepEqual(targets, data.people.map(() => data.admin.email));
+    const definitive = await createOwnedEdition(data.admin.id, { familyId: data.family.id, name: "Definitive", year: 2091, kind: "final" });
+    await generateEditionDraw({ editionId: definitive.id, generatedByAdminId: data.admin.id });
+    targets.length = 0;
+    await sendAdminNotifications({ ...input, editionId: definitive.id, idempotencyKey: crypto.randomUUID() }, transports);
+    assert.deepEqual(targets.sort(), data.people.map(person => person.email).sort());
+  } finally { process.env.APP_ENV = original; }
+}));
+
 test("concurrent reveal opens mark the first opening exactly once", async () => fixture(async (data) => {
   const { draw } = await generation(data);
   const [assignment] = await db.select().from(s.assignments).where(eq(s.assignments.drawId, draw.id));

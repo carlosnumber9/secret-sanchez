@@ -1,11 +1,13 @@
 import assert from "node:assert/strict";
 import test from "node:test";
-import { canResumePending } from "../src/services/notifications/retry";
+import { NotificationRateLimitError, pendingRateLimit } from "../src/services/notifications/retry";
 
-test("pending recovery stays inside provider deduplication guarantees", () => {
-  const now = Date.now();
-  assert.equal(canResumePending("email", new Date(now - 30_000), now), false);
-  assert.equal(canResumePending("email", new Date(now - 61_000), now), true);
-  assert.equal(canResumePending("email", new Date(now - 24 * 60 * 60_000), now), false);
-  assert.equal(canResumePending("whatsapp", new Date(now - 61_000), now), false);
+test("temporary refusals bound retry delays and invalid cooldowns stay unknown", () => {
+  assert.equal(new NotificationRateLimitError("999").retryAfterSeconds, 60);
+  assert.equal(new NotificationRateLimitError("0").retryAfterSeconds, 1);
+  assert.equal(new NotificationRateLimitError("invalid").retryAfterSeconds, 2);
+  assert.equal(pendingRateLimit("rate_limited:1050", 1000), 50);
+  assert.equal(pendingRateLimit("rate_limited:950", 1000), 0);
+  assert.equal(pendingRateLimit("rate_limited:invalid", 1000), null);
+  assert.equal(pendingRateLimit("outcome_unknown:synthetic", 1000), null);
 });

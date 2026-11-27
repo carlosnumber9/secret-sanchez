@@ -91,7 +91,7 @@ export async function sendAdminNotifications(input: SendInput, transports = { em
         const revealUrl = buildRevealUrl(appUrl, decryptRevealToken(assignment.revealTokenCiphertext));
         addLogFields({ stage: "provider" });
         const result = deliveryChannel === "email"
-          ? await transports.email({ to: log.recipient, name, revealUrl, idempotencyKey: log.idempotencyKey ?? undefined, testMode: owned.edition.kind === "test" })
+          ? await transports.email({ to: log.recipient, name, revealUrl, testMode: owned.edition.kind === "test" })
           : await transports.whatsapp({ phone: log.recipient, name, revealUrl });
         if (!result.ok) {
           logger.warn("notification.job", { result: "rejected", reason: "provider_rejected" });

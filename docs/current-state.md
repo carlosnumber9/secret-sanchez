@@ -1,6 +1,6 @@
 # Estado actual
 
-Última revisión documental: **23 de noviembre de 2026**.
+Última revisión documental: **27 de noviembre de 2026**.
 
 ## Implementado en código
 
@@ -14,7 +14,8 @@
 - Revocación, snapshots y contador de intentos conservado incluso al borrar el histórico.
 - Tokens con hash SHA-256 y ciphertext AES-256-GCM; fragmento retirado del navegador y reintento de revelación en memoria.
 - Reservas idempotentes de notificación, lotes reanudables de cuatro mensajes, concurrencia dos y gestión de resultados inciertos.
-- Webhooks firmados de Kapso y Resend; transiciones atómicas y fallos terminales de email.
+- Email mediante Gmail SMTP con contraseña de aplicación, TLS, plantilla de marca y límite total de 20 segundos; no requiere dominio propio.
+- Webhooks firmados de Kapso y compatibilidad con callbacks históricos de Resend; transiciones atómicas. Gmail confirma aceptación SMTP, no entrega al buzón.
 - Cabeceras privadas, CSP de producción, comprobación de origen y límites HTTP.
 - Guardas de aislamiento por entorno y destinatarios seguros fuera de Production; provisionamiento externo pendiente.
 - Fondo WebGL diferido, alternativa SVG y consultas específicas por pantalla.
@@ -30,7 +31,7 @@ Los SQL se versionan y se prueban únicamente en PostgreSQL local con datos sint
 - `0010`: límites compartidos entre funciones. Sin tabla se usa memoria por instancia, sin garantía global.
 - `0011`: auditoría persistente. Sin tabla se emite aviso técnico y las copias históricas se muestran desconocidas.
 - La documentación anterior registró `0005` y `0006` como aplicadas. Eso no prueba el estado actual del entorno; `0007` normaliza estados legacy. El operador debe reconciliar el journal antes de cualquier migración futura.
-- Dominio/remitente y suscripción del webhook de Resend, con `RESEND_WEBHOOK_SECRET`.
+- Prueba real autorizada de Gmail tras desplegar y configurar `GMAIL_USER` y `GMAIL_APP_PASSWORD`; no se han consultado credenciales remotas ni enviado correos reales en esta actualización.
 - Credenciales, plantilla aprobada y webhook de Kapso.
 - Una edición de prueba operativa completa, con destinatarios seguros, antes del uso definitivo.
 
@@ -54,3 +55,9 @@ La comprobación manual en Vercel Preview continúa pendiente; esta actualizaci�
 Todos los administradores registrados tienen acceso al mismo censo y las mismas ediciones, con su propia identidad en las operaciones. La creación inicial impide abrir espacios separados por cuenta. La consolidación operativa autorizada conservó íntegramente el censo seleccionado y su edición, contactos, reparto y logs; eliminó la familia alternativa y sus dependencias, manteniendo las cuentas de acceso.
 
 La copia de los esquemas de aplicación se cifró y se restauró en PostgreSQL local antes del borrado. Se compararon todas las filas públicas con fechas normalizadas a UTC; la transacción de limpieza comprobó los valores completos del grafo conservado y de las cuentas antes de confirmar. No se aplicaron migraciones ni se enviaron notificaciones. Procedimiento en [operación](./operations.md#consolidación-de-la-familia-compartida).
+
+## Gmail SMTP (27 de noviembre de 2026)
+
+El envío activo usa Gmail en lugar de Resend. Las plantillas HTML y texto de `emails/` están integradas y se incluyen explícitamente en la función de Vercel. El remitente es la cuenta configurada; los destinatarios de prueba siguen siendo los del administrador ejecutor en Production y el contacto seguro fuera de Production.
+
+Los rechazos SMTP `4xx` permiten reintentar tras una espera; los `5xx` quedan fallidos. Una desconexión o timeout sin confirmación conserva el intento como pendiente y el panel muestra «Resultado incierto». No se recuperan automáticamente intentos inciertos antiguos. Tras revisar el buzón del remitente, el administrador puede crear un reenvío seleccionado con una clave nueva. La migración no modifica schema, reparto ni contactos.

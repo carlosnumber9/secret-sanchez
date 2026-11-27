@@ -157,8 +157,8 @@ export async function getEditionAppState(adminId: string, editionId: string, vie
       name: string;
       giverKind: "participant" | "familyIsland";
       preferredChannel: "email" | "whatsapp" | "both" | null;
-      emailStatus: "skipped" | "pending" | "missing" | "sent" | "delivered" | "failed" | "read";
-      whatsappStatus: "skipped" | "pending" | "missing" | "sent" | "delivered" | "failed" | "read";
+      emailStatus: "skipped" | "pending" | "missing" | "sent" | "delivered" | "failed" | "read" | "unknown";
+      whatsappStatus: "skipped" | "pending" | "missing" | "sent" | "delivered" | "failed" | "read" | "unknown";
       legacyToken: boolean;
       opened: boolean;
     }> = [];
@@ -169,7 +169,9 @@ export async function getEditionAppState(adminId: string, editionId: string, vie
       const logs = new Map(logRows.map(({ log }) => [`${log.assignmentId}:${log.channel}`, log]));
       deliveries = assignmentRows.map(({ assignment, giver, giverIsland }) => {
         const latestFor = (channel: "email" | "whatsapp") => {
-          const status = logs.get(`${assignment.id}:${channel}`)?.status;
+          const log = logs.get(`${assignment.id}:${channel}`);
+          const status = log?.status;
+          if (status === "pending" && log?.error?.startsWith("outcome_unknown:")) return "unknown" as const;
           return status === "sent" || status === "pending" || status === "delivered" || status === "failed" || status === "read" ? status : null;
         };
         const rawChannel = giver?.preferredChannel ?? giverIsland?.preferredChannel ?? null;

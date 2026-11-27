@@ -32,7 +32,7 @@ Los errores técnicos incluyen `errorId`. Un mismo error o una envoltura de su c
 
 Los eventos iniciales conservan la identidad conocida en ese momento; no se reescriben cuando la autenticación termina. En logout, el enriquecimiento de identidad tiene un máximo de 750 ms y no impide cerrar sesión si falla. No se usa como prueba de identidad el usuario guardado sin verificar dentro de una cookie.
 
-Se permiten UUID de entidades, IDs de mensajes con formato conocido de Resend/WhatsApp, estados, códigos controlados, canales, indicadores, cantidades y nombres permitidos de campos modificados. `changedFields: ["name", "email"]` indica qué campos se enviaron o cambiaron; nunca incluye sus valores. En guardados masivos se usan conteos agregados. Un estado solicitado se distingue del estado efectivamente persistido.
+Se permiten UUID de entidades, IDs de mensajes con formato conocido de Resend/WhatsApp y Message-ID de Gmail generados por la app (UUID sin contactos), estados, códigos controlados, canales, indicadores, cantidades y nombres permitidos de campos modificados. `changedFields: ["name", "email"]` indica qué campos se enviaron o cambiaron; nunca incluye sus valores. En guardados masivos se usan conteos agregados. Un estado solicitado se distingue del estado efectivamente persistido.
 
 Se excluyen nombres, contactos, IP, contraseñas, claves, cookies, firmas, cabeceras de autenticación, cuerpos, respuestas completas, SQL, parámetros, filas, hashes/ciphertext de revelación, URLs secretas y parejas del sorteo. Los metadatos no pueden sobrescribir identidad, evento, nivel o correlación.
 
@@ -73,7 +73,7 @@ Las operaciones medidas producen sufijos `.started`, `.succeeded`, `.failed` y, 
 | `/api/admin/editions/[id]/draws/generate` | `draw.generation.*`, `draw.stage` | Bloqueo, validación, configuración, generación de adultos/bebés, snapshots, asignaciones y auditoría; intento, reglas y cantidades. |
 | `/api/admin/editions/[id]/draws/[drawId]/revoke` | `draw.revocation.*` | Edición, sorteo y estado anterior/nuevo; sin motivo libre escrito por el usuario. |
 | `/api/admin/editions/[id]/notifications/send` | `notification.batch.*`, `notification.delivery.*`, `notification.attempt`, `notification.job`, `notification.persisted` | `batchId`, cursor, modo, selección, canal, asignación, intento, omisión, aceptación, persistencia y resumen. |
-| Resend / Kapso salientes | `provider.email.*`, `provider.whatsapp.*`, `provider.result` | Proveedor, HTTP disponible, duración, rechazo, rate limit, resultado incierto e ID del mensaje. |
+| Gmail SMTP / Kapso salientes | `provider.email.*`, `provider.whatsapp.*`, `provider.result` | Proveedor (`gmail`/`kapso`), HTTP o `smtpStatus`/`smtpCommand` disponibles, duración, rechazo, límite temporal, resultado incierto e ID del mensaje. |
 | `/api/webhooks/resend`, `/api/webhooks/kapso` | `*.webhook_rejected`, `*.webhook_ignored`, `*.delivery_updated` | Firma/configuración/JSON, evento no soportado, mensaje desconocido, transición aplicada o ignorada y reintento. |
 | `/api/admin/notifications/manual` | `notification.manual.*`, `assignment_link_copied` | Administrador, edición, sorteo y asignación; preparación/descifrado del respaldo. No afirma que el navegador haya terminado de copiar. |
 | `/r`, `/api/reveal/resolve`, `/open` | `reveal.resolve_*`, `reveal.resolved`, `reveal.open_*`, `reveal.opened`, `reveal.reopened` | Resolución, primera apertura/reapertura, enlace inválido y asignación validada; sin receptor. |
@@ -82,7 +82,7 @@ Las operaciones medidas producen sufijos `.started`, `.succeeded`, `.failed` y, 
 
 Los eventos de éxito de operaciones dentro de una transacción y la auditoría persistida se emiten solo después del commit. `draw.stage` indica progreso provisional con `transactionPending=true`. `transactionStage` distingue el trabajo del callback y la confirmación del commit; `stage` conserva la etapa de negocio que falló. Una interrupción de red durante commit puede dejar resultado desconocido: el log no prueba por sí solo el estado final de Postgres.
 
-Las reservas de notificación distinguen contacto suprimido, cooldown, lease activa, recuperación, deduplicación, inelegibilidad y nueva reserva. La aceptación de un proveedor no equivale a entrega: se correlaciona con los webhooks posteriores mediante `providerMessageId`, `notificationId` y `assignmentId`. Los callbacks duplicados o desactualizados se registran como `ignored/unchanged`, sin degradar estados.
+Las reservas de notificación distinguen contacto suprimido, cooldown, lease activa, recuperación, deduplicación, inelegibilidad y nueva reserva. La aceptación de un proveedor no equivale a entrega. Gmail no confirma entrega por webhook; se revisan Enviados y devoluciones en su buzón. En Kapso y en el histórico de Resend se correlaciona con los webhooks posteriores mediante `providerMessageId`, `notificationId` y `assignmentId`. Los callbacks duplicados o desactualizados se registran como `ignored/unchanged`, sin degradar estados.
 
 `batchId` es el UUID validado de idempotencia del envío. Agrupa peticiones con cursores del mismo lote; no se registra la clave compuesta interna ni se envía el identificador de petición a proveedores.
 

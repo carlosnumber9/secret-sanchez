@@ -4,7 +4,7 @@
 
 - **Vercel:** ejecuta Astro SSR y sirve assets estáticos.
 - **Supabase Cloud:** autenticación y Postgres.
-- **Resend:** email transaccional.
+- **Gmail SMTP:** email transaccional mediante cuenta Gmail existente; Resend conserva únicamente compatibilidad de callbacks históricos.
 - **Kapso:** plantillas de WhatsApp y webhooks de entrega.
 
 La configuración histórica del repositorio está vinculada al proyecto Vercel `carlos-projects-fa17cb11/secret-sanchez`, conectado a GitHub con
@@ -73,13 +73,20 @@ comando es el procedimiento de recuperación mientras no exista autoservicio.
 - Verificar RLS y grants.
 - Activar backups apropiados al valor de los datos.
 
-### Resend
+### Gmail SMTP
 
-- Verificar el dominio.
-- Configurar SPF/DKIM según el proveedor.
-- Probar remitente y reputación.
-- Gestionar errores y límites.
-- Confirmar explícitamente cualquier envío iniciado desde local: utiliza el proveedor y los datos reales.
+1. Preparar una cuenta Gmail remitente con verificación en dos pasos y una contraseña de aplicación. No usar la contraseña principal. La disponibilidad de contraseñas de aplicación depende de la configuración de seguridad de Google.
+2. Guardar `GMAIL_USER` (dirección completa) y `GMAIL_APP_PASSWORD` como secretos de servidor en Production. Se aceptan los espacios de agrupación de la contraseña al copiarla. Las variables no se imprimen ni se envían al cliente.
+3. Redesplegar para que la función utilice las nuevas variables. El envío usa `smtp.gmail.com:465`, TLS y el nombre visible «Secret Sánchez». No requiere dominio propio, DNS ni plantillas alojadas en Resend.
+4. Comprobar una entrega seleccionada de edición de prueba, con autorización operativa y un destinatario seguro. Las pruebas automatizadas no usan Gmail real.
+5. Buscar `provider.email.*` con `provider=gmail` y `provider.result`: un rechazo incluye `smtpStatus` y, cuando es conocido, `smtpCommand`; no contiene el texto SMTP ni contactos. `535` suele indicar autenticación; `4xx` es rechazo temporal. Consultar la respuesta completa únicamente en el proveedor cuando sea necesario.
+6. Una aceptación SMTP se guarda como `sent`. Gmail no tiene el webhook de entrega de Resend; la apertura del enlace sigue siendo independiente. Revisar Gmail (Enviados y avisos de devolución) antes de reenviar resultados inciertos.
+
+El código espera a completar cada envío y cancela su conexión mediante `AbortSignal` a los 20 segundos. Los puertos 465 y 587 están permitidos en Vercel; se usa 465 con TLS implícito. Las cuotas y filtros antispam de Gmail siguen aplicándose. No configurar una clave Resend como sustituto: no existe fallback de envío a Resend.
+
+`RESEND_WEBHOOK_SECRET` es opcional y solo permite procesar callbacks históricos de `/api/webhooks/resend`. `RESEND_API_KEY` ya no se lee. El cambio no reenvía el histórico ni modifica datos de aplicación.
+
+Referencias: [SMTP de Gmail](https://developers.google.com/workspace/gmail/imap/imap-smtp), [contraseñas de aplicación](https://support.google.com/accounts/answer/185833?hl=es) y [SMTP en Vercel](https://vercel.com/kb/guide/sending-emails-from-an-application-on-vercel).
 
 ### Kapso
 
@@ -140,7 +147,7 @@ no intentar derivarlos desde sus hashes.
 - Contraseñas asignadas a los UUID administrativos.
 - `APP_URL` correcto.
 - RLS/grants revisados.
-- Dominio de Resend verificado.
+- Cuenta remitente Gmail y contraseña de aplicación configuradas; una entrega de prueba autorizada comprobada.
 - Sorteo real probado con un grupo ficticio.
 - Enlaces entregados antes de descartar tokens.
 - Reintentos e idempotencia comprobados.

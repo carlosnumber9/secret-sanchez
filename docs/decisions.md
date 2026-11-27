@@ -13,7 +13,7 @@
 | Tokens | Aleatorios; hash para búsqueda y AES-256-GCM para entrega autorizada. Revelación pública sin cuenta. |
 | Reparto | Dos emparejamientos independientes; adultos equilibrados y bebés asignados a otro núcleo sin repetirlo. |
 | Regeneración | Revocar primero; un intento vigente, numeración monotónica y secretos nuevos. |
-| Entregas | Resend y Kapso, reservas atómicas, deduplicación y reenvío explícito; un resultado incierto no equivale a rechazo. |
+| Entregas | Gmail SMTP y Kapso, reservas atómicas y deduplicación local. SMTP no garantiza deduplicación externa; un resultado incierto exige revisión y reenvío seleccionado explícito. |
 | Respaldo | Copiar un enlace se audita y no acredita entrega. |
 | Seguridad | SQL preparado para RLS, límites compartidos y auditoría; compatibilidad explícita cuando faltan tablas opcionales. |
 | Pruebas | Runner nativo de Node con tsx; integración en PostgreSQL local/CI aislado, sin proveedores reales. |

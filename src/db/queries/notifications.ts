@@ -2,7 +2,7 @@ import { observe, logCommitted } from "@/lib/logger";
 import { emailTransition, suppressedEmailErrors, type EmailEvent } from "@/services/notifications/emailStatus";
 import { hasOptionalTable } from "@/db/capabilities";
 import { previousStatusesFor, type WhatsappDeliveryStatus } from "@/services/notifications/whatsappStatus";
-import { canResumePending, notificationLeaseMs, pendingRateLimit } from "@/services/notifications/retry";
+import { notificationLeaseMs, pendingRateLimit } from "@/services/notifications/retry";
 import { isEligibleNotification } from "@/services/notifications/eligibility";
 import { and, desc, eq, inArray, ne, or, sql } from "drizzle-orm";
 import { db, tracedTransaction } from "@/db/client";
@@ -66,10 +66,6 @@ export async function claimNotificationAttempt(input: {
         if (Date.now() - pending.createdAt.getTime() < notificationLeaseMs) {
           logCommitted("notification.attempt", { result: "skipped", reason: "lease_active", notificationId: pending.id });
           return null;
-        }
-        if (canResumePending(input.channel, pending.createdAt)) {
-          logCommitted("notification.attempt", { reason: "resumed", notificationId: pending.id });
-          return pending;
         }
         if (sameAttempt || input.mode !== "force") {
           logCommitted("notification.attempt", { result: "skipped", reason: "outcome_unknown", notificationId: pending.id });

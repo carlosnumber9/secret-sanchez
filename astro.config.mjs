@@ -5,7 +5,7 @@ import { defineConfig } from "astro/config";
 
 export default defineConfig({
   output: "server",
-  adapter: vercel({ maxDuration: 60 }),
+  adapter: vercel({ maxDuration: 60, includeFiles: ["emails/reveal-resend.html", "emails/reveal-resend.txt"] }),
   integrations: [react()],
   security: {
     csp: {

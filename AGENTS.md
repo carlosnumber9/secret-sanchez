@@ -11,7 +11,7 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - Supabase se usa siempre para Auth y Postgres, tambien desde local.
 - La configuración histórica compartía datos. Desarrollo y Preview deben usar proyectos independientes; las guardas rechazan destinos compartidos. No ejecutar migraciones reales sin autorización explícita.
 - Drizzle define el schema relacional en `src/db/schema.ts`.
-- Resend esta preparado para email.
+- Gmail SMTP envia email con `GMAIL_USER` y `GMAIL_APP_PASSWORD`, sin dominio propio. Resend solo conserva callbacks historicos.
 - Kapso esta integrado para WhatsApp; su activacion requiere credenciales, plantilla aprobada y webhook.
 
 ## Documentacion
@@ -33,7 +33,7 @@ Secret Sanchez es una app familiar de Amigo Invisible para Reyes. El objetivo ac
 - CSS por componente y estilos globales en `src/styles`
 - Supabase Auth y Postgres
 - Drizzle ORM
-- Resend
+- Gmail SMTP con Nodemailer
 - Vercel
 
 ## Comandos
@@ -63,7 +63,8 @@ Variables solo servidor:
 
 - `DATABASE_URL`
 - `REVEAL_TOKEN_ENCRYPTION_KEY`
-- `RESEND_API_KEY`
+- `GMAIL_USER`
+- `GMAIL_APP_PASSWORD`
 - `RESEND_WEBHOOK_SECRET`
 - `KAPSO_API_KEY`
 - `KAPSO_PHONE_NUMBER_ID`
@@ -93,7 +94,7 @@ No exponer variables privadas en codigo cliente, paginas publicas, logs o payloa
 - `src/actions`: casos de uso autorizados; `drawLifecycle.ts` coordina generación y revocación.
 - `src/db/schema.ts`: schema Drizzle.
 - `src/db/queries`: acceso persistente a datos.
-- `src/lib`: utilidades de entorno, Supabase, tokens, hashing, logging, Resend y Kapso.
+- `src/lib`: utilidades de entorno, Supabase, tokens, hashing, logging, Gmail y Kapso.
 - `src/services/draw`: reglas, validacion y generacion del sorteo.
 - `src/services/notifications`: envio de notificaciones.
 - `drizzle`: migraciones y snapshots generados por Drizzle.
@@ -171,7 +172,7 @@ Estados y enums principales:
 ## Notificaciones
 
 - El panel exige confirmacion antes de enviar emails reales.
-- Los intentos se guardan con clave de idempotencia.
+- Los intentos se guardan con clave de idempotencia local. SMTP no deduplica en proveedor; no reintentar automaticamente resultados inciertos.
 - La copia de respaldo descifra el enlace bajo autorizacion y se audita en Vercel.
 - WhatsApp usa Kapso y actualiza estados mediante webhook firmado.
 - La copia de enlaces es un respaldo auditado en Vercel, no un canal de entrega.

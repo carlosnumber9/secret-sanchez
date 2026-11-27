@@ -4,14 +4,14 @@ Secret Sánchez es una aplicación familiar de Amigo Invisible para Reyes. Permi
 restricciones al sorteo y entregar a cada participante un enlace privado para descubrir a quién hace el regalo.
 
 El proyecto está construido con Astro en modo SSR, React Islands y TypeScript. Usa Supabase para autenticación y
-Postgres, Drizzle como ORM, Resend para email y usa Kapso para WhatsApp, pendiente de activación operativa. El despliegue
+Postgres, Drizzle como ORM, Gmail SMTP para email y usa Kapso para WhatsApp, pendiente de activación operativa. El despliegue
 objetivo es Vercel.
 
 Desarrollo y Preview requieren proyectos Supabase independientes de Production. La configuración compartida histórica se rechaza hasta configurar aislamiento. La aplicación no usa fallbacks; las pruebas emplean fixtures aislados.
 
 ## Puesta en marcha
 
-Necesitas Node.js 22.23.4 o un parche posterior de la rama 22, un proyecto de Supabase y, para disponer de todas las integraciones, cuentas de Resend y
+Necesitas Node.js 22.23.4 o un parche posterior de la rama 22, un proyecto de Supabase y, para disponer de todas las integraciones, una cuenta Gmail con contraseña de aplicación y una cuenta de
 Kapso. Si utilizas nvm, el repositorio selecciona la versión compatible mediante `.nvmrc`.
 
 ```bash
