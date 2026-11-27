@@ -3,7 +3,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { AppError } from "./errors";
-import { diagnosticCodes, editableFields, events, operations, reasons, stages, type LogEvent, type OperationName } from "./log-contract";
+import { diagnosticCodes, editableFields, events, operations, reasons, smtpCommands, stages, type LogEvent, type OperationName } from "./log-contract";
 import { logSources } from "./log-sources";
 
 type Rule<T> = (value: unknown) => T | undefined;
@@ -20,7 +20,7 @@ const fieldRules = {
   providerMessageId: providerId, durationMs: number, status: (v: unknown) => number(v) ?? choice(statuses)(v),
   previousStatus: choice(statuses), nextStatus: choice(statuses), reason: (v: unknown) => choice(reasons)(v) ?? code(v),
   stage: choice(stages), transactionStage: choice(["work", "commit"]), authStage: choice(stages), channel: choice(["email", "whatsapp", "manual", "both"]), provider: choice(["gmail", "resend", "kapso", "supabase"]),
-  smtpStatus: number, smtpCommand: choice(["CONN", "EHLO", "HELO", "STARTTLS", "AUTH", "MAIL FROM", "RCPT TO", "DATA", "QUIT"]),
+  smtpStatus: number, smtpCommand: choice(smtpCommands),
   operation: choice(operations), result: choice(["succeeded", "failed", "rejected", "skipped", "unknown", "accepted", "applied", "ignored", "retry"]),
   mode: choice(["pending", "failed", "force"]), scope: choice(["all", "selected"]), kind: choice(["test", "final", "island", "participant"]),
   view: choice(["configuration", "draw", "deliveries", "history", "census"]), strategy: choice(["move", "cascade"]),

@@ -137,3 +137,16 @@ test("WhatsApp retains HTTP cooldown and uncertain-outcome handling", async t =>
   assert.ok(logs.some(entry => entry.httpStatus === 503 && entry.result === "unknown"));
   assert.doesNotMatch(JSON.stringify(logs), privateValues);
 });
+
+test("unrecognized SMTP commands are omitted before creating typed log diagnostics", async t => {
+  const logs = setup(t);
+  const delivery: EmailDelivery = { sender: "sender@example.invalid", transport: {
+    async sendMail() { throw Object.assign(new Error("private-token"), { responseCode: 550, command: "RCPT TO private-contact@example.invalid" }); },
+    close() {}
+  } };
+  assert.equal((await sendEmailNotification(email, delivery)).ok, false);
+  const rejection = logs.find(entry => entry.event === "provider.result" && entry.result === "rejected");
+  assert.equal(rejection?.smtpStatus, 550);
+  assert.equal(rejection?.smtpCommand, undefined);
+  assert.doesNotMatch(JSON.stringify(logs), privateValues);
+});

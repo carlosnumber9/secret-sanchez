@@ -34,7 +34,7 @@ Los eventos iniciales conservan la identidad conocida en ese momento; no se rees
 
 Se permiten UUID de entidades, IDs de mensajes con formato conocido de Resend/WhatsApp y Message-ID de Gmail generados por la app (UUID sin contactos), estados, códigos controlados, canales, indicadores, cantidades y nombres permitidos de campos modificados. `changedFields: ["name", "email"]` indica qué campos se enviaron o cambiaron; nunca incluye sus valores. En guardados masivos se usan conteos agregados. Un estado solicitado se distingue del estado efectivamente persistido.
 
-Se excluyen nombres, contactos, IP, contraseñas, claves, cookies, firmas, cabeceras de autenticación, cuerpos, respuestas completas, SQL, parámetros, filas, hashes/ciphertext de revelación, URLs secretas y parejas del sorteo. Los metadatos no pueden sobrescribir identidad, evento, nivel o correlación.
+Se excluyen nombres, contactos, IP, contraseñas, claves, cookies, firmas, cabeceras de autenticación, cuerpos, respuestas completas, SQL, parámetros, filas, hashes/ciphertext de revelación, URLs secretas y parejas del sorteo. Los metadatos no pueden sobrescribir identidad, evento, nivel o correlación. Los comandos SMTP se normalizan y validan contra un catálogo tipado compartido antes de construir los diagnósticos; los comandos desconocidos se omiten.
 
 ## Niveles y volumen
 

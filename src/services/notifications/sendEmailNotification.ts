@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import type { SendMailOptions } from "nodemailer/lib/mailer";
 import { observe, logger } from "@/lib/logger";
+import { smtpCommands } from "@/lib/log-contract";
 import { getGmailDelivery } from "@/lib/gmail";
 import { NotificationRateLimitError } from "./retry";
 import { renderEmail } from "./renderEmail";
@@ -47,7 +48,8 @@ export async function sendEmailNotification(input: Input, delivery?: EmailDelive
     } catch (error) {
       const smtpStatus = error && typeof error === "object" && "responseCode" in error && typeof error.responseCode === "number" ? error.responseCode : undefined;
       const command = error && typeof error === "object" && "command" in error && typeof error.command === "string" ? error.command : undefined;
-      const smtpCommand = command?.startsWith("AUTH") ? "AUTH" : command;
+      const normalizedCommand = command === "AUTH" || command?.startsWith("AUTH ") ? "AUTH" : command;
+      const smtpCommand = smtpCommands.find(allowed => allowed === normalizedCommand);
       const diagnostics = { smtpStatus, smtpCommand };
       if (smtpStatus && smtpStatus >= 400 && smtpStatus < 500) {
         logger.warn("provider.result", { ...diagnostics, result: "retry", reason: "rate_limited" });

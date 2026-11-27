@@ -1,4 +1,6 @@
 // Controlled vocabulary: never derive event names or diagnostic labels from input.
+export const smtpCommands = ["CONN", "EHLO", "HELO", "STARTTLS", "AUTH", "MAIL FROM", "RCPT TO", "DATA", "QUIT"] as const;
+
 export const operations = [
   "admin.state", "family.create", "island.create", "island.update", "family.layout", "family.draft",
   "participant.create", "participant.update", "participant.deletion_impact", "participant.delete",
