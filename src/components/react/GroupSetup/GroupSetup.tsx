@@ -1,18 +1,22 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
 export default function GroupSetup() {
+  useBrowserDebug("GroupSetup");
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
 
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
+    browserDebug("action.started", { component: "GroupSetup", action: "submit" });
     event.preventDefault();
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/groups", {
+      const response = await debugFetch("/api/admin/groups", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name })
@@ -21,6 +25,7 @@ export default function GroupSetup() {
       if (!response.ok || !payload?.ok) throw new Error(payload?.message);
       window.location.reload();
     } catch {
+      browserDebug("action.failed", { component: "GroupSetup" });
       setMessage("No se pudo crear el grupo.");
       setBusy(false);
     }

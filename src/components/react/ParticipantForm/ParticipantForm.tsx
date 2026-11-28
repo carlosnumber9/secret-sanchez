@@ -1,3 +1,4 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
 import { normalizePhone, participantEmailIsValid, participantPhoneIsValid, phonePattern } from "@/lib/contact";
 export { participantEmailIsValid, participantPhoneIsValid } from "@/lib/contact";
 import { Button } from "@/components/ui/button";
@@ -42,6 +43,7 @@ export default function ParticipantForm({
   onIslandChange,
   onSubmit
 }: Props) {
+  useBrowserDebug("ParticipantForm");
   const valid = participantDraftIsValid(value, islandId, islands);
   return (
     <form

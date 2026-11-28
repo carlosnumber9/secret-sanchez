@@ -1,3 +1,5 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { availableDeliveryChannel } from "@/lib/contact";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -32,6 +34,7 @@ export default function EditionConfigurator({ editionId, initialIslands, initial
   initialPeople: Person[];
   locked: boolean;
 }) {
+  useBrowserDebug("EditionConfigurator");
   const [islands, setIslands] = useState(initialIslands);
   const [people, setPeople] = useState(() => initialPeople.map((person) => ({
     ...person,
@@ -47,15 +50,17 @@ export default function EditionConfigurator({ editionId, initialIslands, initial
   const preparedIslandCount = islands.filter((island) => island.enabled && island.representativeParticipantId).length;
 
   async function patch(url: string, body: unknown) {
+    browserDebug("action.started", { component: "EditionConfigurator", action: "patch" });
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+      const response = await debugFetch(url, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
       const payload = await response.json() as { message?: string };
       if (!response.ok) throw new Error(payload.message);
       setMessage("Configuración guardada.");
       return true;
     } catch (error) {
+      browserDebug("action.failed", { component: "EditionConfigurator" });
       setMessage(error instanceof Error && error.message ? error.message : "No se pudo guardar.");
       return false;
     } finally {
@@ -64,12 +69,14 @@ export default function EditionConfigurator({ editionId, initialIslands, initial
   }
 
   async function changeIsland(island: Island, changes: Partial<Island>) {
+    browserDebug("action.started", { component: "EditionConfigurator", action: "changeIsland" });
     if (await patch(`/api/admin/editions/${editionId}/islands/${island.id}`, changes)) {
       setIslands((current) => current.map((item) => item.id === island.id ? { ...item, ...changes } : item));
     }
   }
 
   async function changePerson(person: Person, changes: Partial<Person>) {
+    browserDebug("action.started", { component: "EditionConfigurator", action: "changePerson" });
     const next = { ...person, ...changes };
     if (next.enabled && !next.isBaby && !next.canGive && !next.canReceive) {
       setMessage("Una persona adulta activa debe regalar, recibir o ambas cosas.");

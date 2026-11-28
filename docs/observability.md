@@ -1,10 +1,10 @@
-# Observabilidad del servidor
+# Observabilidad
 
 ## Estado y alcance
 
 Implementado el 23 de noviembre de 2026: JSON estructurado en stdout/stderr, contexto por petición, identidad verificada, operaciones y etapas del servidor. Incluye SSR, APIs, acciones, repositorios, seguridad, proveedores, auditoría y revelación. No se ha verificado ni cambiado la configuración remota de Vercel.
 
-No incluye telemetría del navegador, OpenTelemetry, Log Drains ni almacenamiento histórico adicional. Los comandos CLI ejecutados localmente no se convierten en Runtime Logs de Vercel. Los registros operativos no sustituyen las tablas de auditoría ni las entregas persistidas.
+Incluye diagnóstico local del navegador descrito abajo. No incluye OpenTelemetry, Log Drains ni almacenamiento histórico adicional. Los comandos CLI ejecutados localmente no se convierten en Runtime Logs de Vercel. Los registros operativos no sustituyen las tablas de auditoría ni las entregas persistidas.
 
 ## Formato y correlación
 
@@ -140,3 +140,15 @@ Al añadir un flujo, registrar un nombre estable en `src/lib/log-contract.ts`, i
 - [Vercel: CLI logs](https://vercel.com/docs/cli/logs).
 - [OWASP: Logging Cheat Sheet](https://cheatsheetseries.owasp.org/cheatsheets/Logging_Cheat_Sheet.html).
 - [Node.js 22: AsyncLocalStorage](https://nodejs.org/docs/latest-v22.x/api/async_context.html).
+
+## Diagnóstico del navegador
+
+Implementado el 28 de noviembre de 2026. Todas las páginas cargan diagnóstico compartido desde `BaseLayout`. Los registros usan `console.debug` con el prefijo `[Secret Sanchez]`, también en producción. En DevTools, activar el nivel **Verbose/Detallado** y filtrar por ese prefijo. Activar **Preserve log/Conservar registro** para seguir recargas y redirecciones. No se envían estos registros a Vercel ni a otro servicio.
+
+Se registran ciclo de página, conectividad, visibilidad, errores globales sin contenido, interacciones de controles sin valores, montaje y desmontaje de componentes React y comienzo de acciones. Los flujos de familia incluyen guardado y arrastre; los de notificaciones, confirmación o cancelación, resultados agregados por lote y copia de enlaces; la revelación registra sus estados y el fondo animado su inicialización o alternativa estática. Los eventos de interacción indican captura del evento, no confirman el éxito de una operación.
+
+Todas las llamadas `fetch` propias del cliente utilizan `debugFetch`: registra inicio, respuesta HTTP o fallo de transporte, duración hasta recibir cabeceras e identificador local correlativo. Conserva `X-Request-Id` si tiene formato UUID para cruzar la petición con los registros del servidor. Una respuesta HTTP correcta no implica que el contrato JSON o la operación de negocio hayan terminado correctamente. No se consume ni clona el cuerpo de respuesta.
+
+Las rutas conocidas se registran sin IDs de entidades; las desconocidas se etiquetan como `other`. Nunca se registran query strings, fragmentos, cuerpos, cabeceras de autorización, cookies, credenciales, contactos, nombres, asignaciones, enlaces secretos, mensajes de excepción ni stacks. Los metadatos añadidos por los puntos de instrumentación son etiquetas constantes, estados y cantidades. No hay logs por fotograma, pulsación o movimiento de arrastre.
+
+El código SSR, las consultas a base de datos y los proveedores continúan observándose en servidor. No se trasladan sus detalles internos al navegador. Los registros de consola son efímeros y no sustituyen la auditoría persistida.

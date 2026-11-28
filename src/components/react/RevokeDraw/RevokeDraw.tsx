@@ -1,19 +1,24 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
 export default function RevokeDraw({ editionId, drawId, exposure }: { editionId: string; drawId: string; exposure: { notifications: number; manual: number | null; opened: number } }) {
+  useBrowserDebug("RevokeDraw");
   const [confirmation, setConfirmation] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   async function revoke() {
+    browserDebug("action.started", { component: "RevokeDraw", action: "revoke" });
     setBusy(true);
     try {
-      const response = await fetch(`/api/admin/editions/${editionId}/draws/${drawId}/revoke`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmation, reason }) });
+      const response = await debugFetch(`/api/admin/editions/${editionId}/draws/${drawId}/revoke`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmation, reason }) });
       const payload = await response.json() as { message?: string };
       if (!response.ok) throw new Error(payload.message);
       window.location.reload();
     } catch (error) {
+      browserDebug("action.failed", { component: "RevokeDraw" });
       setMessage(error instanceof Error && error.message ? error.message : "No se pudo anular el reparto.");
       setBusy(false);
     }

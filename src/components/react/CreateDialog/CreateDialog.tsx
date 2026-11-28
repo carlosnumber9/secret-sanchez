@@ -1,3 +1,5 @@
+import { browserDebug } from "@/lib/browser-debug";
+import { useBrowserDebug } from "@/lib/use-browser-debug";
 import { Button } from "@/components/ui/button";
 import { X } from "lucide-react";
 import { forwardRef, useId, type MouseEvent, type ReactNode } from "react";
@@ -18,6 +20,7 @@ const CreateDialog = forwardRef<HTMLDialogElement, Props>(function CreateDialog(
   { title, description, children, onClose },
   ref
 ) {
+  useBrowserDebug("CreateDialog");
   const titleId = useId();
   const descriptionId = useId();
 
@@ -28,7 +31,7 @@ const CreateDialog = forwardRef<HTMLDialogElement, Props>(function CreateDialog(
       aria-labelledby={titleId}
       aria-describedby={descriptionId}
       onClick={closeOnBackdrop}
-      onClose={onClose}
+      onClose={() => { browserDebug("dialog.closed"); onClose?.(); }}
     >
       <div className="create-dialog__card">
         <header className="create-dialog__header">

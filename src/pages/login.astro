@@ -98,6 +98,7 @@ const next = getSafeRedirectPath(Astro.url.searchParams.get("next"));
 </BaseLayout>
 
 <script>
+  import { browserDebug, debugFetch } from "@/lib/browser-debug";
   const form = document.querySelector<HTMLFormElement>("#password-login-form");
   const message = document.querySelector<HTMLElement>("#login-message");
   const submitButton = document.querySelector<HTMLButtonElement>("#login-submit");
@@ -105,6 +106,7 @@ const next = getSafeRedirectPath(Astro.url.searchParams.get("next"));
   if (form && message && submitButton) {
     form.addEventListener("submit", async (event) => {
       event.preventDefault();
+      browserDebug("auth.login_started");
       const data = new FormData(form);
       const email = data.get("email");
       const password = data.get("password");
@@ -124,22 +126,25 @@ const next = getSafeRedirectPath(Astro.url.searchParams.get("next"));
       }
 
       try {
-        const response = await fetch("/api/auth/login", {
+        const response = await debugFetch("/api/auth/login", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email, password })
         });
         const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
         if (response.ok && payload?.ok) {
+          browserDebug("auth.login_succeeded");
           message.textContent = "Acceso correcto. Entrando...";
           message.dataset.state = "success";
           window.location.replace(form.dataset.next || "/");
           return;
         }
 
+        browserDebug("auth.login_rejected");
         message.textContent = payload?.message ?? "No se pudo iniciar sesión.";
         message.dataset.state = "error";
       } catch {
+        browserDebug("auth.login_failed");
         message.textContent = "No se pudo iniciar sesión. Revisa la conexión y vuelve a intentarlo.";
         message.dataset.state = "error";
       } finally {

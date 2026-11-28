@@ -27,6 +27,9 @@ const { title, description = "Amigo Invisible familiar para Reyes.", showLogout 
     <title>{title}</title>
   </head>
   <body>
+    <script>
+      import "@/lib/browser-diagnostics";
+    </script>
     <ThreeGiftBackground />
     <div class="app-content-layer">
       <slot />

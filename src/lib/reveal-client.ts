@@ -1,3 +1,4 @@
+import { debugFetch } from "./browser-debug";
 export type RevealPreparation = { giverName: string; giverKind: "participant" | "familyIsland"; giverIslandName: string | null; alreadyOpened: boolean };
 type RevealReceiver = { receiverName: string };
 
@@ -7,7 +8,7 @@ export class RevealRequestError extends Error {
 
 export function requestReveal(phase: "resolve", token: string, signal?: AbortSignal, send?: typeof fetch): Promise<RevealPreparation>;
 export function requestReveal(phase: "open", token: string, signal?: AbortSignal, send?: typeof fetch): Promise<RevealReceiver>;
-export async function requestReveal(phase: "resolve" | "open", token: string, signal?: AbortSignal, send = fetch): Promise<RevealPreparation | RevealReceiver> {
+export async function requestReveal(phase: "resolve" | "open", token: string, signal?: AbortSignal, send = debugFetch): Promise<RevealPreparation | RevealReceiver> {
   const response = await send(`/api/reveal/${phase}`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ token }), signal });
   if (response.status === 404) throw new RevealRequestError("Este enlace no parece válido.", true);
   if (response.status === 429) throw new RevealRequestError("Demasiados intentos. Espera unos segundos y vuelve a intentarlo.");

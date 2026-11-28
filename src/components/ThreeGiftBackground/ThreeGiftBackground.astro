@@ -4,6 +4,7 @@
 </div>
 
 <script>
+  import { browserDebug } from "@/lib/browser-debug";
   const root = document.querySelector<HTMLElement>("[data-three-gift-background]");
   if (root) {
     const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)");
@@ -16,11 +17,17 @@
       const current = ++generation;
       dispose?.();
       dispose = undefined;
-      if (suspended || reducedMotion.matches || smallScreen.matches || connection?.saveData) return;
+      if (suspended || reducedMotion.matches || smallScreen.matches || connection?.saveData) {
+        browserDebug("background.skipped", { suspended, reducedMotion: reducedMotion.matches, smallScreen: smallScreen.matches, saveData: Boolean(connection?.saveData) });
+        return;
+      }
       try {
         const { initializeGiftBackground } = await import("./scene");
-        if (current === generation && !suspended) dispose = initializeGiftBackground(root!);
-      } catch { /* The static gift remains available without WebGL. */ }
+        if (current === generation && !suspended) {
+          dispose = initializeGiftBackground(root!);
+          browserDebug("background.initialized", { animated: Boolean(dispose) });
+        }
+      } catch { browserDebug("background.failed"); /* The static gift remains available without WebGL. */ }
     }
     function schedule() {
       if (typeof window.requestIdleCallback === "function") window.requestIdleCallback(() => void update(), { timeout: 2000 });

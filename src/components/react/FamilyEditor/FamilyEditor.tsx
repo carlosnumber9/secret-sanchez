@@ -1,3 +1,5 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Popover } from "@base-ui/react/popover";
 import { availableDeliveryChannel, normalizePhone } from "@/lib/contact";
 import { createSerialQueue } from "@/lib/serial-queue";
@@ -317,6 +319,7 @@ const screenReaderInstructions = {
 };
 
 export default function FamilyEditor({ familyId, initialIslands, initialRevision }: Props) {
+  useBrowserDebug("FamilyEditor");
   const preparedInitialIslands = useMemo(() => prepareInitialIslands(initialIslands), [initialIslands]);
   const [islands, setIslands] = useState(preparedInitialIslands);
   const savedIslandsRef = useRef(preparedInitialIslands);
@@ -427,7 +430,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }, [islands]);
 
   async function api<T>(url: string, method: string, body?: unknown) {
-    const response = await fetch(url, {
+    const response = await debugFetch(url, {
       method,
       headers: { "Content-Type": "application/json" },
       body: body ? JSON.stringify(body) : undefined
@@ -454,6 +457,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   async function persistChange(update: (current: Island[]) => Island[], deletions: {
     participants?: string[]; islands?: string[];
   } = {}) {
+    browserDebug("family.save_queued");
     setPendingCount((count) => count + 1);
     try {
       return await enqueue(async () => {
@@ -470,6 +474,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
           confirmedIslandDeletionIds: deletions.islands ?? []
         };
         const updated = await api<{ revision: string; islands: Island[] }>(`/api/admin/families/${familyId}/layout`, "PATCH", payload);
+        browserDebug("family.saved", { islands: updated.islands.length, participants: updated.islands.reduce((total, island) => total + island.participants.length, 0) });
         savedIslandsRef.current = updated.islands;
         revisionRef.current = updated.revision;
         setIslands(updated.islands);
@@ -478,6 +483,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
         return updated.islands;
       });
     } catch (error) {
+      browserDebug("action.failed", { component: "FamilyEditor" });
       showError(error);
       throw error;
     } finally {
@@ -498,6 +504,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }
 
   async function addIsland() {
+    browserDebug("action.started", { component: "FamilyEditor", action: "addIsland" });
     const name = newIslandName.trim();
     if (!name) return;
     const created: Island = { id: null, clientId: `island-${crypto.randomUUID()}`, name, color: colors[islands.length % colors.length], participants: [] };
@@ -507,11 +514,13 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
       setNewIslandName("");
       islandDialogRef.current?.close();
     } catch (error) {
+      browserDebug("action.failed", { component: "FamilyEditor" });
       setDialogError(error instanceof Error ? error.message : "No se pudo añadir la unidad.");
     }
   }
 
   async function addParticipant() {
+    browserDebug("action.started", { component: "FamilyEditor", action: "addParticipant" });
     const draft = { ...participant, email: participant.email.trim(), phone: normalizePhone(participant.phone) };
     if (!selectedIsland || !participantDraftIsValid(draft, selectedIsland.clientId, formIslands)) return;
     const created: Participant = { ...draft, id: null, clientId: `participant-${crypto.randomUUID()}`, preferredChannel: draft.isBaby ? null : draft.preferredChannel, sortOrder: selectedIsland.participants.length };
@@ -522,6 +531,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
       setParticipant(emptyParticipant);
       participantDialogRef.current?.close();
     } catch (error) {
+      browserDebug("action.failed", { component: "FamilyEditor" });
       setDialogError(error instanceof Error ? error.message : "No se pudo añadir la persona.");
     }
   }
@@ -531,12 +541,14 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }
 
   async function saveName(kind: "island" | "participant", target: Island | Participant, name: string) {
+    browserDebug("action.started", { component: "FamilyEditor", action: "saveName" });
     await locked(() => persistChange((current) => kind === "island"
       ? current.map((island) => island.clientId === target.clientId ? { ...island, name } : island)
       : updatePerson(current, target.clientId, (person) => ({ ...person, name }))));
   }
 
   async function saveContact(person: Participant, field: "email" | "phone", value: string, toggle: boolean) {
+    browserDebug("action.started", { component: "FamilyEditor", action: "saveContact" });
     await persistChange((current) => updatePerson(current, person.clientId, (saved) => {
       if (saved.isBaby) throw new Error("Los bebés no tienen contacto propio.");
       const email = field === "email" ? value : saved.email;
@@ -554,14 +566,19 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }
 
   async function toggleBaby(person: Participant) {
+    browserDebug("action.started", { component: "FamilyEditor", action: "toggleBaby" });
     try {
       await locked(() => persistChange((current) => updatePerson(current, person.clientId, (saved) => ({
         ...saved, isBaby: !saved.isBaby, email: "", phone: "", preferredChannel: null
       }))));
-    } catch (error) { showError(error); }
+    } catch (error) {
+      browserDebug("action.failed", { component: "FamilyEditor" });
+      showError(error);
+    }
   }
 
   async function deletePerson(person: Participant) {
+    browserDebug("action.started", { component: "FamilyEditor", action: "deletePerson" });
     try {
       await locked(async () => {
         const impact = await api<{ draws: number; assignments: number; notifications: number; opened: number }>(`/api/admin/participants/${person.id}/deletion-impact`, "GET");
@@ -571,10 +588,14 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
           participants: island.participants.filter(({ clientId }) => clientId !== person.clientId)
         })), { participants: person.id ? [person.id] : [] });
       });
-    } catch (error) { showError(error); }
+    } catch (error) {
+      browserDebug("action.failed", { component: "FamilyEditor" });
+      showError(error);
+    }
   }
 
   async function deleteIsland(island: Island) {
+    browserDebug("action.started", { component: "FamilyEditor", action: "deleteIsland" });
     try {
       await locked(async () => {
         const impact = await api<{ draws: number }>(`/api/admin/islands/${island.id}/deletion-impact`, "GET");
@@ -596,7 +617,10 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
             ? { ...item, participants: [...item.participants, ...source.participants] } : item);
         }, { islands: island.id ? [island.id] : [], participants: targetId ? [] : island.participants.flatMap(({ id }) => id ? [id] : []) });
       });
-    } catch (error) { showError(error); }
+    } catch (error) {
+      browserDebug("action.failed", { component: "FamilyEditor" });
+      showError(error);
+    }
   }
 
   function reorderIsland(sourceId: string, targetId: string) {
@@ -627,6 +651,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }
 
   function handleDragStart(event: DragStartEvent) {
+    browserDebug("family.handleDragStart");
     const data = dragData(event.active.data.current);
     if (!data) return;
     dragStartSnapshotRef.current = islands;
@@ -663,6 +688,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }
 
   function handleDragEnd(event: DragEndEvent) {
+    browserDebug("family.handleDragEnd");
     const activeData = dragData(event.active.data.current);
     const overData = dragData(event.over?.data.current);
     if (!activeData) {
@@ -699,6 +725,7 @@ export default function FamilyEditor({ familyId, initialIslands, initialRevision
   }
 
   function handleDragCancel(_event: DragCancelEvent) {
+    browserDebug("family.handleDragCancel");
     restoreDragSnapshot();
     setMessage("Movimiento cancelado.");
   }

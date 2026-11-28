@@ -1,3 +1,5 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 
@@ -6,6 +8,7 @@ export default function EditionRules({ editionId, people, initialNoSameIsland, i
   editionId: string; people: Array<{ id: string; name: string }>;
   initialNoSameIsland: boolean; initialExclusions: Pair[]; locked: boolean;
 }) {
+  useBrowserDebug("EditionRules");
   const [noSameIsland, setNoSameIsland] = useState(initialNoSameIsland);
   const [exclusions, setExclusions] = useState(initialExclusions);
   const [from, setFrom] = useState("");
@@ -22,13 +25,17 @@ export default function EditionRules({ editionId, people, initialNoSameIsland, i
     setMessage("Cambios pendientes de guardar.");
   }
   async function save() {
+    browserDebug("action.started", { component: "EditionRules", action: "save" });
     setBusy(true); setMessage("");
     try {
-      const response = await fetch(`/api/admin/editions/${editionId}/rules`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ noSameIsland, exclusions }) });
+      const response = await debugFetch(`/api/admin/editions/${editionId}/rules`, { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ noSameIsland, exclusions }) });
       const payload = await response.json() as { message?: string };
       if (!response.ok) throw new Error(payload.message || "No se pudieron guardar las reglas.");
       setMessage("Reglas guardadas.");
-    } catch (error) { setMessage(error instanceof Error ? error.message : "No se pudieron guardar las reglas."); }
+    } catch (error) {
+      browserDebug("action.failed", { component: "EditionRules" });
+      setMessage(error instanceof Error ? error.message : "No se pudieron guardar las reglas.");
+    }
     finally { setBusy(false); }
   }
   return <section className="stack">

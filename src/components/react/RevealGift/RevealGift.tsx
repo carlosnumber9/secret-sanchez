@@ -1,3 +1,5 @@
+import { browserDebug } from "@/lib/browser-debug";
+import { useBrowserDebug } from "@/lib/use-browser-debug";
 import { Button } from "@/components/ui/button";
 import { Gift } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
@@ -13,7 +15,9 @@ type RevealState =
   | { status: "error"; phase: "open"; details: RevealPreparation; message: string };
 
 export default function RevealGift() {
+  useBrowserDebug("RevealGift");
   const [state, setState] = useState<RevealState>({ status: "loading" });
+  useEffect(() => { browserDebug("reveal.state", { status: state.status }); }, [state.status]);
   const token = useRef<string | null>(null);
   const active = useRef<AbortController | null>(null);
 
@@ -33,6 +37,7 @@ export default function RevealGift() {
         if (active.current === controller) setState({ status: "open", details: details!, receiverName: data.receiverName });
       }
     } catch (error) {
+      browserDebug("action.failed", { component: "RevealGift" });
       if (active.current !== controller) return;
       if (error instanceof RevealRequestError && error.invalid) {
         token.current = null;

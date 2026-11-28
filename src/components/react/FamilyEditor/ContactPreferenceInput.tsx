@@ -1,3 +1,5 @@
+import { browserDebug } from "@/lib/browser-debug";
+import { useBrowserDebug } from "@/lib/use-browser-debug";
 import { Input } from "@/components/ui/input";
 import { normalizePhone, participantEmailIsValid, participantPhoneIsValid } from "@/lib/contact";
 import { CheckCircle2, LoaderCircle, Mail, MailCheck, MessageCircle, MessageCircleCheck, RotateCcw } from "lucide-react";
@@ -14,6 +16,7 @@ type Props = {
 };
 
 export default function ContactPreferenceInput({ channel, name, value, selected, disabled, onCommit, onDirtyChange }: Props) {
+  useBrowserDebug("ContactPreferenceInput");
   const email = channel === "email";
   const [draft, setDraft] = useState(value);
   const [saving, setSaving] = useState(false);
@@ -41,6 +44,7 @@ export default function ContactPreferenceInput({ channel, name, value, selected,
   }, []);
 
   async function commit(toggle = false): Promise<void> {
+    browserDebug("action.started", { component: "ContactPreferenceInput", action: "commit" });
     if (disabled) return;
     if (pendingRef.current) {
       if (toggle && !queuedToggleRef.current) {
@@ -72,6 +76,7 @@ export default function ContactPreferenceInput({ channel, name, value, selected,
         savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
         return true;
       } catch (error) {
+      browserDebug("action.failed", { component: "ContactPreferenceInput" });
         failedToggleRef.current = toggle;
         setError(error instanceof Error ? error.message : "No se pudo guardar el contacto.");
         return false;

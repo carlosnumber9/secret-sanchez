@@ -1,3 +1,5 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { Gift, Send } from "lucide-react";
@@ -13,17 +15,19 @@ type Props = {
 type DrawState = "idle" | "loading" | "done" | "error";
 
 export default function DrawGenerator({ editionId, participantCount, editionKind }: Props) {
+  useBrowserDebug("DrawGenerator");
   const [state, setState] = useState<DrawState>("idle");
   const [message, setMessage] = useState("Listo para repartir cuando Juan lo vea claro.");
 
   async function generateDraw() {
+    browserDebug("action.started", { component: "DrawGenerator", action: "generateDraw" });
     if (!window.confirm(`¿Confirmas el reparto de esta edición ${editionKind === "test" ? "de prueba" : "definitiva"}? Podrás revertirlo, pero los enlaces que alguien abra no pueden olvidarse.`)) {
       return;
     }
     setState("loading");
     setMessage("Buscando un reparto válido...");
     try {
-      const response = await fetch(`/api/admin/editions/${editionId}/draws/generate`, {
+      const response = await debugFetch(`/api/admin/editions/${editionId}/draws/generate`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ confirmed: true })
@@ -32,6 +36,7 @@ export default function DrawGenerator({ editionId, participantCount, editionKind
       setState(payload.ok ? "done" : "error");
       setMessage(payload.message);
     } catch {
+      browserDebug("action.failed", { component: "DrawGenerator" });
       setState("error");
       setMessage("No se pudo generar el sorteo. Revisa la conexión y vuelve a intentarlo.");
     }

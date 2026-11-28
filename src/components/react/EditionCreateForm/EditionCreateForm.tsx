@@ -1,3 +1,5 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { CalendarPlus } from "lucide-react";
@@ -11,6 +13,7 @@ type Props = {
 };
 
 export default function EditionCreateForm({ familyId, initiallyOpen = false }: Props) {
+  useBrowserDebug("EditionCreateForm");
   const [name, setName] = useState("");
   const [year, setYear] = useState(new Date().getFullYear() + 1);
   const [kind, setKind] = useState<"test" | "final">("test");
@@ -28,11 +31,12 @@ export default function EditionCreateForm({ familyId, initiallyOpen = false }: P
   }
 
   async function submit(event: React.SyntheticEvent<HTMLFormElement>) {
+    browserDebug("action.started", { component: "EditionCreateForm", action: "submit" });
     event.preventDefault();
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/editions", {
+      const response = await debugFetch("/api/admin/editions", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ familyId, name, year, kind })
@@ -41,6 +45,7 @@ export default function EditionCreateForm({ familyId, initiallyOpen = false }: P
       if (!response.ok || !payload.data) throw new Error(payload.message);
       window.location.assign(`/ediciones/${payload.data.id}`);
     } catch (error) {
+      browserDebug("action.failed", { component: "EditionCreateForm" });
       setMessage(error instanceof Error && error.message ? error.message : "No se pudo crear la edición.");
       setBusy(false);
     }

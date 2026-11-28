@@ -1,3 +1,5 @@
+import { useBrowserDebug } from "@/lib/use-browser-debug";
+import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Copy, Mail, MessageCircle, RefreshCw, Send } from "lucide-react";
@@ -23,19 +25,22 @@ const labels: Record<DeliveryStatus, string> = {
 };
 
 export default function DeliveryStatusPanel({ deliveries, editionId, testMode }: Props) {
+  useBrowserDebug("DeliveryStatusPanel");
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const attempt = useRef<{ signature: string; key: string; cursor: number; drawId?: string } | null>(null);
 
   async function send(mode: "pending" | "failed" | "force", scope: "all" | "selected" = "all") {
+    browserDebug("action.started", { component: "DeliveryStatusPanel", action: "send" });
     if (scope === "selected" && !selected.length) { setMessage("Selecciona al menos una entrega."); return; }
     const uncertainSelection = mode === "force" && deliveries.some(delivery => selected.includes(delivery.id) && (delivery.emailStatus === "unknown" || delivery.whatsappStatus === "unknown"));
     const warning = (testMode
       ? "Los emails de prueba se redirigirán a tu correo de acceso y los WhatsApp al teléfono de prueba. ¿Continuar?"
       : "Esto enviará mensajes reales a la familia. ¿Quieres continuar?")
       + (uncertainSelection ? "\nHay envíos con resultado incierto que podrían haber llegado. Reenviarlos puede duplicar mensajes. ¿Has comprobado su estado antes de continuar?" : "");
-    if (!window.confirm(warning)) return;
+    if (!window.confirm(warning)) { browserDebug("notification.cancelled"); return; }
+    browserDebug("notification.confirmed", { mode, scope, selectedCount: selected.length, testMode });
     const signature = JSON.stringify({ mode, scope, selected: [...selected].sort() });
     if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID(), cursor: 0 };
     setBusy(true);
@@ -44,13 +49,14 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
       let totals = { sent: 0, failed: 0, unknown: 0, skipped: 0 };
       let throttles = 0;
       for (;;) {
-        const response = await fetch(`/api/admin/editions/${editionId}/notifications/send`, {
+        const response = await debugFetch(`/api/admin/editions/${editionId}/notifications/send`, {
           method: "POST", headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ mode, scope, assignmentIds: scope === "selected" ? selected : undefined, confirmed: true, idempotencyKey: attempt.current!.key, cursor: attempt.current!.cursor, drawId: attempt.current!.drawId })
         });
         const payload = await response.json() as { message?: string; data?: { sent: number; failed: number; skipped: number; unknown: number; drawId: string; nextCursor: number | null; retryAfterSeconds: number; processed: number; total: number } };
         if (!response.ok || !payload.data) throw new Error(payload.message);
         const data = payload.data;
+        browserDebug("notification.batch", { sent: data.sent, failed: data.failed, unknown: data.unknown, skipped: data.skipped, processed: data.processed, total: data.total, retryAfterSeconds: data.retryAfterSeconds });
         attempt.current!.drawId = data.drawId;
         totals = { sent: totals.sent + data.sent, failed: totals.failed + data.failed, unknown: totals.unknown + data.unknown, skipped: totals.skipped + data.skipped };
         setMessage(`Procesadas ${data.processed}/${data.total} entregas. ${totals.sent} enviadas.`);
@@ -61,20 +67,23 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
           await new Promise((resolve) => setTimeout(resolve, data.retryAfterSeconds * 1000));
         }
       }
+      browserDebug("notification.completed", totals);
       attempt.current = null;
       setMessage(`${totals.sent} enviados, ${totals.failed} fallidos, ${totals.unknown} con resultado incierto y ${totals.skipped} omitidos.`);
       window.setTimeout(() => window.location.reload(), 900);
     } catch (error) {
+      browserDebug("action.failed", { component: "DeliveryStatusPanel" });
       setMessage(error instanceof Error && error.message ? error.message : "No se pudieron procesar los envíos.");
       setBusy(false);
     }
   }
 
   async function copyLink(delivery: Delivery) {
+    browserDebug("action.started", { component: "DeliveryStatusPanel", action: "copyLink" });
     setBusy(true);
     setMessage("");
     try {
-      const response = await fetch("/api/admin/notifications/manual", {
+      const response = await debugFetch("/api/admin/notifications/manual", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ assignmentId: delivery.id })
@@ -82,8 +91,12 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
       const payload = await response.json() as { ok: boolean; message?: string; data?: { revealUrl: string } };
       if (!response.ok || !payload.data) throw new Error(payload.message);
       await navigator.clipboard.writeText(payload.data.revealUrl);
+      browserDebug("notification.link_copied");
       setMessage(`Enlace de ${delivery.name} copiado.`);
-    } catch { setMessage("No se pudo preparar o copiar el enlace."); }
+    } catch {
+      browserDebug("action.failed", { component: "DeliveryStatusPanel" });
+      setMessage("No se pudo preparar o copiar el enlace.");
+    }
     finally { setBusy(false); }
   }
 

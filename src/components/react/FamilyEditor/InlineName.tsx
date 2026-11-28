@@ -1,3 +1,5 @@
+import { browserDebug } from "@/lib/browser-debug";
+import { useBrowserDebug } from "@/lib/use-browser-debug";
 import { Input } from "@/components/ui/input";
 import { Check, CheckCircle2, LoaderCircle, Pencil } from "lucide-react";
 import { useEffect, useId, useRef, useState, type SubmitEvent } from "react";
@@ -11,6 +13,7 @@ type Props = {
 };
 
 export default function InlineName({ name, label, disabled, heading, onSave }: Props) {
+  useBrowserDebug("InlineName");
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(name);
   const [saving, setSaving] = useState(false);
@@ -35,6 +38,7 @@ export default function InlineName({ name, label, disabled, heading, onSave }: P
   }, [editing]);
 
   async function submit(event: SubmitEvent<HTMLFormElement>) {
+    browserDebug("action.started", { component: "InlineName", action: "submit" });
     event.preventDefault();
     const trimmed = draft.trim();
     if (disabled || submittingRef.current || !trimmed) return;
@@ -52,6 +56,7 @@ export default function InlineName({ name, label, disabled, heading, onSave }: P
       if (savedTimerRef.current) clearTimeout(savedTimerRef.current);
       savedTimerRef.current = setTimeout(() => setSaved(false), 3000);
     } catch (error) {
+      browserDebug("action.failed", { component: "InlineName" });
       setError(error instanceof Error ? error.message : "No se pudo guardar el nombre.");
     } finally {
       submittingRef.current = false;
