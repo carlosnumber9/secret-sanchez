@@ -4,8 +4,17 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useState } from "react";
 
-export default function GroupSetup() {
+export default function GroupSetup({ onCreated }: { onCreated: () => Promise<void> }) {
   useBrowserDebug("GroupSetup");
+  const [created, setCreated] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
+  async function refresh() {
+    setBusy(true);
+    setRefreshError(false);
+    try { await onCreated(); }
+    catch { setRefreshError(true); setMessage("La familia se creó, pero no se pudieron actualizar los datos."); }
+    finally { setBusy(false); }
+  }
   const [name, setName] = useState("");
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
@@ -23,13 +32,16 @@ export default function GroupSetup() {
       });
       const payload = (await response.json().catch(() => null)) as { ok?: boolean; message?: string } | null;
       if (!response.ok || !payload?.ok) throw new Error(payload?.message);
-      window.location.reload();
+      setCreated(true);
+      await refresh();
     } catch {
       browserDebug("action.failed", { component: "GroupSetup" });
       setMessage("No se pudo crear el grupo.");
       setBusy(false);
     }
   }
+
+  if (created) return <div className="stack"><p role="status">{message || "Actualizando familia..."}</p>{refreshError && <Button disabled={busy} onClick={() => void refresh()}>Actualizar datos</Button>}</div>;
 
   return (
     <form className="stack" onSubmit={submit}>

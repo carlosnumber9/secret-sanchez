@@ -182,3 +182,11 @@ En envíos, Email y WhatsApp muestran estados independientes. Juan puede selecci
 La revelación distingue tokens rechazados de fallos temporales. Conserva el token únicamente en memoria después de retirarlo del fragmento y ofrece reintento tanto al preparar como al abrir. Cada petición tiene un timeout de 12 segundos y se cancela al desmontar; no guarda el token en almacenamiento del navegador.
 
 La configuración incluye reglas y exclusiones dirigidas, con guardado explícito. Las ediciones archivadas y con intento vigente muestran los controles bloqueados. El envío informa progreso por lotes y separa resultados inciertos de errores confirmados.
+
+## Actualización de datos sin recargar la página
+
+La creación inicial de familia obtiene el censo actualizado y muestra el editor en la misma pantalla. La anulación de un reparto consulta la edición, actualiza estado e historial y habilita configuración y reglas cuando corresponde. Ambas pantallas permiten reintentar solo la lectura si falló después de confirmar la mutación.
+
+El panel de envíos consulta los estados del servidor al terminar cada operación de envío, también cuando hubo errores o lotes parcialmente procesados. Conserva el resumen y las selecciones que sigan existiendo, libera los controles y permite «Actualizar estados» para consultar entregas y aperturas posteriores. Si falla la lectura, bloquea nuevos envíos hasta actualizar los datos; reintentar esa lectura no envía mensajes. Si ya no hay reparto vigente, lo indica y deshabilita envíos. La copia de enlaces permanece como acción independiente.
+
+Estas operaciones no recargan el documento ni reinician la consola. El login y la creación de una edición mantienen sus navegaciones a otra ruta.

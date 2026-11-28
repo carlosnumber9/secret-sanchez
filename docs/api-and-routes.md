@@ -15,12 +15,14 @@
 
 ## APIs administrativas
 
+- Lectura del censo: `GET /api/admin/family`, con familia, revisión, unidades y participantes editables.
 - Familia: `POST /api/admin/groups`, `POST /api/admin/islands`, `PATCH|DELETE /api/admin/islands/[id]`, `POST /api/admin/participants`, `PATCH|DELETE /api/admin/participants/[id]`, `PATCH /api/admin/families/[id]/layout` y `PATCH /api/admin/families/[id]/name`.
 - Impacto destructivo: `GET /api/admin/participants/[id]/deletion-impact` y `GET /api/admin/islands/[id]/deletion-impact`.
-- Ediciones: `GET|POST /api/admin/editions`, `PATCH /api/admin/editions/[id]`.
+- Ediciones: `GET|POST /api/admin/editions`, `GET|PATCH /api/admin/editions/[id]`. La lectura devuelve el modelo de configuración, intento vigente, exposición e historial de anulaciones, sin contactos ni secretos de revelación.
 - Reglas: `PUT /api/admin/editions/[id]/rules`, con `noSameIsland` y hasta 500 pares dirigidos `exclusions`.
 - Configuración: `PATCH /api/admin/editions/[id]/islands/[islandId]` y `PATCH /api/admin/editions/[id]/participants/[participantId]`.
 - Intentos: `POST /api/admin/editions/[id]/draws/generate` y `POST /api/admin/editions/[id]/draws/[drawId]/revoke`.
+- Estados de entrega: `GET /api/admin/editions/[id]/deliveries`, con `deliveries` y `drawId` (o `null` si no hay reparto vigente).
 - Entrega: `POST /api/admin/editions/[id]/notifications/send` y `POST /api/admin/notifications/manual`.
 
 Todas requieren sesión y pertenecer a `admin_users`; todos los administradores comparten familia y ediciones. Las respuestas mantienen `{ ok, data?, message?, code?, errorId? }`.
@@ -43,6 +45,8 @@ El borrador familiar incluye una `revision` opaca obtenida con el censo. Se comp
 
 `POST /api/webhooks/resend` valida los headers Svix y firma del cuerpo original; procesa entrega, retraso, fallo, rebote y supresión. No exige sesión. Ambos webhooks responden `503` para IDs todavía desconocidos, permitiendo reintentos del proveedor.
 
-El envío devuelve `drawId`, `nextCursor`, contadores, resultados inciertos y posible `retryAfterSeconds`. Cada continuación debe conservar `idempotencyKey` y `drawId`. Los errores `409 DRAW_CHANGED` requieren recargar. Las mutaciones pueden devolver `403` por origen, `413` por cuerpo o `429` con `Retry-After`. Véanse [límites](./auth-security.md) y [lotes](./notifications.md).
+El envío devuelve `drawId`, `nextCursor`, contadores, resultados inciertos y posible `retryAfterSeconds`. Cada continuación debe conservar `idempotencyKey` y `drawId`. Los errores `409 DRAW_CHANGED` requieren actualizar los datos; el panel vuelve a consultar el intento vigente sin recargar el documento. Las mutaciones pueden devolver `403` por origen, `413` por cuerpo o `429` con `Retry-After`. Véanse [límites](./auth-security.md) y [lotes](./notifications.md).
 
 `POST /api/auth/login` inicia sesión por contraseña; `GET /api/health` informa disponibilidad sin divulgar secretos ni mensajes de conexión.
+
+Las lecturas de refresco mantienen la autorización administrativa y las cabeceras privadas sin caché del middleware. El cliente solicita `cache: "no-store"`. Tras crear la familia, anular un reparto o terminar un envío, se consulta el estado del servidor y se actualiza React sin navegación. Si una mutación confirmada termina bien y falla la lectura posterior, «Actualizar datos» reintenta solamente el GET.

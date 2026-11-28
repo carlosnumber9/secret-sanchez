@@ -1,3 +1,4 @@
+import { refreshData } from "@/lib/refresh-data";
 import { useBrowserDebug } from "@/lib/use-browser-debug";
 import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Badge } from "@/components/ui/badge";
@@ -24,14 +25,42 @@ const labels: Record<DeliveryStatus, string> = {
   read: "Leído", missing: "Falta contacto", skipped: "No usado", unknown: "Resultado incierto"
 };
 
-export default function DeliveryStatusPanel({ deliveries, editionId, testMode }: Props) {
+export default function DeliveryStatusPanel({ deliveries: initialDeliveries, editionId, testMode }: Props) {
   useBrowserDebug("DeliveryStatusPanel");
+  const [deliveries, setDeliveries] = useState(initialDeliveries);
+  const [hasDraw, setHasDraw] = useState(true);
+  const [refreshError, setRefreshError] = useState(false);
+  const busyRef = useRef(false);
   const [selected, setSelected] = useState<string[]>([]);
   const [message, setMessage] = useState("");
   const [busy, setBusy] = useState(false);
   const attempt = useRef<{ signature: string; key: string; cursor: number; drawId?: string } | null>(null);
 
+  async function refresh() {
+    try {
+      const data = await refreshData<{ deliveries: Delivery[]; drawId: string | null }>(`/api/admin/editions/${editionId}/deliveries`);
+      if (!data.drawId || (attempt.current?.drawId && attempt.current.drawId !== data.drawId)) attempt.current = null;
+      setDeliveries(data.deliveries);
+      setHasDraw(Boolean(data.drawId));
+      setSelected(current => current.filter(id => data.deliveries.some(delivery => delivery.id === id)));
+      setRefreshError(false);
+      browserDebug("notification.refreshed", { count: data.deliveries.length });
+    } catch {
+      setRefreshError(true);
+      browserDebug("notification.refresh_failed");
+    }
+  }
+
+  async function refreshOnly() {
+    if (busyRef.current) return;
+    busyRef.current = true;
+    setBusy(true);
+    try { await refresh(); }
+    finally { busyRef.current = false; setBusy(false); }
+  }
+
   async function send(mode: "pending" | "failed" | "force", scope: "all" | "selected" = "all") {
+    if (busyRef.current || refreshError || !hasDraw) return;
     browserDebug("action.started", { component: "DeliveryStatusPanel", action: "send" });
     if (scope === "selected" && !selected.length) { setMessage("Selecciona al menos una entrega."); return; }
     const uncertainSelection = mode === "force" && deliveries.some(delivery => selected.includes(delivery.id) && (delivery.emailStatus === "unknown" || delivery.whatsappStatus === "unknown"));
@@ -43,6 +72,7 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
     browserDebug("notification.confirmed", { mode, scope, selectedCount: selected.length, testMode });
     const signature = JSON.stringify({ mode, scope, selected: [...selected].sort() });
     if (attempt.current?.signature !== signature) attempt.current = { signature, key: crypto.randomUUID(), cursor: 0 };
+    busyRef.current = true;
     setBusy(true);
     setMessage("");
     try {
@@ -70,16 +100,20 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
       browserDebug("notification.completed", totals);
       attempt.current = null;
       setMessage(`${totals.sent} enviados, ${totals.failed} fallidos, ${totals.unknown} con resultado incierto y ${totals.skipped} omitidos.`);
-      window.setTimeout(() => window.location.reload(), 900);
     } catch (error) {
       browserDebug("action.failed", { component: "DeliveryStatusPanel" });
       setMessage(error instanceof Error && error.message ? error.message : "No se pudieron procesar los envíos.");
+    } finally {
+      await refresh();
+      busyRef.current = false;
       setBusy(false);
     }
   }
 
   async function copyLink(delivery: Delivery) {
+    if (busyRef.current) return;
     browserDebug("action.started", { component: "DeliveryStatusPanel", action: "copyLink" });
+    busyRef.current = true;
     setBusy(true);
     setMessage("");
     try {
@@ -97,18 +131,21 @@ export default function DeliveryStatusPanel({ deliveries, editionId, testMode }:
       browserDebug("action.failed", { component: "DeliveryStatusPanel" });
       setMessage("No se pudo preparar o copiar el enlace.");
     }
-    finally { setBusy(false); }
+    finally { busyRef.current = false; setBusy(false); }
   }
 
   return <section className="stack">
     {testMode && <p><strong>Modo prueba:</strong> los emails se redirigen a tu correo de acceso y los WhatsApp al teléfono de prueba configurado.</p>}
     <p>En email, «Enviado» confirma que el correo fue aceptado para envío. La apertura del enlace se muestra por separado.</p>
     {deliveries.some(delivery => delivery.emailStatus === "unknown" || delivery.whatsappStatus === "unknown") && <p>Los envíos con resultado incierto requieren revisión antes de usar «Reenviar seleccionados». No se reintentan automáticamente.</p>}
+    {!hasDraw && <p role="status">Ya no hay un reparto vigente. Vuelve a la edición para preparar uno nuevo.</p>}
+    {refreshError && <p role="alert">No se pudieron actualizar los estados. Actualiza los datos antes de iniciar otro envío.</p>}
     <div className="cluster cluster--actions">
-      <Button disabled={busy} type="button" onClick={() => send("pending")}><Send size={18} />Enviar pendientes</Button>
-      <Button disabled={busy} variant="secondary" type="button" onClick={() => send("failed")}><RefreshCw size={18} />Reintentar fallidos</Button>
-      <Button disabled={busy || !selected.length} variant="outline" type="button" onClick={() => send("force", "selected")}><RefreshCw size={18} />Reenviar seleccionados</Button>
+      <Button disabled={busy || refreshError || !hasDraw} type="button" onClick={() => send("pending")}><Send size={18} />Enviar pendientes</Button>
+      <Button disabled={busy || refreshError || !hasDraw} variant="secondary" type="button" onClick={() => send("failed")}><RefreshCw size={18} />Reintentar fallidos</Button>
+      <Button disabled={busy || refreshError || !hasDraw || !selected.length} variant="outline" type="button" onClick={() => send("force", "selected")}><RefreshCw size={18} />Reenviar seleccionados</Button>
     </div>
+    <Button disabled={busy} variant="outline" type="button" onClick={() => void refreshOnly()}>Actualizar estados</Button>
     {message && <p role="status">{message}</p>}
     <section className="delivery-panel">
       {deliveries.map((delivery) => <article className="delivery-panel__row" key={delivery.id}>

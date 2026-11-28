@@ -3,8 +3,17 @@ import { browserDebug, debugFetch } from "@/lib/browser-debug";
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 
-export default function RevokeDraw({ editionId, drawId, exposure }: { editionId: string; drawId: string; exposure: { notifications: number; manual: number | null; opened: number } }) {
+export default function RevokeDraw({ editionId, drawId, exposure, onRevoked }: { editionId: string; drawId: string; exposure: { notifications: number; manual: number | null; opened: number }; onRevoked: () => Promise<void> }) {
   useBrowserDebug("RevokeDraw");
+  const [revoked, setRevoked] = useState(false);
+  const [refreshError, setRefreshError] = useState(false);
+  async function refresh() {
+    setBusy(true);
+    setRefreshError(false);
+    try { await onRevoked(); }
+    catch { setRefreshError(true); setMessage("El reparto se anuló, pero no se pudieron actualizar los datos."); }
+    finally { setBusy(false); }
+  }
   const [confirmation, setConfirmation] = useState("");
   const [reason, setReason] = useState("");
   const [busy, setBusy] = useState(false);
@@ -16,13 +25,15 @@ export default function RevokeDraw({ editionId, drawId, exposure }: { editionId:
       const response = await debugFetch(`/api/admin/editions/${editionId}/draws/${drawId}/revoke`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ confirmation, reason }) });
       const payload = await response.json() as { message?: string };
       if (!response.ok) throw new Error(payload.message);
-      window.location.reload();
+      setRevoked(true);
+      await refresh();
     } catch (error) {
       browserDebug("action.failed", { component: "RevokeDraw" });
       setMessage(error instanceof Error && error.message ? error.message : "No se pudo anular el reparto.");
       setBusy(false);
     }
   }
+  if (revoked) return <section className="stack"><p role="status">{message || "Actualizando edición..."}</p>{refreshError && <Button disabled={busy} onClick={() => void refresh()}>Actualizar datos</Button>}</section>;
   return <section className="stack">
     <p><strong>Atención:</strong> se invalidarán todos los enlaces. Ya se han registrado {exposure.notifications} intentos de envío, {exposure.manual ?? "un número desconocido de"} copias manuales y {exposure.opened} aperturas; lo que alguien haya visto no puede deshacerse.</p>
     <label className="form-field">Motivo opcional<input value={reason} onChange={(event) => setReason(event.target.value)} /></label>

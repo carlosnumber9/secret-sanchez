@@ -9,10 +9,10 @@ const routes = [
   /^\/ediciones(?:\/(?:nueva|[\da-f-]+)(?:\/(?:sorteo|envios))?)?\/?$/,
   /^\/api\/auth\/(?:login|logout)$/,
   /^\/api\/reveal\/(?:resolve|open)$/,
-  /^\/api\/admin\/(?:groups|islands|participants|editions)$/,
+  /^\/api\/admin\/(?:family|groups|islands|participants|editions)$/,
   /^\/api\/admin\/(?:islands|participants)\/[\da-f-]+(?:\/deletion-impact)?$/,
   /^\/api\/admin\/families\/[\da-f-]+\/(?:layout|name)$/,
-  /^\/api\/admin\/editions\/[\da-f-]+(?:\/(?:rules|islands\/[\da-f-]+|participants\/[\da-f-]+|draws\/generate|draws\/[\da-f-]+\/revoke|notifications\/send))?$/,
+  /^\/api\/admin\/editions\/[\da-f-]+(?:\/(?:deliveries|rules|islands\/[\da-f-]+|participants\/[\da-f-]+|draws\/generate|draws\/[\da-f-]+\/revoke|notifications\/send))?$/,
   /^\/api\/admin\/notifications\/(?:send|manual)$/
 ];
 

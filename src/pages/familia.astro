@@ -1,28 +1,12 @@
 ---
-import FamilyEditor from "@/components/react/FamilyEditor/FamilyEditor";
-import Card from "@/components/Card/Card.astro";
-import GroupSetup from "@/components/react/GroupSetup/GroupSetup";
+import FamilyWorkspace from "@/components/react/FamilyWorkspace/FamilyWorkspace";
 import AdminLayout from "@/layouts/AdminLayout.astro";
 import { getAdminAppState } from "@/actions/adminData";
+import { familyView } from "@/lib/admin-view-models";
 
-const state = await getAdminAppState(Astro.locals.admin.id, { editions: false });
-const islands = state.islands.map((island) => ({
-  id: island.id,
-  name: island.name,
-  color: island.color ?? "#d6a84f",
-  participants: state.participants.filter((participant) => participant.familyIslandId === island.id).map((participant) => ({
-    id: participant.id,
-    name: participant.name,
-    email: participant.email ?? "",
-    phone: participant.phone ?? "",
-    preferredChannel: participant.preferredChannel === "manual" ? null : participant.preferredChannel,
-    isBaby: participant.isBaby,
-    sortOrder: participant.sortOrder
-  }))
-}));
+const state = familyView(await getAdminAppState(Astro.locals.admin.id, { editions: false }));
 ---
-
 <AdminLayout title="Familia">
   <div class="section-header"><h1>Familia</h1><p>Organiza el censo permanente por unidades. La participación y los roles se deciden dentro de cada edición.</p></div>
-  {state.family ? <FamilyEditor client:load familyId={state.family.id} initialRevision={state.revision!} initialIslands={islands} /> : <Card tone="accent"><div class="stack"><h2>Crea la familia</h2><p>Será el censo permanente para todas las ediciones.</p><GroupSetup client:load /></div></Card>}
+  <FamilyWorkspace client:load initialState={state} />
 </AdminLayout>

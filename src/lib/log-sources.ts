@@ -1,5 +1,15 @@
 // Source locations accepted in diagnostics. Update when source modules are added.
 export const logSources = new Set([
+  "src/lib/admin-view-models.ts",
+  "src/lib/refresh-data.ts",
+  "src/lib/browser-debug.ts",
+  "src/lib/browser-diagnostics.ts",
+  "src/lib/use-browser-debug.ts",
+  "src/components/react/EditionWorkspace/EditionWorkspace.tsx",
+  "src/components/react/FamilyWorkspace/FamilyWorkspace.tsx",
+  "src/pages/api/admin/family.ts",
+  "src/pages/api/admin/editions/[id]/deliveries.ts",
+
   "src/actions/adminData.ts",
   "src/actions/drawLifecycle.ts",
   "src/actions/editionData.ts",
