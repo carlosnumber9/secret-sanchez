@@ -7,8 +7,13 @@
 - **Gmail SMTP:** email transaccional mediante cuenta Gmail existente; Resend conserva únicamente compatibilidad de callbacks históricos.
 - **Kapso:** plantillas de WhatsApp y webhooks de entrega.
 
-La configuración histórica del repositorio está vinculada al proyecto Vercel `carlos-projects-fa17cb11/secret-sanchez`, conectado a GitHub con
-`main` como rama de Production. El dominio reservado es `https://secret-sanchez.vercel.app`. Esta actualización no certifica la configuración remota. Los cambios que requieren tablas opcionales detectan su ausencia; sus funcionalidades distribuidas quedan pendientes de migración.
+El único proyecto de despliegue de esta aplicación es `carlos-projects-fa17cb11/secret-sanchez-2amj`, conectado a `carlosnumber9/secret-sanchez`, con `main` como rama de Production. Su dominio canónico es `https://secret-sanchez-2amj.vercel.app`.
+
+La identidad del proyecto está versionada en `vercel.project.json` (identificadores públicos, sin credenciales). Ejecutar `npm run vercel:link` en cada checkout antes de utilizar Vercel CLI: escribe `.vercel/project.json`, ignorado por Git, sin crear proyectos ni desplegar. Los despliegues automáticos por Git dependen de la conexión configurada en Vercel.
+
+El proyecto anterior sin sufijo queda fuera de la topología y puede retirarse desde Vercel una vez revisada cualquier configuración remota que se desee conservar. El repositorio y el icono de los correos ya no dependen de su dominio. Borrarlo no migra sus variables al proyecto conservado: Gmail requiere `GMAIL_USER` y `GMAIL_APP_PASSWORD` en este último y un nuevo despliegue tras configurarlas. Consultar siempre los logs del proyecto `secret-sanchez-2amj`.
+
+En Production, `APP_URL` debe coincidir con el dominio canónico; en desarrollo y Preview, `PRODUCTION_APP_URL` debe referenciarlo y `APP_URL` debe conservar un origen independiente. Si hay callbacks o URLs permitidas en Supabase, Gmail/Resend o Kapso, revisar también su configuración externa: no se actualiza al editar este repositorio. Los cambios que requieren tablas opcionales detectan su ausencia; sus funcionalidades distribuidas quedan pendientes de migración.
 
 ## Entornos
 

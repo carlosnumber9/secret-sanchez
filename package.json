@@ -10,6 +10,7 @@
     "dev": "astro dev",
     "build": "node scripts/check-build-tools.mjs && astro check && astro build",
     "preview": "astro preview",
+    "vercel:link": "node scripts/link-vercel.mjs",
     "test": "node --import tsx --test tests/*.test.ts",
     "admin:bootstrap": "tsx scripts/bootstrap-admin.ts",
     "admin:set-password": "tsx scripts/set-admin-password.ts",

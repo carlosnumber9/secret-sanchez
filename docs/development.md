@@ -78,3 +78,9 @@ Las migraciones compartidas y las copias reales no están autorizadas durante es
 - `APP_ENV=test` solo admite PostgreSQL local con nombre terminado en `_test` y una URL de Auth `.invalid`. No permite saltarse las guardas con un Supabase real.
 
 `db:generate` y `db:check` no conectan a la base. `db:migrate`, `db:push`, `db:studio`, bootstrap y reset de contraseña validan el contexto antes de operar. Para Production, el operador debe seleccionar explícitamente ese contexto; estos comandos no se han ejecutado contra él en esta sesión.
+
+## Enlace local con Vercel
+
+El proyecto conservado es `carlos-projects-fa17cb11/secret-sanchez-2amj`. Antes de utilizar Vercel CLI, ejecutar `npm run vercel:link` para generar el enlace local desde `vercel.project.json`. El comando no despliega, no consulta secretos y no modifica archivos `.env`. No versionar `.vercel` ni crear otro proyecto al vincular un checkout.
+
+Production utiliza `https://secret-sanchez-2amj.vercel.app`; en desarrollo y Preview, usar ese origen únicamente como `PRODUCTION_APP_URL`, manteniendo un `APP_URL` independiente.
